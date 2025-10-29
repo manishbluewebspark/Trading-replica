@@ -132,8 +132,6 @@ export const login = async (req, res) => {
             error: null,
         });
 
-    res.status(200).json({ message: 'Login successful', });
-
   } catch (error) {
 
       return res.json({
@@ -247,13 +245,13 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 export const getAngelOneProfile = async function (req,res,next) {
     try {
 
-      let auth_token = req.headers.authorization.split(" ")[1];
+      
 
       var config = {
       method: 'get',
       url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile',
       headers : {
-        'Authorization': `Bearer ${auth_token}`,
+         'Authorization': `Bearer ${req.headers.angelonetoken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-UserType': 'USER',
@@ -338,73 +336,10 @@ export const logoutAngelOne = async function (req,res,next) {
 }
 
 
-// Step 4: Generate Token
-export const reGenerateTokenWithAngelOne = async function (req,res,next) {
-    try {
-
-          // var reqData = JSON.stringify({
-          //   "refreshToken":req.body.refresh_token
-          // });
-
-           var reqData = JSON.stringify({
-            "refreshToken":`${process.env.ANGELONE_REFRESH_TOKEN}`,
-          });
 
 
-          var config = {
-          method: 'post',
-          url: 'https://apiconnect.angelone.in/rest/auth/angelbroking/jwt/v1/generateTokens',
-          headers: {
-            'Authorization': `Bearer ${process.env.ANGELONE_TOKEN}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-UserType': 'USER',
-            'X-SourceID': 'WEB',
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-        },
-        data : reqData
-      };
 
-    let {data} = await axios(config);
-
-    console.log(data);
-    
-
-       if(data.status==true) {
-
-            return res.json({
-            success: true,
-            statusCode:200,
-            data: data.data,
-            message:'get data'
-        });
-
-         }else{
-
-        return res.json({
-            success: false,
-            statusCode:data.errorcode,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: data.message,
-        });
-    }
-
-  } catch (error) {
-
-    res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-
-  }
-}
-
-
-// Step 5: Get AngelOne Profile
+// Step 4: Get AngelOne Profile
 export const getAngelOneProfileFund = async function (req,res,next) {
     try {
 
@@ -456,6 +391,63 @@ export const getAngelOneProfileFund = async function (req,res,next) {
 }
 
 
+
+// Step 5: Generate Token
+export const reGenerateTokenWithAngelOne = async function (req,res,next) {
+    try {
+
+          var reqData = JSON.stringify({
+            "refreshToken":req.body.refresh_token
+          });
+
+          var config = {
+          method: 'post',
+          url: 'https://apiconnect.angelone.in/rest/auth/angelbroking/jwt/v1/generateTokens',
+          headers: {
+            'Authorization': `Bearer ${req.headers.angelonetoken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+        },
+        data : reqData
+      };
+
+    let {data} = await axios(config);
+
+       if(data.status==true) {
+
+            return res.json({
+            success: true,
+            statusCode:200,
+            data: data.data,
+            message:'get data'
+        });
+
+         }else{
+
+        return res.json({
+            success: false,
+            statusCode:data.errorcode,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: data.message,
+        });
+    }
+
+  } catch (error) {
+
+    res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+  }
+}
 
 export const angelOneCallback = async (req, res) => {
 

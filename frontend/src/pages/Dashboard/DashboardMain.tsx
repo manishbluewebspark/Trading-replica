@@ -359,7 +359,7 @@ const [reload, setReload] = useState(false);
 </div>
 
         {/* Statistics Card */}
-        <div className="bg-white rounded-xl shadow p-4 col-span-1">
+        {/* <div className="bg-white rounded-xl shadow p-4 col-span-1">
           <div className="text-sm font-semibold text-gray-700 mb-3">Statistics</div>
           <div className="grid grid-cols-4 gap-3 text-center">
             <StatMini label="Trades Today" value="0" />
@@ -367,14 +367,26 @@ const [reload, setReload] = useState(false);
             <StatMini label="Win Rate" value="0%" />
             <StatMini label="Cumulative P/L" value="₹0" />
           </div>
+        </div> */}
+
+         <div className="bg-white rounded-xl shadow p-4 col-span-1">
+          <div className="text-sm font-semibold text-gray-700 mb-3">Profit & Loss</div>
+          <div className="text-emerald-600 text-2xl font-bold">
+            {loading ? "Loading..." : error ? "—" : `₹${Number(fundData || 0).toFixed(2)}`}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            {error ? <span className="text-red-500">{error}</span> : "Today"}
+          </div>
         </div>
+      
+
 
         {/* Orders */}
         <div className="bg-white rounded-xl shadow p-4 col-span-1">
           <div className="text-sm font-semibold text-gray-700 mb-3">Orders</div>
-          <div className="h-20 flex items-end">
+          {/* <div className="h-20 flex items-end">
             <div className="w-8 h-3 bg-indigo-100 rounded" />
-          </div>
+          </div> */}
           <div className="text-2xl font-bold mt-2">{total + 1}</div>
         </div>
 

@@ -99,6 +99,7 @@ const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(nu
              {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+                "AngelOneToken": localStorage.getItem("angel_token") || "",
             },
           }
         );

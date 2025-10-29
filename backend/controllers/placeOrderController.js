@@ -8,12 +8,9 @@ import Order from '../models/orderModel.js';
 export const placeOrder = async (req, res,next) => {
     try {
 
-        console.log(req.body);
-        
-
-        // 1️⃣ Prepare order payload
+        //1 Prepare order payload
             const saveObj = {
-            variety: "NORMAL",
+            variety: req.body.variety,
             tradingsymbol: req.body.symbol,
             symboltoken: req.body.token,
             transactiontype: req.body.transactiontype,
@@ -50,7 +47,7 @@ export const placeOrder = async (req, res,next) => {
 
         let response = await axios(config)
 
-        console.log(response,'response');
+       
         
 
     //    const total = 190
@@ -201,8 +198,6 @@ export const getOrder = async (req, res,next) => {
         };
 
         let {data} = await axios(config)
-
-        
 
         if(data.status==true) {
   
@@ -367,7 +362,7 @@ export const getLTP = async (req, res,next) => {
 };
 
 //   WOKRING 
-export const getTradeBook = async (req, res,next) => {
+export const getTradeBook1 = async (req, res,next) => {
     try {
 
       var config = {

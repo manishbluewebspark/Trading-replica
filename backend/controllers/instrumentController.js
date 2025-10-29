@@ -7,9 +7,9 @@ export const getPerticularInstruments = async (req, res) => {
     try {
 
         const reqData = JSON.stringify({
-            "exchange": "NSE",
-            "tradingsymbol": "SBIN-EQ",
-            "symboltoken": "3045"
+            "exchange": req.body.exchange,
+            "tradingsymbol": req.body.tradingsymbol,
+            "symboltoken": req.body.symboltoken,
         });
 
         var config = {
@@ -37,7 +37,7 @@ export const getPerticularInstruments = async (req, res) => {
             status: true,
             statusCode:200,
             data: data.data,
-            message:'get data'
+            message:'successfully fetch data'
         });
 
          }else{
@@ -80,7 +80,7 @@ export const getAllInstruments = async (req, res) => {
             status: true,
             statusCode:200,
             data: data,
-            message:''
+            message:'successfully fetch data'
         });
 
     } catch (error) {
