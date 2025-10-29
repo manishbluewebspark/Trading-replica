@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom"; // ✅ FIXED
 import {
   BoxCubeIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
   ListIcon,
   PieChartIcon,
@@ -30,7 +29,6 @@ import {
   LineChart,
   Layers,
   ChartCandlestick,
-  LogOut,
 } from "lucide-react";
 
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import AdminHome from "../Dashboard/Home";
-import UserHome from "../Dashboard/User";
 import DashboardMain from "./DashboardMain";
 
 export default function Layout() {

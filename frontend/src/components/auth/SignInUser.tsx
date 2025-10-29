@@ -1,7 +1,5 @@
 import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc";
-import { FaXTwitter } from "react-icons/fa6";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -49,9 +47,9 @@ export default function SignInUser() {
   };
 
   // AngelOne login handler
-  const handleAngelOneLogin = () => {
-    window.location.href = `${apiUrl}/auth/angelone`;
-  };
+  // const handleAngelOneLogin = () => {
+  //   window.location.href = `${apiUrl}/auth/angelone`;
+  // };
 
   
 

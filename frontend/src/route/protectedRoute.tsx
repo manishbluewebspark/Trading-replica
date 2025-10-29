@@ -35,7 +35,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     const feed_token = params.get('feed_token');
     const refresh_token = params.get('refresh_token');
 
-    if (authToken) {
+    if (authToken&&feed_token&&refresh_token) {
       // Save auth_token to localStorage (or any secure storage)
       localStorage.setItem("angel_token", authToken);
        localStorage.setItem("angel_feed_token", feed_token);

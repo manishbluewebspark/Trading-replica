@@ -844,6 +844,9 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 // ----------------------------------------------------------
 
 export default function InstrumentForm() {
+
+   const apiUrl = import.meta.env.VITE_API_URL;
+
   const [data, setData] = useState<any[]>([]);
     const [dataexcel, setDataExcel] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -862,7 +865,7 @@ export default function InstrumentForm() {
   const gridApiRef = useRef<GridApi | null>(null);
 
 
-    function formatOptionSymbol(symbol) {
+    function formatOptionSymbol(symbol:any) {
 
     symbol = String(symbol).toUpperCase().trim();
 
@@ -914,7 +917,7 @@ export default function InstrumentForm() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.get("http://localhost:5000/api/order/get/instrument",  {
+      const res = await axios.get(`${apiUrl}/order/get/instrument`,  {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -935,11 +938,11 @@ export default function InstrumentForm() {
     // });
 
       allData = allData
-        .filter(item => {
+        .filter((item:any) => {
           const name = String( item.symbol || "").toUpperCase();
           return name.startsWith("NIFTY") || name.startsWith("BANKNIFTY");
         })
-        .map(item => {
+        .map((item:any) => {
           const symbol = String(item.symbol || "").toUpperCase();
           const formattedName = formatOptionSymbol(symbol);
           return { ...item, formattedName };
@@ -977,7 +980,7 @@ export default function InstrumentForm() {
       symboltoken: item.token,
     };
      try{
-          const res = await axios.post("http://localhost:5000/api/order/get/ltp", payload, {
+          const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -1011,7 +1014,7 @@ export default function InstrumentForm() {
       symboltoken: item.token,
     };
      try{
-          const res = await axios.post("http://localhost:5000/api/order/get/ltp", payload, {
+          const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -1121,7 +1124,7 @@ export default function InstrumentForm() {
 
     try{
       const res = await axios.post(
-      "http://localhost:5000/api/order/place/order",
+      `${apiUrl}/order/place/order`,
       formData,
       {
             headers: {

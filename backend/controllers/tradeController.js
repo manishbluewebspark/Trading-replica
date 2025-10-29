@@ -28,7 +28,7 @@ export const getPerticularTradeBook = async (req, res) => {
          if(data.status==true) {
 
             return res.json({
-            success: true,
+            status: true,
             statusCode:200,
             data: data.data,
             message:'get data'
@@ -37,7 +37,7 @@ export const getPerticularTradeBook = async (req, res) => {
          }else{
 
         return res.json({
-            success: false,
+            status: false,
             statusCode:data.errorcode,
             message: "Unexpected error occurred. Please try again.",
             data:null,
@@ -83,7 +83,7 @@ export const getTradeBook = async (req, res) => {
          if(data.status==true) {
 
             return res.json({
-            success: true,
+            status: true,
             statusCode:200,
             data: data.data,
             message:'get data'
@@ -92,7 +92,7 @@ export const getTradeBook = async (req, res) => {
          }else{
 
         return res.json({
-            success: false,
+            status: false,
             statusCode:data.errorcode,
             message: "Unexpected error occurred. Please try again.",
             data:null,

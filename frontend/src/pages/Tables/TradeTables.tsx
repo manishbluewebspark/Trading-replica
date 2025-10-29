@@ -73,6 +73,10 @@ const btn = (disabled: boolean): React.CSSProperties => ({
 
 /** ====== Component ====== **/
 export default function TradeTables() {
+
+
+   const apiUrl = import.meta.env.VITE_API_URL;
+
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +99,7 @@ const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(nu
       setError(null);
       try {
         // 👇 change URL if your route differs
-        const data  = await axios.get("http://localhost:5000/api/order/get/trade/book",
+        const {data}  = await axios.get(`${apiUrl}/order/get/trade/book`,
              {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -105,6 +109,27 @@ const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(nu
         );
 
         console.log(data);
+        
+
+        if(data.status==true) {
+
+        setTrades(data.data||[]);
+
+       }else if(data.status==false&&data.message=='Unauthorized'){
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+           
+       }else{
+          // alert(data?.message)
+       }
+
+
+        
+
+       
         
 
 
@@ -174,11 +199,13 @@ const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(nu
   };
 
   const handleScripChange = (value: string) => {
+     setSelectedScrip(value);
       console.log(value);
       
   }
 
     const handleStrategyChange = (value: string) => {
+      setSelectedStrategy(value)
       console.log(value);
       
   }

@@ -33,7 +33,6 @@ import ProtectedRoute from "./route/protectedRoute";
 import ChangePassword from "./components/UserProfile/changePassword";
 import TokenStatus from "./pages/admin/TokenStatus";
 import Terms from "./pages/AuthPages/Terms";
-import Layout from "./pages/Dashboard/Layout";
 import LoginSuccess from "./components/auth/LoginSuccess";
 import KiteLoginSuccess from "./components/auth/KiteLoginSuccess";
 import GrowwLoginSuccess from "./components/auth/GrowwLoginSuccess";

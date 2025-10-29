@@ -6,11 +6,14 @@ import Label from "../form/Label";
 import { useEffect, useState } from "react";
 
 export default function UserMetaCard() {
-  const { isOpen, openModal, closeModal } = useModal();
+  const { isOpen,  closeModal } = useModal();
     const [userName, setUserName] = useState("");
     const [userImage, setUserImage] = useState("");
     const [userRole, setUserRole] = useState("");
     const [userCityOrState, setUserCityOrState] = useState("");
+
+    console.log(userImage);
+    
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");

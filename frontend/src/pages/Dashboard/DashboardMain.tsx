@@ -251,7 +251,7 @@ import { useOrderCount } from "../../socket/useOrderCount";
 
 export default function DashboardMain() {
 
-    const apiUrl = import.meta.env.VITE_API_URL;
+     const apiUrl = import.meta.env.VITE_API_URL;
 
   // ✅ all hooks go inside the component, at the top level
   const total = useOrderCount();
@@ -267,7 +267,7 @@ const [reload, setReload] = useState(false);
         setError("");
 
         const res = await axios.get(
-          "http://localhost:5000/api/users/get/user/fund",
+          `${apiUrl}/users/get/user/fund`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -300,7 +300,7 @@ const [reload, setReload] = useState(false);
   const handleGenerateToken =  async () => {
 
          const {data} = await axios.get(
-          "http://localhost:5000/api/users/login/totp/angelone",
+          `${apiUrl}/users/login/totp/angelone`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -409,11 +409,11 @@ const [reload, setReload] = useState(false);
 }
 
 /* --- small UI helpers --- */
-function StatMini({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-indigo-50 rounded-lg py-3">
-      <div className="text-xl font-bold">{value}</div>
-      <div className="text-[11px] text-gray-600 mt-1">{label}</div>
-    </div>
-  );
-}
+// function StatMini({ label, value }: { label: string; value: string }) {
+//   return (
+//     <div className="bg-indigo-50 rounded-lg py-3">
+//       <div className="text-xl font-bold">{value}</div>
+//       <div className="text-[11px] text-gray-600 mt-1">{label}</div>
+//     </div>
+//   );
+// }

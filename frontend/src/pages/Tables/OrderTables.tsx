@@ -66,6 +66,9 @@ const statusColor = (status: string) => {
 };
 
 export default function OrderTables() {
+
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const [orders, setOrders] = useState<Order[]>([]);
    
   const [loading, setLoading] = useState(true);
@@ -91,7 +94,7 @@ export default function OrderTables() {
     async function fetchOrders() {
      
       try {
-        const {data} = await axios.get("http://localhost:5000/api/order/get/order", {
+        const {data} = await axios.get(`${apiUrl}/order/get/order`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
               "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -177,7 +180,7 @@ export default function OrderTables() {
     const handleCancelClick = async (item: any) => {
 
     try {
-         let res = await axios.post("http://localhost:5000/api/order/cancel/order", item, {
+         let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
               "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -202,6 +205,8 @@ export default function OrderTables() {
       }   
     } catch (error:any) {
 
+      setError(error.message)
+
        alert(error.message)
     }
 
@@ -212,7 +217,7 @@ export default function OrderTables() {
 
          e.preventDefault();
 
-        let res = await axios.post("http://localhost:5000/api/order/modify/order", selectedItem, {
+        let res = await axios.post(`${apiUrl}/order/modify/order`, selectedItem, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",

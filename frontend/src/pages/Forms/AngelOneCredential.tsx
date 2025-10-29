@@ -178,6 +178,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const AngelOneCredential: FC = () => {
+
+     const apiUrl = import.meta.env.VITE_API_URL;
+
+
   // 🔑 Form fields
   const [clientId, setClientId] = useState("");
   const [totpSecret, setTotpSecret] = useState("");
@@ -187,7 +191,8 @@ const AngelOneCredential: FC = () => {
   const [showTotp, setShowTotp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL;
+
+ 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,7 +204,7 @@ const AngelOneCredential: FC = () => {
                 password:password,
             }
 
-            let res = await axios.post("http://localhost:5000/api/order/create/angelone", reqData, {
+            let res = await axios.post(`${apiUrl}/order/create/angelone`, reqData, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                         "AngelOneToken": localStorage.getItem("angel_token") || "",
