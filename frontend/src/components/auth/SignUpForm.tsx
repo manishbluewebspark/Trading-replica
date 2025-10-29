@@ -7,6 +7,7 @@ import Checkbox from "../form/input/Checkbox";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Button from "../ui/button/Button";
+import { useNavigate } from "react-router";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,7 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const apiUrl = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
 
   const [isChecked, setIsChecked] = useState(() => {
     return JSON.parse(localStorage.getItem("termsAccepted") || "false");
@@ -57,6 +59,8 @@ export default function SignUpForm() {
         setPassword("");
         setIsChecked(false);
       }
+      navigate("/");
+
     } catch (error: any) {
       if (error.response && error.response.data?.message) {
         alert(error.response.data.message);
