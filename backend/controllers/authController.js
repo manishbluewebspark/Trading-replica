@@ -7,7 +7,7 @@ import querystring from "querystring";
 import dotenv from 'dotenv';
 dotenv.config();
 import { Op } from 'sequelize';
-import { generateRandomWords } from "../utils/randomWords.js";
+import { generateRandomNumbers } from "../utils/randomWords.js";
 import axios from 'axios';
 import { generateTOTP } from '../utils/generateTOTP.js';
 import AngelOneCredentialer from '../models/angelOneCredential.js'
@@ -20,6 +20,27 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 
 
 // ===================== auth controller start ================================
+
+
+async function generateUniqueUsername() {
+  let username;
+  let isUnique = false;
+
+  while (!isUnique) {
+    username = await generateRandomNumbers(5); // e.g., "48371"
+
+    const existingUser = await User.findOne({
+      where: { username: username },
+    });
+
+    if (!existingUser) {
+      isUnique = true; // ✅ unique username found
+    }
+  }
+
+  return username;
+}
+
 
 export const register = async (req, res) => {
 
@@ -36,23 +57,49 @@ export const register = async (req, res) => {
         });
     }
 
+     // ✅ Check mobile number length (must be exactly 10 digits)
+      if (!mob || mob.length !== 10) {
+        return res.json({
+          status: false,
+          statusCode: 400,
+          message: "Mobile number must be exactly 10 digits",
+          error: null,
+        });
+      }
+
+      // ✅ Validate password strength
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{7,}$/;
+
+  if (!passwordRegex.test(password)) {
+    return res.json({
+      status: false,
+      statusCode: 400,
+      message:
+        "Password must be at least 7 characters long and contain uppercase, lowercase, number, and special character",
+    });
+  }
+
+       const username = await generateUniqueUsername();
+    
       const userExists = await User.findOne({
         where: {
           [Op.or]: [
             { email: email },
-            { phoneNumber: mob }
+            { phoneNumber: mob },
+            {username:username}
           ]
         }
       });
 
-    let username = await generateRandomWords(5) 
+
     
     if (userExists){
 
        return res.json({
             status: false,
             statusCode:400,
-            message: "User already exists",
+            message: "User already exists with mobile ,email",
             error: null,
         });
 
@@ -60,7 +107,7 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-     await User.create({
+     let saveUser = await User.create({
       firstName,
       lastName,
       username:username,
@@ -69,11 +116,13 @@ export const register = async (req, res) => {
       password: hashedPassword,
       isChecked
     });
-
+    
+     const token = jwt.sign({ id: saveUser.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+   
      return res.json({
             status: true,
             statusCode:400,
-            data:null,
+            saveUser,token,
             message: "User registered successfully",
             error: null,
         });
@@ -97,7 +146,16 @@ export const login = async (req, res) => {
 
   try {
 
-    const user = await User.findOne({ where: { email } });
+    // const user = await User.findOne({ where: { email } });
+
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: email },      // assuming you store emails in lowercase
+          { username: email },    // usernames are case-sensitive or as per your rules
+        ],
+      },
+    });
 
     if (!user) {
 
@@ -244,8 +302,6 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 
 export const getAngelOneProfile = async function (req,res,next) {
     try {
-
-      
 
       var config = {
       method: 'get',
@@ -453,17 +509,12 @@ export const angelOneCallback = async (req, res) => {
 
   const { auth_token, feed_token, refresh_token } = req.query;
 
-   console.log(" Auth Token 123445:", auth_token, feed_token, refresh_token);
-
   if (!auth_token) {
     return res.status(400).json({ message: "Missing auth_token in callback" });
   }
 
   try {
-    console.log("✅ Auth Token:", auth_token);
-    console.log("✅ Feed Token:", feed_token);
-    console.log("✅ Refresh Token:", refresh_token);
-
+   
      // Generate pseudo user
     // const profileData = await fetchAngelOneProfile(refresh_token);
 
@@ -491,7 +542,7 @@ export const angelOneCallback = async (req, res) => {
         feedToken: feed_token,
         refreshToken: refresh_token
       });
-      console.log("✅ New user created:", user);
+      
     } else {
       user.name = angelUser.name;
       user.email = angelUser.email || user.email;
@@ -499,7 +550,7 @@ export const angelOneCallback = async (req, res) => {
       user.feedToken = feed_token;
       user.refreshToken = refresh_token;
       await user.save();
-      console.log("✅ Existing user updated:", user);
+      
     }
 
     // Generate JWT

@@ -4,6 +4,8 @@ import * as XLSX from 'xlsx';
 import { Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
+import { toast } from "react-toastify";
+
 
 type Order = {
   variety: string;
@@ -107,6 +109,9 @@ export default function OrderTables() {
         setOrders(data.data);
 
        }else if(data.status==false&&data.message=='Unauthorized'){
+
+         toast.error('Unauthorized User');
+
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("termsAccepted");
@@ -118,7 +123,8 @@ export default function OrderTables() {
        }
         
       } catch (err: any) {
-           alert(err?.message)
+         toast.error(err?.message || "Something went wrong");
+         
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -189,7 +195,9 @@ export default function OrderTables() {
 
       if(res.data.status==true) {
 
-        alert(res.data.message)
+         toast.success(res.data.message);
+
+        
 
       }else if(res.data.status==false&&res.data.status=='Unauthorized'){
             localStorage.removeItem("token");
@@ -201,13 +209,15 @@ export default function OrderTables() {
        }
        else{
 
-           alert(res.data.message)
+        toast.error(res.data.message || "Something went wrong");
+         
       }   
     } catch (error:any) {
 
       setError(error.message)
 
-       alert(error.message)
+        toast.error(error.messagee || "Something went wrong");
+
     }
 
       }
@@ -231,7 +241,7 @@ export default function OrderTables() {
           
       if(res.data.status==true) {
 
-        alert(res.data.message)
+         toast.success(res.data.message);
 
       }else if(res.data.status==false&&res.data.status=='Unauthorized'){
             localStorage.removeItem("token");
@@ -242,12 +252,16 @@ export default function OrderTables() {
        }
        else{
 
-           alert(res.data.message)
+         toast.error(res.data.message || "Something went wrong");
       }   
           
     }
 
      const handleExcelDownload = () => {
+
+
+      //  window.open(`${apiUrl}/users/export/orders`, "_blank");
+
         // Convert data to worksheet
         const worksheet = XLSX.utils.json_to_sheet(orders);
         // Create a workbook

@@ -8,6 +8,7 @@ import {  useNavigate } from "react-router-dom";
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [userName, setUserName] = useState("User");
+    const [userNameId, setUserNameId] = useState("User");
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [userImage, setUserImage] = useState("");
   const [userRole, setUserRole] = useState("U");
@@ -22,6 +23,7 @@ export default function UserDropdown() {
         console.log();
         
         setUserName(parsedUser.firstName || "User");
+         setUserNameId(parsedUser.username || "User");
         setUserEmail(parsedUser.email || "user@example.com");
         setUserImage(parsedUser.image || "");
         setUserRole(parsedUser.role || "U");
@@ -30,6 +32,9 @@ export default function UserDropdown() {
       }
     }
 
+
+    console.log(userImage);
+    
     // ✅ Call API after fetching local data
     // const fetchUserData = async () => {
     //   try {
@@ -61,6 +66,9 @@ export default function UserDropdown() {
   const userInitial =
     userRole?.trim()?.length > 0 ? userRole.trim()[0].toUpperCase() : "U";
 
+    console.log(userInitial);
+    
+
   function toggleDropdown() {
     setIsOpen(!isOpen);
   }
@@ -86,7 +94,7 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-gray-200 flex items-center justify-center text-theme-sm font-bold text-gray-700">
+        {/* <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-gray-200 flex items-center justify-center text-theme-sm font-bold text-gray-700">
           {userImage ? (
             <img
               src={`http://localhost:5000/uploads/${userImage}`}
@@ -96,9 +104,9 @@ export default function UserDropdown() {
           ) : (
             userInitial
           )}
-        </span>
+        </span> */}
 
-        <span className="block mr-1 font-medium text-theme-sm">{userName}</span>
+        <span className="block mr-1 font-medium text-theme-sm">{userNameId}</span>
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""

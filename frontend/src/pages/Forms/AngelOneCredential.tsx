@@ -179,8 +179,7 @@ import { toast } from "react-toastify";
 
 const AngelOneCredential: FC = () => {
 
-     const apiUrl = import.meta.env.VITE_API_URL;
-
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   // 🔑 Form fields
   const [clientId, setClientId] = useState("");
@@ -190,9 +189,6 @@ const AngelOneCredential: FC = () => {
   // 👁️ Toggles
   const [showTotp, setShowTotp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-
- 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,16 +207,17 @@ const AngelOneCredential: FC = () => {
                     },
              })
 
-             console.log(res);
+             if(res.data.status==true) {
+              
+              toast.success(res?.data?.message);
+              setClientId("");
+              setTotpSecret("");
+              setPassword("");
+                    
+             }else{
+              toast.error(res?.data?.message || "Something went wrong");
              
-
-    
-     
-
-    //   toast.success(res.data?.message || "Credentials updated");
-      setClientId("");
-      setTotpSecret("");
-      setPassword("");
+             }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Something went wrong");
     }

@@ -51,15 +51,33 @@ export default function SignUpForm() {
         isChecked: isChecked
       });
 
-      if (response.status === 201) {
+    
+      if (response.data.status == true) {
+
+        console.log(response.data);
+        
         toast.success("User registered successfully!");
         setFirstName("");
         setLastName("");
         setEmail("");
         setPassword("");
         setIsChecked(false);
+        
+
+      localStorage.setItem("token", response?.data?.token);
+      localStorage.setItem("user", JSON.stringify( response?.data?.saveUser));
+
+     
+      navigate("/dashboard");
+
+       
+      }else {
+
+        console.log(response);
+        
+         toast.error(response.data.message);
       }
-      navigate("/");
+      
 
     } catch (error: any) {
       if (error.response && error.response.data?.message) {

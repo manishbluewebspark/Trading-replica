@@ -247,11 +247,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useOrderCount } from "../../socket/useOrderCount";
-
+import { toast } from "react-toastify";
 
 export default function DashboardMain() {
 
-     const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   // ✅ all hooks go inside the component, at the top level
   const total = useOrderCount();
@@ -283,7 +283,7 @@ const [reload, setReload] = useState(false);
         
 
         // adjust based on your API shape
-        setData(data.availablecash);
+        setData(data?.availablecash||0);
       } catch (err: any) {
         console.error("fetch error:", err);
         setError(err?.response?.data?.message || "Failed to load data");
@@ -299,6 +299,8 @@ const [reload, setReload] = useState(false);
   // Function runs when button is clicked
   const handleGenerateToken =  async () => {
 
+       try{
+          
          const {data} = await axios.get(
           `${apiUrl}/users/login/totp/angelone`,
           {
@@ -308,18 +310,18 @@ const [reload, setReload] = useState(false);
           }
         );
 
-       console.log('hello 1');
+       console.log('hello 1',data);
        
 
        if(data.status==true) {
 
-        console.log('hello 2');
+      
          
        let angel_auth_token = data.data.jwtToken
        let angel_refresh_token = data.data.refreshToken
        let angel_feed_token = data.data.feedToken
 
-       console.log('hello 3');
+       
 
        localStorage.setItem("angel_token", angel_auth_token);
        localStorage.setItem("angel_feed_token", angel_refresh_token);
@@ -328,16 +330,21 @@ const [reload, setReload] = useState(false);
         console.log('hello 4');
         
         //  // 🔘 This function can be called from anywhere (button, etc.)
-          setReload(prev => !prev);   
+          setReload(prev => !prev);  
+          
+           toast.success("Login Successful in AngelOne!");
 
-          alert('save')
-
-
-        
-    
       // window.location.href = `${apiUrl}/auth/angelone`;
 
-  };
+  }else{
+        toast.error(data.message);
+  }
+
+       }catch(err:any) {
+        toast.error(err.message);
+  }
+
+        
 
 }
 

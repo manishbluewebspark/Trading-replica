@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 const authMiddleware = (req, res, next) => {
 
-  const token = req.headers.authorization?.split(' ')[1];
+const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     
@@ -13,23 +13,16 @@ const authMiddleware = (req, res, next) => {
             message: "Unauthorized",
             error: null,
         });
-  
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    console.log(decoded);
-    
 
     req.userId = decoded.id;
 
     next();
 
   } catch (err) {
-
-    console.log(err);
-    
 
     return res.status(403).json({ message: 'Token invalid or expired' });
   }

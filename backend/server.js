@@ -34,7 +34,8 @@ dotenv.config();
 const corsOptions = {
   origin: [  
     'http://localhost:5173',
-    'https://pleadingly-misshapen-wilber.ngrok-free.dev'  
+     'http://3.109.204.28',
+    'https://pleadingly-misshapen-wilber.ngrok-free.dev'
  
   ],
   // credentials: true,  
@@ -51,6 +52,7 @@ app.use(express.json());
 app.get("/test/point", (req, res) => {
   
   res.send("Login callback received successfully ✅");
+  
 });
 
 
@@ -105,5 +107,6 @@ sequelize.sync({ force: false }).then(() => {
 // refresh_token = eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJSRUZSRVNILVRPS0VOIjoiZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SjFjMlZ5WDNSNWNHVWlPaUpqYkdsbGJuUWlMQ0owYjJ0bGJsOTBlWEJsSWpvaWRISmhaR1ZmY21WbWNtVnphRjkwYjJ0bGJpSXNJbWR0WDJsa0lqb3dMQ0p6YjNWeVkyVWlPaUl6SWl3aVpHVjJhV05sWDJsa0lqb2lNV1V6WkRkbU9XRXRORFExWWkwelpHTTFMVGt4TVdFdE5qUmxaamsyT0RZd05XSmtJaXdpYTJsa0lqb2lkSEpoWkdWZmEyVjVYM1l5SWl3aWIyMXVaVzFoYm1GblpYSnBaQ0k2TUN3aWFYTnpJam9pYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrRlNTazFCTVRreU1TSXNJbVY0Y0NJNk1UYzJNVFkwTlRVMk1pd2libUptSWpveE56WXhOVFU0T1RneUxDSnBZWFFpT2pFM05qRTFOVGc1T0RJc0ltcDBhU0k2SW1NME9UTXdaalV5TFRWbFpHTXROREkxTnkxaE1HRTJMVEZpWWpVME1URXhZalF5WXlJc0lsUnZhMlZ1SWpvaUluMC54dnczTFJPeG4wZlVwNldVdmdfallBS0VxbjdCLVpuLXJBLUdKbUtnYUs4NXN2dXZxM1pCQXNIckx4T0pIbFpkeTljSmRQaDltNGFjVVNWNTF6S3FXMkpBS3VveG4tc2prLW5ER3FhV2FyY3F1Z2hYNmNYSGtvaWVMalktaFhiM1o5UFZ1V1ZyaVVCRHRfdURnODM4aW4wMjMzRUgxREtLdmJRY3FranJFX1EiLCJpYXQiOjE3NjE1NTkxNjJ9.jn9DJ7Vp6frTP0WjPBCwuZqqQclvjvw9WbDRVVBEmT0Pf39QQv2304w86cNKBBQVyq3hF92yX0f67NGG3DviSA
 
 //  token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzYxNjI1ODUzLCJleHAiOjE3NjE3MTIyNTN9.tAnJRzX4Svdb9xqJDc6zGlmJ3ZLyUbFLTMjjQKGMnTw
+
 
 

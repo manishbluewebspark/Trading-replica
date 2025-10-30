@@ -29,14 +29,27 @@ export default function SignInUser() {
         password,
       });
 
+
+      console.log(response.data);
+
+      if(response.data.status==true) {
+
       const { token, user } = response.data;
-
-
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-
       toast.success("Login successful!");
       navigate("/dashboard");
+
+      }else{
+  toast.error(
+         response.data.message|| "Login failed. Please try again."
+        );
+      }
+
+      
+      
+
+
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Login failed. Please try again."
@@ -98,14 +111,14 @@ export default function SignInUser() {
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Email <span className="text-error-500">*</span>
+                    Email OR Username <span className="text-error-500">*</span>
                   </Label>
                   <Input
-                    placeholder="info@gmail.com"
+                     placeholder="Enter your email or username"
                     value={emailOrUsername}
                     onChange={(e) => setEmailOrUsername(e.target.value)}
                     required
-                    type="email"
+                    type="text"
                   />
                 </div>
                 <div>

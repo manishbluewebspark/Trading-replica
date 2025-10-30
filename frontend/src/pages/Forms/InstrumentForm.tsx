@@ -826,7 +826,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import * as XLSX from 'xlsx';
-
+import { toast } from "react-toastify";
 // --- AG Grid v31+ (modular) ------------------------------
 import { ModuleRegistry } from "ag-grid-community";
 import { AllCommunityModule } from "ag-grid-community";
@@ -953,14 +953,14 @@ export default function InstrumentForm() {
 
        }else{
 
-              alert(res?.data?.message)
+         toast.error(res?.data?.message || "Something went wrong");
 
        }
 
  
     } catch (err: any) {
 
-      alert(err?.message)
+       toast.error(err?.message || "Something went wrong");
       
       setError(err?.message || "Something went wrong");
     } finally {
@@ -996,11 +996,11 @@ export default function InstrumentForm() {
 
            }else{
 
-            alert(res?.data?.message)
+             toast.error(res?.data?.message || "Something went wrong");
            }
      }catch(err:any) {
 
-      alert(err.message)
+       toast.error(err.message || "Something went wrong");
      }
     
   };
@@ -1030,11 +1030,11 @@ export default function InstrumentForm() {
 
            }else{
 
-            alert(res?.data?.message)
+            toast.error(res?.data?.message || "Something went wrong");
            }
      }catch(err:any) {
 
-      alert(err.message)
+      toast.error(err.message || "Something went wrong");
      }
   };
 
@@ -1137,7 +1137,6 @@ export default function InstrumentForm() {
     if(res?.data?.status==true) {
 
       alert(res?.data?.message)
-
       setShowForm(false);
       setVariety("");
       setDuration("");
@@ -1146,12 +1145,13 @@ export default function InstrumentForm() {
    
     }else{
 
-          alert(res?.data?.message)
+      toast.error(res?.data?.message || "Something went wrong");
+         
     }
   
     }catch(err:any) {
 
-         alert(err.message)
+       toast.error(err.message || "Something went wrong");
     }
 
   };

@@ -47,9 +47,6 @@ export const placeOrder = async (req, res,next) => {
 
         let response = await axios(config)
 
-       
-        
-
     //    const total = 190
     //    getIO().to("orders").emit("orders:count", {total});
 
@@ -89,6 +86,7 @@ export const placeOrder = async (req, res,next) => {
         });
     }
 };
+
 
 //   WOKRING 
 export const cancelOrder = async (req, res,next) => {
@@ -176,6 +174,7 @@ export const cancelOrder = async (req, res,next) => {
     }
 };
 
+
 //   WOKRING 
 export const getOrder = async (req, res,next) => {
     try {
@@ -231,6 +230,7 @@ export const getOrder = async (req, res,next) => {
         });
     }
 };
+
 
 // export const getOrder = async (req, res,next) => {
 //     try {
@@ -299,7 +299,6 @@ export const getBookOrder = async (req, res,next) => {
 };
 
 
-
 //   WOKRING 
 export const getLTP = async (req, res,next) => {
     try {
@@ -361,6 +360,7 @@ export const getLTP = async (req, res,next) => {
     }
 };
 
+
 //   WOKRING 
 export const getTradeBook1 = async (req, res,next) => {
     try {
@@ -400,6 +400,7 @@ export const getTradeBook1 = async (req, res,next) => {
         });
     }
 };
+
 
 // WOKRING
 export const ModifyOrder = async (req, res,next) => {

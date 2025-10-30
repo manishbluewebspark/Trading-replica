@@ -22,7 +22,10 @@ const User = sequelize.define('User', {
   },
   phoneNumber: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+     validate: {
+    len: [10, 15], // ✅ min 10, max 15 characters
+  },
   },
   password: {
     type: DataTypes.STRING,
