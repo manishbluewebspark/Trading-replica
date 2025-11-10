@@ -51,15 +51,19 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  angeloneId: {
+  brokerName: {
   type: DataTypes.STRING,
-  allowNull: true,
-  unique: true
+  allowNull: true
 },
-// brokerType:{
-// type: DataTypes.TEXT,
-//   allowNull: true,
-// },
+brokerImageLink:{
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
+angelLoginUser:{
+  type: DataTypes.BOOLEAN,
+  allowNull: true,
+},
+
 authToken: {
   type: DataTypes.TEXT,
   allowNull: true,
@@ -69,6 +73,14 @@ feedToken: {
   allowNull: true,
 },
 refreshToken: {
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
+resetCode:{
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
+resetCodeExpire:{
   type: DataTypes.TEXT,
   allowNull: true,
 }

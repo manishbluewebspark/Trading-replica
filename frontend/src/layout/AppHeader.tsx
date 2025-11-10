@@ -6,10 +6,60 @@ import { useSidebar } from "../context/SidebarContext";
 import NotificationDropdown from "../components/header/NotificationDropdown";
 import UserDropdown from "../components/header/UserDropdown";
 
+type Tick = {
+  mode: 1 | 2 | 3;
+  exchangeType: number;
+  token: string;
+  sequenceNumber: number;
+  exchangeTimestamp: string;
+  ltpPaiseOrRaw: number;
+  ltp: number;
+};
+
+
+import { getSocket } from ".././socket/Socket";
+
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+
+  const [nifty, setNifty] = useState<number | null>(null);
+  const [bankNifty, setBankNifty] = useState<number | null>(null);
+
+    const lastTickTime = useRef<number>(Date.now());
+
+  // Example: Replace with real API or WebSocket later
+  useEffect(() => {
+    // Simulated values for demo
+    
+
+      const socket = getSocket();
+      
+          const onTick = (tick: Tick) => {
+
+            // console.log(tick,'app header');
+
+             lastTickTime.current = Date.now();
+
+            let nifty_50_token = '99926000'
+            let bank_nifty_token = '99926009'
+            
+           // Match tokens & update only the correct state
+            if (tick.token === nifty_50_token) {
+              setNifty(tick.ltp);
+            } else if (tick.token === bank_nifty_token) {
+              setBankNifty(tick.ltp);
+            }
+            
+            
+          };
+      
+          socket.on("tick", onTick);
+
+
+  }, []);
+
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -115,6 +165,38 @@ const AppHeader: React.FC = () => {
             </svg>
           </button>
 
+       {/* Left side */}
+<div className="flex items-center gap-20 pl-20">
+ 
+
+      {/* Nifty 50 */}
+      <a
+        href="https://www.tradingview.com/chart/UEWMwVlE/?symbol=NSE%3ANIFTY"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex flex-col items-start hover:text-blue-600 transition-colors"
+      >
+        <span className="text-sm font-semibold text-gray-900">Nifty 50</span>
+        <span className="text-[13px] font-medium text-gray-600">
+          {nifty ? nifty.toFixed(2) : "--"}
+        </span>
+      </a>
+
+      {/* Bank Nifty */}
+      <a
+        href="https://www.tradingview.com/chart/?symbol=NSE%3ABANKNIFTY"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex flex-col items-start hover:text-blue-600 transition-colors"
+      >
+        <span className="text-sm font-semibold text-gray-900">Bank Nifty</span>
+        <span className="text-[13px] font-medium text-gray-600">
+          {bankNifty ? bankNifty.toFixed(2) : "--"}
+        </span>
+      </a>
+    </div>
+
+
           <div className="hidden lg:block">
             <form>
               <div className="relative">
@@ -158,6 +240,7 @@ const AppHeader: React.FC = () => {
           <div className="flex items-center gap-2 2xsm:gap-3">
             {/* <!-- Dark Mode Toggler --> */}
             {/* <ThemeToggleButton /> */}
+            
             {/* <!-- Dark Mode Toggler --> */}
             <NotificationDropdown />
             {/* <!-- Notification Menu Area --> */}

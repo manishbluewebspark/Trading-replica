@@ -37,6 +37,7 @@ import { useSidebar } from "../context/SidebarContext";
 
 
 
+
 type Role = "admin" | "user";
 
 type SubItem = {
@@ -63,12 +64,12 @@ const navItems: NavItem[] = [
     roles: ["admin", "user"],
   },
 
-  {
-    icon: <ChartCandlestick size={20} />,
-    name: "Watch List",
-    path: "/new-watch",
-    roles: ["admin", "user"],
-  },
+  // {
+  //   icon: <ChartCandlestick size={20} />,
+  //   name: "Watch List",
+  //   path: "/new-watch",
+  //   roles: ["admin", "user"],
+  // },
 
   {
     icon: <ClipboardList size={20} />,
@@ -82,104 +83,105 @@ const navItems: NavItem[] = [
     path: "/instrument",
     roles: ["admin", "user"],
   },
+  // {
+  //   icon: <Layers size={20} />,
+  //   name: "Nifty-Bank Instrument",
+  //   path: "/instrument/niftyandbanknifty",
+  //   roles: ["admin", "user"],
+  // },
   {
     icon: <LineChart size={20} />,
     name: "Trades",
     path: "/trades",
     roles: ["admin", "user"],
   },
-  {
-    icon: <Layers size={20} />,
-    name: "Net Position",
-    path: "/new-position",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <Briefcase size={20} />,
-    name: "Management",
-    path: "/management",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <FileText size={20} />,
-    name: "Order Logs",
-    path: "/order-logs",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <Activity size={20} />,
-    name: "Activity Logs",
-    path: "/activity-logs",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <Settings size={20} />,
-    name: "Trade Setting",
-    path: "/trade-setting",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <PieChart size={20} />,
-    name: "Option Analytics",
-    path: "/option-analytics",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <Radio size={20} />,
-    name: "Broadcast Messages",
-    path: "/broadcast-analytics",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <HelpCircle size={20} />,
-    name: "Support",
-    path: "/support",
-    roles: ["admin", "user"],
-  },
+  
+  // {
+  //   icon: <Briefcase size={20} />,
+  //   name: "Management",
+  //   path: "/management",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <FileText size={20} />,
+  //   name: "Order Logs",
+  //   path: "/order-logs",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <Activity size={20} />,
+  //   name: "Activity Logs",
+  //   path: "/activity-logs",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <Settings size={20} />,
+  //   name: "Trade Setting",
+  //   path: "/trade-setting",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <PieChart size={20} />,
+  //   name: "Option Analytics",
+  //   path: "/option-analytics",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <Radio size={20} />,
+  //   name: "Broadcast Messages",
+  //   path: "/broadcast-analytics",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <HelpCircle size={20} />,
+  //   name: "Support",
+  //   path: "/support",
+  //   roles: ["admin", "user"],
+  // },
 
  
-  {
-    icon: <img src={BrokerIcon} alt="Users" className="w-5 h-5" />,
-    name: "User Position",
-    path: "",
-    roles: ["admin", "user"],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Users",
-    subItems: [
-      { name: "All Users", path: "/all-users", roles: ["admin"] },
-      { name: "Users Report", path: "/user-reports", roles: ["admin", "user"] },
-    ],
-    roles: ["admin"],
-  },
-  {
-    icon: <img src={UsersIcon} alt="Users" className="w-5 h-5" />,
-    name: "Brokers",
-    path: "/brokers",
-    roles: ["admin"],
-  },
-    {
-    icon: <RiBroadcastFill />,
-    name: "Broadcast",
-    path: "/broadcast",
-    roles: ["admin"],
-  },
-    {
-    icon: <TbLogs />,
-    name: "Activity Logs",
-    path: "/activity-logs",
-    roles: ["admin"],
-  },  
-    {
-    name: "Reports",
-    icon: <ListIcon />,
-    subItems: [
-      { name: "License Report", path: "/license-report", roles: ["admin"] },
-      { name: "PPO Report", path: "/error-404", roles: ["admin"] },
-    ],
-    roles: ["admin"],
-  },
+  // {
+  //   icon: <img src={BrokerIcon} alt="Users" className="w-5 h-5" />,
+  //   name: "User Position",
+  //   path: "",
+  //   roles: ["admin", "user"],
+  // },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Users",
+  //   subItems: [
+  //     { name: "All Users", path: "/all-users", roles: ["admin"] },
+  //     { name: "Users Report", path: "/user-reports", roles: ["admin", "user"] },
+  //   ],
+  //   roles: ["admin"],
+  // },
+  // {
+  //   icon: <img src={UsersIcon} alt="Users" className="w-5 h-5" />,
+  //   name: "Brokers",
+  //   path: "/brokers",
+  //   roles: ["admin"],
+  // },
+  //   {
+  //   icon: <RiBroadcastFill />,
+  //   name: "Broadcast",
+  //   path: "/broadcast",
+  //   roles: ["admin"],
+  // },
+  //   {
+  //   icon: <TbLogs />,
+  //   name: "Activity Logs",
+  //   path: "/activity-logs",
+  //   roles: ["admin"],
+  // },  
+  //   {
+  //   name: "Reports",
+  //   icon: <ListIcon />,
+  //   subItems: [
+  //     { name: "License Report", path: "/license-report", roles: ["admin"] },
+  //     { name: "PPO Report", path: "/error-404", roles: ["admin"] },
+  //   ],
+  //   roles: ["admin"],
+  // },
   // {
   //   name: "Forms",
   //   icon: <ListIcon />,
@@ -203,6 +205,8 @@ const navItems: NavItem[] = [
   //   roles: ["admin", "user"],
   // },
 ];
+
+
 
 const othersItems: NavItem[] = [
   {

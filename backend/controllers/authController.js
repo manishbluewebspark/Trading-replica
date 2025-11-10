@@ -11,6 +11,8 @@ import { generateRandomNumbers } from "../utils/randomWords.js";
 import axios from 'axios';
 import { generateTOTP } from '../utils/generateTOTP.js';
 import AngelOneCredentialer from '../models/angelOneCredential.js'
+import {  connectSmartSocket,isSocketReady} from "../services/smartapiFeed.js"
+import angelApi from "../utils/angelApiClient.js"; // <- the shared axios client
 
 
 const GROWW_CLIENT_ID = process.env.GROWW_CLIENT_ID;
@@ -20,6 +22,16 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 
 
 // ===================== auth controller start ================================
+
+
+let BrokerNameAndImageLink = [
+   {brokerName:'Angelone',link:'https://upload.wikimedia.org/wikipedia/commons/2/28/AngelOne_logo.png'},
+   {brokerName:'5Paisa',link:'https://cdn.techjockey.com/web/assets/images/techjockey/products/18508_5Paisalogo.jpg'},
+   {brokerName:'AliceBlue',link:'https://tvblog-static.tradingview.com/uploads/2024/06/alice-blue-now-on-tradingview-preview.jpg'},
+   {brokerName:'Binance',link:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj97fmjaCYgkevu7aFhgWDjXPfuNxt8bWk5w&s'},
+   {brokerName:'BitBns',link:'https://images.seeklogo.com/logo-png/42/1/bitbns-bns-logo-png_seeklogo-426572.png'},
+]
+
 
 
 async function generateUniqueUsername() {
@@ -44,7 +56,7 @@ async function generateUniqueUsername() {
 
 export const register = async (req, res) => {
 
-  const { firstName, lastName, email, password,mob, isChecked } = req.body;
+  const { firstName, lastName, email, password,mob, isChecked,broker } = req.body;
 
   try {
     if (!isChecked) {
@@ -92,8 +104,6 @@ export const register = async (req, res) => {
         }
       });
 
-
-    
     if (userExists){
 
        return res.json({
@@ -107,26 +117,44 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ✅ Find broker in the array (case-insensitive)
+    const matchedBroker = BrokerNameAndImageLink.find(
+      (item) => item.brokerName.toLowerCase() === broker?.toLowerCase()
+    );
+
+    // ✅ Get the image link (or fallback)
+    const brokerImage = matchedBroker ? matchedBroker.link : null;
+
      let saveUser = await User.create({
       firstName,
       lastName,
       username:username,
       email,
       phoneNumber:mob,
+      role:'user',
       password: hashedPassword,
-      isChecked
+      isChecked,
+      brokerName:broker,
+      brokerImageLink:brokerImage
     });
     
-     const token = jwt.sign({ id: saveUser.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+     const token = jwt.sign({ id: saveUser.id,role:saveUser.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+
    
      return res.json({
             status: true,
             statusCode:400,
             saveUser,token,
+            data:saveUser,
             message: "User registered successfully",
             error: null,
         });
   } catch (error) {
+
+
+    console.log(error);
+    
 
     return res.json({
             status: false,
@@ -138,6 +166,8 @@ export const register = async (req, res) => {
 
   }
 };
+
+
 
 
 export const login = async (req, res) => {
@@ -180,7 +210,15 @@ export const login = async (req, res) => {
 
     } 
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id,role:user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+     if(isSocketReady) {
+      console.log("🟢 SmartAPI socket already ready for");
+     }else{
+         connectSmartSocket(user.authToken,user.feedToken)
+     }
+
+   
 
      return res.json({
             status: true,
@@ -192,6 +230,9 @@ export const login = async (req, res) => {
 
   } catch (error) {
 
+    console.log(error);
+    
+
       return res.json({
             status: false,
             statusCode:500,
@@ -201,6 +242,9 @@ export const login = async (req, res) => {
         });
   }
 };
+
+
+
 
 
 
@@ -220,7 +264,7 @@ export const loginWithAngelOne = async (req, res) => {
 // Step 2: Get AngelOne Profile
 export const loginWithTOTPInAngelOne = async function (req,res,next) {
     try {
-
+        
     let existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
 
     if (!existing) {
@@ -267,12 +311,23 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
         authToken: data.data.jwtToken,
         feedToken: data.data.feedToken,
         refreshToken: data.data.refreshToken,
+        angelLoginUser:true,
       },
       {
         where: { id: req.userId },
         returning: true, // optional, to get the updated record
       }
     );
+
+
+
+        if (isSocketReady()) {
+        console.log('✅ WebSocket is connected!');
+      } else {
+          connectSmartSocket( data.data.jwtToken,data.data.feedToken)
+      }
+
+
 
       return res.status(200).json({
               status: true,
@@ -291,6 +346,10 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 
   } catch (error) {
 
+
+    console.log(error);
+    
+
     return res.json({
               status: false,
               data:null,
@@ -300,14 +359,115 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
   }
 }
 
+// export const loginWithTOTPInAngelOne = async (req, res, next) => {
+//   try {
+//     // 1) Fetch stored Angel creds for this user
+//     const existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
+//     if (!existing) {
+//       return res.status(404).json({
+//         status: false,
+//         statusCode: 404,
+//         message: "No credentials found for this user.",
+//         data: null,
+//       });
+//     }
+
+//     const createdData = existing.dataValues;
+//     const totpCode = await generateTOTP(createdData.totpSecret);
+
+//     // 2) Headers (keep your IPv4 public IP for compatibility)
+//     const headers = {
+//       "Content-Type": "application/json",
+//       "Accept": "application/json",
+//       "X-UserType": "USER",
+//       "X-SourceID": "WEB",
+//       "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP || "127.0.0.1",
+//       "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP || "1.187.216.154",
+//       "X-MACAddress": process.env.MAC_Address || "32:bd:3a:75:8f:62",
+//       "X-PrivateKey": process.env.PRIVATE_KEY, // Angel API key
+//     };
+
+//     // 3) Body (no stringify; axios handles JSON)
+//     const body = {
+//       clientcode: createdData.clientId,
+//       password: createdData.password,
+//       totp: totpCode,
+//     };
+
+//     // 4) Call Angel One Auth (note: single slash path; baseURL covers the host)
+//     const { data } = await angelApi.post(
+//       "/rest/auth/angelbroking/user/v1/loginByPassword",
+//       body,
+//       { headers }
+//     );
+
+//     // 5) Handle response
+//     if (data?.status === true && data?.data?.jwtToken) {
+//       // Persist tokens
+//       await User.update(
+//         {
+//           authToken: data.data.jwtToken,
+//           feedToken: data.data.feedToken,
+//           refreshToken: data.data.refreshToken,
+//         },
+//         { where: { id: req.userId } }
+//       );
+
+//       // Optional: Connect SmartAPI WebSocket using fresh tokens
+//       try {
+//         connectSmartSocket(data.data.jwtToken, data.data.feedToken);
+//       } catch (wsErr) {
+//         // Don't fail login if WS connect fails; just log it
+//         console.warn("SmartAPI WS connect error:", wsErr?.message || wsErr);
+//       }
+
+//       return res.status(200).json({
+//         status: true,
+//         statusCode: 200,
+//         data: data.data,
+//       });
+//     }
+
+//     // Angel returned an application error
+//     return res.status(401).json({
+//       status: false,
+//       statusCode: data?.errorCode || 401,
+//       message: data?.message || "Angel One login failed.",
+//       data: null,
+//     });
+//   } catch (error) {
+//     // Network/timeout/auth parsing etc.
+//     console.error("loginWithTOTPInAngelOne error:", {
+//       code: error?.code,
+//       errno: error?.errno,
+//       syscall: error?.syscall,
+//       address: error?.address,
+//       port: error?.port,
+//       message: error?.message,
+//       responseStatus: error?.response?.status,
+//       responseData: error?.response?.data,
+//     });
+
+//     return res.status(500).json({
+//       status: false,
+//       statusCode: 500,
+//       message: "Unexpected error occurred during Angel One login.",
+//       data: null,
+//       error: error?.message,
+//     });
+//   }
+// };
+
 export const getAngelOneProfile = async function (req,res,next) {
     try {
+
 
       var config = {
       method: 'get',
       url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile',
       headers : {
          'Authorization': `Bearer ${req.headers.angelonetoken}`,
+          // 'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-UserType': 'USER',
@@ -419,19 +579,52 @@ export const getAngelOneProfileFund = async function (req,res,next) {
 
     let {data} = await axios(config);
 
+
      if(data.status==true) {
 
-      return res.status(200).json({
+      var configTrade = {
+              method: 'get',
+              url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook',
+              headers: { 
+                 'Authorization': `Bearer ${req.headers.angelonetoken}`,
+                'Content-Type': 'application/json', 
+                'Accept': 'application/json', 
+                'X-UserType': 'USER', 
+                'X-SourceID': 'WEB', 
+               'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+              },
+              
+          };
+
+          
+      let getTradeData = await axios(configTrade);
+
+      if(getTradeData.data.status==true) {
+
+        return res.json({
               status: true,
-              data: data.data
+              statusCode:200,
+              data: data.data,
+              totalOrders:getTradeData.data.data||0,
           });
+      }else{
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:getTradeData.data.errorCode,
+              message:getTradeData.error.message
+          });
+     }
 
      }else{
           return res.json({
               status: false,
               data:null,
               statusCode:data.errorCode,
-              message:error.message
+              message:data.error.message
           });
      }
 
@@ -798,49 +991,70 @@ export const fyersCallback = async (req, res) => {
 
 
 export const sendForgotEmail = async (req, res) => {
+
   const { email } = req.body;
 
   try {
     const emailExist = await User.findOne({ where: { email } });
+
     if(!emailExist) {
+
       return res.status(400).json({ message: "email is not registered" });
+
     }
 
     const resetCode = Math.floor(10000 + Math.random() * 900000).toString();
 
     emailExist.resetCode = resetCode;
+
     emailExist.resetCodeExpire = Date.now() + 15 * 60 * 1000;
+
     await emailExist.save();
 
     await sendResetMail(email, resetCode);
 
     return res.status(200).json({ message: "Reset Code Send to Your Email" });
+
   } catch (error) {
+
     console.error(error);
+
     return res.status(500).json({ message: "server error" });
   }
 }
+
 
 export const verifyCode = async (req, res) => {
 
   const { email, code } = req.body;
 
   try {
+
     const user = await User.findOne({ where: { email } });
+
     if (!user) {
+
       return res.status(404).json({ message: "Email not registered" });
     }
 
     if (user.resetCode === code) {
+
       return res.status(200).json({ message: "Code verified successfully" });
+
     } else {
+
       return res.status(400).json({ message: "Invalid or expired code" });
+
     }
   } catch (error) {
+
     console.error("Verify code error:", error);
+
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
 
 export const newPassword = async (req, res) => {
   try {
@@ -871,6 +1085,10 @@ export const newPassword = async (req, res) => {
     return res.status(500).json({ message: "internal server error" })
   }
 };
+
+
+
+
 
 // ===================== auth controller end ================================
 
@@ -930,10 +1148,11 @@ export const addressUpdate = async (req, res) => {
 };
 
 export const updatePassword = async (req, res) => {
-  const { id, currentPassword, newPassword, confirmPassword } = req.body;
+
+  const { currentPassword, newPassword, confirmPassword } = req.body;
 
   try {
-    const existingUser = await User.findByPk(id);
+    const existingUser = await User.findByPk(req.userId);
     if (!existingUser) {
       return res.status(404).json({ message: "User not found" });
     }

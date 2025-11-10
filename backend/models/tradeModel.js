@@ -16,6 +16,10 @@ const Trade = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    token:{
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     instrumenttype: {
       type: DataTypes.STRING,
       allowNull: true,

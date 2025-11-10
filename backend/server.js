@@ -5,12 +5,17 @@ import authRoutes from './routes/authRoute.js';
 import userRoutes from './routes/userRoute.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import orderRoute from './routes/orderRoute.js';
+import adminRoute from './routes/admin/adminOrderRoute.js';
 import cors from 'cors';
 import path from 'path';
-import http from "http";         
+import http from "http";
+import session from "express-session";
+import cookieParser from "cookie-parser";
 import { initSocket } from "./socket/index.js";
 
-
+import { connectSmartSocket } from "./services/smartapiFeed.js";
+import {bulkInsertPostgre} from "./script/postgre.js"
+import {seedAdmin} from './script/adminInsert.js'
 
 
 
@@ -30,12 +35,17 @@ main().catch(console.error);
 
 
 
+
+// bulkInsertPostgre()
+// bulkUpdateSyFieldsJS()
+
 dotenv.config();
 const corsOptions = {
   origin: [  
-    'http://localhost:5173',
-     'http://3.109.204.28',
-    'https://pleadingly-misshapen-wilber.ngrok-free.dev'
+        process.env.CROSS_ORIGIN_APP_1,   // your React/Vite app
+        process.env.CROSS_ORIGIN_APP_2,
+        process.env.CROSS_ORIGIN_APP_3,
+        process.env.CROSS_ORIGIN_APP_4,
  
   ],
   // credentials: true,  
@@ -44,9 +54,27 @@ const corsOptions = {
 };
 const app = express();
 
-
+app.use(cookieParser()); // <– parses cookies automatically
 app.use(cors(corsOptions)); 
 app.use(express.json());
+
+
+
+  // connectSmartSocket(process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN)
+
+
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  name: "sid",
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,          // HTTP only in dev
+    maxAge: 1000 * 60 * 60,
+  },
+}));
 
 
 app.get("/test/point", (req, res) => {
@@ -62,6 +90,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use("/api/licenses", licenseRoutes);
 app.use('/api/order', orderRoute);
+app.use('/api/admin', adminRoute);
+
+
 
 
 const server = http.createServer(app);
@@ -80,6 +111,7 @@ sequelize.sync({ force: false }).then(() => {
 
   server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
+    // seedAdmin()
   });
 }).catch(err => {
   console.error('❌ DB connection error:', err);
@@ -107,6 +139,7 @@ sequelize.sync({ force: false }).then(() => {
 // refresh_token = eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJSRUZSRVNILVRPS0VOIjoiZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SjFjMlZ5WDNSNWNHVWlPaUpqYkdsbGJuUWlMQ0owYjJ0bGJsOTBlWEJsSWpvaWRISmhaR1ZmY21WbWNtVnphRjkwYjJ0bGJpSXNJbWR0WDJsa0lqb3dMQ0p6YjNWeVkyVWlPaUl6SWl3aVpHVjJhV05sWDJsa0lqb2lNV1V6WkRkbU9XRXRORFExWWkwelpHTTFMVGt4TVdFdE5qUmxaamsyT0RZd05XSmtJaXdpYTJsa0lqb2lkSEpoWkdWZmEyVjVYM1l5SWl3aWIyMXVaVzFoYm1GblpYSnBaQ0k2TUN3aWFYTnpJam9pYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrRlNTazFCTVRreU1TSXNJbVY0Y0NJNk1UYzJNVFkwTlRVMk1pd2libUptSWpveE56WXhOVFU0T1RneUxDSnBZWFFpT2pFM05qRTFOVGc1T0RJc0ltcDBhU0k2SW1NME9UTXdaalV5TFRWbFpHTXROREkxTnkxaE1HRTJMVEZpWWpVME1URXhZalF5WXlJc0lsUnZhMlZ1SWpvaUluMC54dnczTFJPeG4wZlVwNldVdmdfallBS0VxbjdCLVpuLXJBLUdKbUtnYUs4NXN2dXZxM1pCQXNIckx4T0pIbFpkeTljSmRQaDltNGFjVVNWNTF6S3FXMkpBS3VveG4tc2prLW5ER3FhV2FyY3F1Z2hYNmNYSGtvaWVMalktaFhiM1o5UFZ1V1ZyaVVCRHRfdURnODM4aW4wMjMzRUgxREtLdmJRY3FranJFX1EiLCJpYXQiOjE3NjE1NTkxNjJ9.jn9DJ7Vp6frTP0WjPBCwuZqqQclvjvw9WbDRVVBEmT0Pf39QQv2304w86cNKBBQVyq3hF92yX0f67NGG3DviSA
 
 //  token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzYxNjI1ODUzLCJleHAiOjE3NjE3MTIyNTN9.tAnJRzX4Svdb9xqJDc6zGlmJ3ZLyUbFLTMjjQKGMnTw
+
 
 
 

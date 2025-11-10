@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import {  useNavigate } from "react-router-dom";
-
-
+import axios from "axios";
 
 export default function UserDropdown() {
+
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [isOpen, setIsOpen] = useState(false);
   const [userName, setUserName] = useState("User");
     const [userNameId, setUserNameId] = useState("User");
@@ -20,10 +22,9 @@ export default function UserDropdown() {
       try {
         const parsedUser = JSON.parse(storedUser);
 
-        console.log();
+       
         
-        setUserName(parsedUser.firstName || "User");
-         setUserNameId(parsedUser.username || "User");
+        setUserNameId(parsedUser.username || "User");
         setUserEmail(parsedUser.email || "user@example.com");
         setUserImage(parsedUser.image || "");
         setUserRole(parsedUser.role || "U");
@@ -31,35 +32,37 @@ export default function UserDropdown() {
         console.error("Failed to parse user from localStorage", error);
       }
     }
-
-
-    console.log(userImage);
     
     // ✅ Call API after fetching local data
-    // const fetchUserData = async () => {
-    //   try {
-    //     const response = await axios.get("http://localhost:5000/api/users/get/user/profile", {
-    //       headers: {
-    //         Authorization: `Bearer ${localStorage.getItem("token")}`, // optional
-    //       },
-    //     });
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/users/getuser/profile`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // optional
+          },
+        });
 
-    //      let resData = response.data
+         let resData = response.data
 
-    //      if(resData.status==true){
+         if(resData.status==true){
 
-    //        setUserName( resData.data.name);
+           console.log(resData.data);
 
-    //      }else{
-    //       // alert('Error fetching user data')
-    //      }
+           let UserNameDb = resData.data.firstName+' '+resData.data.lastName
+
+           setUserName(resData.data.username);
+           setUserNameId( UserNameDb);
+
+         }else{
+          // alert('Error fetching user data')
+         }
         
-    //   } catch (error) {
-    //     console.error("Error fetching user data:", error);
-    //   }
-    // };
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
 
-    // fetchUserData(); // call function
+    fetchUserData(); // call function
 
   }, []);
 
@@ -77,7 +80,38 @@ export default function UserDropdown() {
     setIsOpen(false);
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+
+
+  
+      try {
+        const response = await axios.get(`${API_URL}/users/logout`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // optional
+          },
+        });
+
+         let resData = response.data
+
+         if(resData.status==true){
+
+           console.log(resData.data);
+
+           let UserNameDb = resData.data.firstName+' '+resData.data.lastName
+
+           setUserName(resData.data.username);
+           setUserNameId( UserNameDb);
+
+         }else{
+          // alert('Error fetching user data')
+         }
+        
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+
+
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("termsAccepted");
@@ -162,7 +196,7 @@ export default function UserDropdown() {
               AngelOne Credential
             </DropdownItem>
           </li>
-          <li>
+          {/* <li>
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
@@ -171,7 +205,7 @@ export default function UserDropdown() {
             >
               Account settings
             </DropdownItem>
-          </li>
+          </li> */}
           <li>
             <DropdownItem
               onItemClick={closeDropdown}

@@ -12,29 +12,62 @@ interface UserInfo {
   lastName: string;
   email: string;
   phoneNumber: string;
+  username:"";
+  brokerName:"";
   bio: string;
   image: File | null;
 }
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
+
+    const [broker, setBroker] = useState("");
+
   const apiUrl = import.meta.env.VITE_API_URL;
   const [userInfo, setUserInfo] = useState<UserInfo>({
     id: 1,
     firstName: "",
     lastName: "",
+    brokerName:"",
     email: "",
+    username:"",
     phoneNumber: "",
     bio: "",
     image: null,
   });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUserInfo(parsedUser);
-    }
+    // const storedUser = localStorage.getItem("user");
+    // if (storedUser) {
+    //   const parsedUser = JSON.parse(storedUser);
+    //   setUserInfo(parsedUser);
+    // }
+
+     const fetchUserData = async () => {
+      try {
+       
+          // 2️⃣ Call your GET API after user found
+          const res = await axios.get(`${apiUrl}/users/getuser/profile`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+              AngelOneToken: localStorage.getItem("angel_token") || "",
+            },
+          });
+
+          
+          setUserInfo(res.data.data);
+          setBroker(res.data.data.brokerName)
+        
+      } catch (err: any) {
+        console.error("API fetch error:", err);
+       
+      } finally {
+       
+      }
+    };
+
+    fetchUserData();
+
   }, []);
 
   const handleChange = (field: keyof UserInfo, value: any) => {
@@ -52,16 +85,23 @@ export default function UserInfoCard() {
       formData.append("lastName", userInfo.lastName);
       formData.append("email", userInfo.email);
       formData.append("phoneNumber", userInfo.phoneNumber);
+      formData.append("brokerName", broker);
       formData.append("bio", userInfo.bio);
       if (userInfo.image) {
         formData.append("image", userInfo.image);
       }
 
-      const response = await axios.put(`${apiUrl}/auth/profile/update`, formData, {
+      console.log(broker);
+      
+
+
+      const response = await axios.put(`${apiUrl}/users/profile/update`, formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          "AngelOneToken": localStorage.getItem("angel_token") || "",
         },
       });
+
 
       const updatedUser = response.data.user;
       localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -88,13 +128,19 @@ export default function UserInfoCard() {
           <div>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400"> Name</p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-words">
-              {userInfo.firstName}  {userInfo.lastName}
+              {userInfo.firstName}
             </p>
           </div>
           <div>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Last Name</p>
             <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-words">
               {userInfo.lastName}
+            </p>
+          </div>
+          <div>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">UserName</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-words">
+              {userInfo.username}
             </p>
           </div>
           <div>
@@ -109,9 +155,17 @@ export default function UserInfoCard() {
               {userInfo.phoneNumber}
             </p>
           </div>
+            <div>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Broker</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-words">
+              {userInfo.brokerName}
+            </p>
+          </div>
+
+
           
         </div>
-      </div>
+     </div>
 
       {/* Right: Edit button */}
       <button
@@ -146,25 +200,46 @@ export default function UserInfoCard() {
               </div>
 
               <div>
-                <Label>First Name</Label>
-                <Input type="text" value={userInfo.firstName} onChange={(e) => handleChange("firstName", e.target.value)} />
+                <Label>First Name <span className="text-error-500">*</span></Label>
+                <Input type="text" required value={userInfo.firstName} onChange={(e) => handleChange("firstName", e.target.value)} />
               </div>
               <div>
-                <Label>Last Name</Label>
-                <Input type="text" value={userInfo.lastName} onChange={(e) => handleChange("lastName", e.target.value)} />
+                <Label>Last Name <span className="text-error-500">*</span></Label>
+                <Input type="text" required value={userInfo.lastName} onChange={(e) => handleChange("lastName", e.target.value)} />
+              </div>
+               <div>
+                <Label>UserName<span className="text-error-500">*</span></Label>
+                <Input type="text" required value={userInfo.username} onChange={(e) => handleChange("username", e.target.value)} />
               </div>
               <div>
-                <Label>Email</Label>
-                <Input type="email" value={userInfo.email} onChange={(e) => handleChange("email", e.target.value)} />
+                <Label>Email<span className="text-error-500">*</span></Label>
+                <Input type="email" required  value={userInfo.email} onChange={(e) => handleChange("email", e.target.value)} />
               </div>
               <div>
-                <Label>Phone</Label>
-                <Input type="text" value={userInfo.phoneNumber} onChange={(e) => handleChange("phoneNumber", e.target.value)} />
+                <Label>Phone <span className="text-error-500">*</span></Label>
+                <Input type="text"   required value={userInfo.phoneNumber} onChange={(e) => handleChange("phoneNumber", e.target.value)} />
               </div>
-              {/* <div className="lg:col-span-2">
-                <Label>Bio</Label>
-                <Input type="text" value={userInfo.bio} onChange={(e) => handleChange("bio", e.target.value)} />
-              </div> */}
+                    <div>
+                    <Label>
+                      Broker<span className="text-error-500">*</span>
+                    </Label>
+                    <select
+                      id="broker"
+                      name="broker"
+                      value={broker}
+                      onChange={(e) => setBroker(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select Broker</option>
+                      <option value="Angelone">Angelone</option>
+                      <option value="5Paisa">5Paisa</option>
+                      <option value="AliceBlue">AliceBlue</option>
+                      <option value="Binance">Binance</option>
+                      <option value="BitBns">BitBns</option>
+                    </select>
+                  </div>
+
             </div>
           </div>
 

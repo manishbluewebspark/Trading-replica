@@ -237,7 +237,7 @@ const AngelOneCredential: FC = () => {
               htmlFor="client-id"
               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
             >
-              Client Id
+              Client Id <span className="text-error-500">*</span>
             </Label>
             <div className="relative">
               <Input
@@ -262,7 +262,7 @@ const AngelOneCredential: FC = () => {
               htmlFor="totp-secret"
               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
             >
-              TOTP Secret
+              TOTP Secret <span className="text-error-500">*</span>
             </Label>
             <div className="relative">
               <Input
@@ -297,7 +297,7 @@ const AngelOneCredential: FC = () => {
               htmlFor="ao-password"
               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
             >
-              Password
+              Password <span className="text-error-500">*</span>
             </Label>
             <div className="relative">
               <Input

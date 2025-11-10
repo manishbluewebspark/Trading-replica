@@ -4,6 +4,10 @@ import sequelize from "../config/db.js";
 const Order = sequelize.define(
   "Order",
   {
+    userId: {
+      type: DataTypes.INTEGER,   // 🔁 changed from UUID
+      allowNull: false,
+    },
     variety: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -24,11 +28,19 @@ const Order = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    totalPrice:{
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
     triggerprice: {
       type: DataTypes.FLOAT,
       allowNull: true,
     },
     quantity: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    actualQuantity:{
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -129,14 +141,6 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    fillid: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    filltime: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     parentorderid: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -146,6 +150,29 @@ const Order = sequelize.define(
       allowNull: true,
     },
     uniqueorderid: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    //  traded schema value 
+    tradedValue:{
+       type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+     fillprice: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    fillsize: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    fillid: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true, // Each fill is unique
+    },
+    filltime: {
       type: DataTypes.STRING,
       allowNull: true,
     },

@@ -7,6 +7,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const ChangePassword: FC = () => {
+
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -19,20 +20,20 @@ const ChangePassword: FC = () => {
         e.preventDefault();
 
         try {
-            const storedUser = localStorage.getItem("user");
-            if (!storedUser) {
-                toast.error("user not logged in");
-                return;
-            }
 
-            const { id } = JSON.parse(storedUser);
-
+           
             const res = await axios.put(`${apiUrl}/auth/update-password`, {
-                id,
                 currentPassword,
                 newPassword,
                 confirmPassword
-            })
+            },
+             {
+            headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+            "Content-Type": "application/json"
+            }
+  }
+        )
 
             toast.success(res.data.message);
             setCurrentPassword("");
@@ -55,7 +56,7 @@ const ChangePassword: FC = () => {
                             htmlFor="current-password"
                             className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                         >
-                            Current Password
+                            Current Password <span className="text-error-500">*</span>
                         </Label>
                         <div className="relative">
                             <Input
@@ -88,7 +89,7 @@ const ChangePassword: FC = () => {
                             htmlFor="password"
                             className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                         >
-                            New Password
+                            New Password <span className="text-error-500">*</span>
                         </Label>
                         <div className="relative">
                             <Input
@@ -123,7 +124,7 @@ const ChangePassword: FC = () => {
                             htmlFor="confirm-password"
                             className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                         >
-                            Confirm password
+                            Confirm password <span className="text-error-500">*</span>
                         </Label>
                         <div className="relative">
                             <Input

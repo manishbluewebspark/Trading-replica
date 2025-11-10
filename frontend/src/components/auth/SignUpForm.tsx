@@ -31,7 +31,7 @@ export default function SignUpForm() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log(firstName,lastName,email,mob,password,isChecked);
+    console.log(firstName,lastName,email,mob,password,isChecked,broker);
     
 
     if (!isChecked) {
@@ -48,7 +48,8 @@ export default function SignUpForm() {
         email: email.trim(),
         mob:mob,
         password: password,
-        isChecked: isChecked
+        isChecked: isChecked,
+        broker:broker
       });
 
     

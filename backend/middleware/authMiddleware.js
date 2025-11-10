@@ -5,6 +5,8 @@ const authMiddleware = (req, res, next) => {
 
 const token = req.headers.authorization?.split(' ')[1];
 
+const angelToken = req.headers.angelonetoken;
+
   if (!token) {
     
      return res.json({
@@ -15,11 +17,24 @@ const token = req.headers.authorization?.split(' ')[1];
         });
   }
 
+  // if(req.url!=='/login/totp/angelone'&&!angelToken) {
+
+  //     return res.json({
+  //           status: false,
+  //           statusCode:401,
+  //           message: "Angel Token not Found",
+  //           error: null,
+  //       });
+           
+  // }
+
+
+ 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.userId = decoded.id;
-
+    
     next();
 
   } catch (err) {

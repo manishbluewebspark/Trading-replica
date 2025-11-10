@@ -3,11 +3,6 @@ import speakeasy from 'speakeasy';
 
 export function generateTOTP(secret) {
 
-
-  console.log('hello ',generateTOTP);
-  
-
-
   return speakeasy.totp({
     secret: secret,   
     encoding: 'base32',

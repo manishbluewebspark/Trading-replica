@@ -41,6 +41,13 @@ import OrderTables from "./pages/Tables/OrderTables";
 import DashboardMain from "./pages/Dashboard/DashboardMain";
 import TradeTables from "./pages/Tables/TradeTables";
 import AngelOneCredential from "./pages/Forms/AngelOneCredential";
+import Home from "./pages/Dashboard/Home";
+import InstrumentFormAdmin from "./pages/Forms/instrumentFormAdmin";
+import AngelOrderTable from "./pages/Tables/AngelOrderTable";
+import AngelTradeTable from "./pages/Tables/AngelTradeTable";
+import NIftyAndBankNifty from "./pages/Forms/NIftyAndBankNifty";
+import UsersTables from "./pages/Tables/UsersTables";
+import OrderTableAdmin from "./pages/Tables/OrderTableAdmin";
 
 export default function App() {
   return (
@@ -81,18 +88,32 @@ export default function App() {
 
 
             <Route path="/instrument" element={<ProtectedRoute><InstrumentForm /></ProtectedRoute>} />
+ {/* <Route path="/instrument/niftyandbanknifty" element={<ProtectedRoute><NIftyAndBankNifty /></ProtectedRoute>} /> */}
+
             <Route path="/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
             <Route path="/angelonecredential" element={<ProtectedRoute><AngelOneCredential /></ProtectedRoute>} />
 
 
-              
+             <Route path="/angel/order" element={<ProtectedRoute><AngelOrderTable /></ProtectedRoute>} />
+            <Route path="/angel/trades" element={<ProtectedRoute><AngelTradeTable /></ProtectedRoute>} />
+
+                     <Route path="/admin/deshboard" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                     <Route path="/new/deshboard" element={<ProtectedRoute><DashboardMain /></ProtectedRoute>} />
 
-             
+               <Route path="/admin/usertable" element={<ProtectedRoute><UsersTables /></ProtectedRoute>} />
+                <Route path="/admin/order" element={<ProtectedRoute><OrderTableAdmin /></ProtectedRoute>} />
+
+
 
 
             {/*===================== admin ============================= */}
+
+
+          <Route path="/admin/instrument" element={<ProtectedRoute><InstrumentFormAdmin /></ProtectedRoute>} />
+           <Route path="/admin/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} />
+            <Route path="/admin/trades" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
+
 
             <Route path="/all-users" element={<ProtectedRoute><AllUser /></ProtectedRoute>} />
             <Route path="/user-reports" element={<ProtectedRoute><UserReport /></ProtectedRoute>} />

@@ -29,19 +29,22 @@ export default function SignInUser() {
         password,
       });
 
-
-      console.log(response.data);
-
       if(response.data.status==true) {
 
       const { token, user } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       toast.success("Login successful!");
-      navigate("/dashboard");
 
-      }else{
-  toast.error(
+       if(user.role=='admin') {
+
+        navigate("/admin/deshboard");
+
+       }else{
+        navigate("/dashboard");
+       }
+      } else{
+      toast.error(
          response.data.message|| "Login failed. Please try again."
         );
       }

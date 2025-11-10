@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import * as XLSX from 'xlsx';
-import { Select, DatePicker } from "antd";
+import { Select, DatePicker,Button } from "antd";
 import dayjs from "dayjs";
 import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 
 type Order = {
@@ -42,6 +43,8 @@ type Order = {
   exchorderupdatetime: string;
   fillid: string;
   filltime: string;
+  fillprice:string;
+  fillsize:string;
   parentorderid: string;
   uniqueorderid: string;
   exchangeorderid: string;
@@ -57,7 +60,7 @@ function useDebounced<T>(value: T, delay = 250) {
   return v as T;
 }
 
-const PAGE_SIZE_DEFAULT = 10;
+const PAGE_SIZE_DEFAULT = 1000;
 
 const statusColor = (status: string) => {
   const s = status?.toLowerCase();
@@ -70,6 +73,10 @@ const statusColor = (status: string) => {
 export default function OrderTables() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
+
+   const navigate = useNavigate();
+
+  const [profitAndLossData, setProfitAndLossData] = useState<number>(0);
 
   const [orders, setOrders] = useState<Order[]>([]);
    
@@ -85,18 +92,24 @@ export default function OrderTables() {
   const [showForm, setShowForm] = useState(false); // ✅ control modal visibility
   const [selectedItem, setSelectedItem] = useState<any | null>(null); // ✅ store clicked item
 
+  const [selectedScrip, setSelectedScrip] = useState<string>("LOCAL_TABLE");
 
-  const [selectedScrip, setSelectedScrip] = useState<string>("All Scrips");
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("All Strategy");
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
+  const [getPrice, setOnlyPrice] = useState("");
+  const [getslotSIze, setSlotSIze] = useState("");
+  
+
+
+
   useEffect(() => {
+
     let cancelled = false;
 
     async function fetchOrders() {
      
       try {
-        const {data} = await axios.get(`${apiUrl}/order/get/order`, {
+        const {data} = await axios.get(`${apiUrl}/order/get/table/order`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
               "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -104,7 +117,13 @@ export default function OrderTables() {
             },
           });
 
+          console.log(data);
+          
+
        if(data.status==true) {
+
+        console.log(data.data);
+        
 
         setOrders(data.data);
 
@@ -119,15 +138,35 @@ export default function OrderTables() {
             localStorage.removeItem("refresh_token");
            
        }else{
+
+         toast.error(data?.message||"Something went wrong");
           // alert(data?.message)
        }
         
       } catch (err: any) {
+
+        console.log(err);
+        
          toast.error(err?.message || "Something went wrong");
          
       } finally {
         if (!cancelled) setLoading(false);
       }
+
+
+       // 2️⃣ Third API: (example)
+         const getAllTodayTrade = await axios.get(`${apiUrl}/order/dummydatatrade`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+
+
+     
+      setProfitAndLossData(getAllTodayTrade?.data?.pnl)
+
+
     }
 
     fetchOrders();
@@ -176,12 +215,39 @@ export default function OrderTables() {
   }, [filtered, page, pageSize]);
 
 
-    const handleBuyClick = async(item: any) => {
+    const handleUpdateClick = async(item: any) => {
 
-        setSelectedItem(item);
-        setShowForm(true);
-        
+      const payload = {
+      exchange: item.exchange,
+      tradingsymbol: item.tradingsymbol,
+      symboltoken:item.symboltoken,
+    };
+
+     const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+                "AngelOneToken": localStorage.getItem("angel_token") || "",
+            },
+          });
+
+
+          console.log(res);
+          
+
+      
+           if(res?.data?.status==true) {
+
+            setOnlyPrice(res?.data?.data.data.ltp)
+            setSlotSIze(item.fillsize)  
+            setSelectedItem(item);
+            setShowForm(true);
+
+           }else{
+
+            toast.error(res?.data?.message || "Something went wrong");
+           }
     }
+
 
     const handleCancelClick = async (item: any) => {
 
@@ -192,6 +258,10 @@ export default function OrderTables() {
               "AngelOneToken": localStorage.getItem("angel_token") || "",
             },
           })
+
+
+          console.log(res.data);
+          
 
       if(res.data.status==true) {
 
@@ -222,23 +292,39 @@ export default function OrderTables() {
 
       }
 
-      // ✅ Handle Form Submit
+      // ✅ Handle Update Form Submit
     const handleSubmit = async(e: React.FormEvent) => {
 
-         e.preventDefault();
+         e.preventDefault()
 
-        let res = await axios.post(`${apiUrl}/order/modify/order`, selectedItem, {
+        let reqData = {
+
+           userId:selectedItem.userId,    
+            variety: selectedItem.variety,
+            tradingsymbol: selectedItem.tradingsymbol,
+            symboltoken: selectedItem.symboltoken,
+            transactiontype: "SELL",
+            exchange: selectedItem.exchange,
+            ordertype: selectedItem.ordertype,
+            producttype: selectedItem.producttype || "INTRADAY",
+            duration:selectedItem.duration || "DAY",
+            price: selectedItem.totalPrice,
+            totalPrice:selectedItem.totalPrice,
+            actualQuantity:selectedItem.actualQuantity,
+            squareoff: "0",
+            stoploss: "0",
+            quantity: selectedItem.quantity,
+
+        }
+         
+         
+        let res = await axios.put(`${apiUrl}/order/modify/order`, reqData, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",
             },
           }) 
-
-
-          console.log(res,'hello update');
-          
-          
-          
+ 
       if(res.data.status==true) {
 
          toast.success(res.data.message);
@@ -272,6 +358,53 @@ export default function OrderTables() {
         XLSX.writeFile(workbook, "orders.xlsx");
       };
 
+
+      const handleGetDates = async ()=>{
+          
+        let res = await axios.post(`${apiUrl}/order/datefilter/order`, dateRange, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+                "AngelOneToken": localStorage.getItem("angel_token") || "",
+            },
+          }) 
+
+          if(res.data.status==true) {
+
+            console.log(res.data);
+            
+
+             setOrders(res.data.data);
+
+         toast.success(res.data.message);
+
+      }else if(res.data.status==false&&res.data.status=='Unauthorized'){
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");  
+       }
+       else{
+
+         toast.error(res.data.message || "Something went wrong");
+      }   
+          
+      }
+
+
+      // 🧩 Function to handle selection
+  const handleSelectChange = (value: string) => {
+
+    setSelectedScrip(value)
+       
+     if(value=='ANGEL_TABLE') {
+      
+        navigate(`/angel/order`);
+     }else{
+       navigate(`/order`);
+     }
+  };
+
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" }}>
       <h2 style={{ marginBottom: 12 }}>Orders</h2>
@@ -288,34 +421,25 @@ export default function OrderTables() {
   <Select
     value={selectedScrip}
     style={{ width: 180 }}
-    onChange={setSelectedScrip}
-    options={[
-      { label: "All Scrips", value: "All Scrips" },
-      { label: "NIFTY", value: "NIFTY" },
-      { label: "BANKNIFTY", value: "BANKNIFTY" },
-      { label: "RELIANCE", value: "RELIANCE" },
-      { label: "SBIN", value: "SBIN" },
-    ]}
+    onChange={handleSelectChange}
+   options={[
+            { label: "Angel Table", value: "ANGEL_TABLE" },
+             { label: "Local Table", value: "LOCAL_TABLE" },
+         
+          ]}
   />
 
-  <Select
-    value={selectedStrategy}
-    style={{ width: 180 }}
-    onChange={setSelectedStrategy}
-    options={[
-      { label: "All Strategy", value: "All Strategy" },
-      { label: "Scalping", value: "Scalping" },
-      { label: "Intraday", value: "Intraday" },
-      { label: "Swing", value: "Swing" },
-    ]}
-  />
+  
 
+<div>
+  
+</div>
   <DatePicker.RangePicker
     style={{ width: 300 }}
     value={dateRange}
     onChange={(val) => setDateRange(val as [dayjs.Dayjs, dayjs.Dayjs])}
-    format="DD MMM YYYY hh:mm A"
-    showTime={{ format: "hh:mm A" }}
+    // format="DD MMM YYYY hh:mm A"
+    // showTime={{ format: "hh:mm A" }}
     ranges={{
       Today: [dayjs().startOf("day"), dayjs().endOf("day")],
       Yesterday: [
@@ -331,9 +455,30 @@ export default function OrderTables() {
       ],
     }}
   />
+    <Button onClick={handleGetDates} className="ml-3">
+        Get Dates
+      </Button>
+
+    <div className="flex items-center gap-3 mt-4">
+  <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-2 text-center">
+    <div className="text-xs text-gray-500 font-medium">PNL</div>
+    <div
+      className={`text-lg font-semibold mt-0.5 ${
+        profitAndLossData >= 0 ? 'text-emerald-600' : 'text-red-600'
+      }`}
+    >
+      ₹{profitAndLossData.toFixed(2)}
+    </div>
+  </div>
 </div>
 
 
+      
+  
+</div>
+
+
+  
  
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
@@ -393,17 +538,24 @@ export default function OrderTables() {
             <thead style={{ background: "#f8fafc" }}>
               <tr>
                 {[
+                  "Action",
                   "Order ID",
-                  "variety",
                   "Symbol",
+                  "Order Qty",
+                  "Order Price",
+                  //  "Time",
+                  "Traded Qty",
+                   "Traded Price",
+                    "Traded Time",
                   "Transaction Type",
+                    "Status",
+                 
                   "Type",
                   "Product Type",
-                  "Qty",
-                  "Price",
-                  "Status",
                   "Message",
-
+                  "variety",
+                
+                   "Token",
                   // "Exchange",
                   // "Variety",
                   "Updated At",
@@ -459,18 +611,43 @@ export default function OrderTables() {
                 !error &&
                 current.map((o) => (
                   <tr key={o.orderid} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={td}>
+                      <button
+                        onClick={() => handleUpdateClick(o)}
+                        disabled={o.transactiontype === "SELL"} // 👈 disable when SELL
+                        style={{
+                          display: "inline-block",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          color: "white",
+                          background: statusColor("complete"),
+                          textTransform: "capitalize",
+                          opacity: o.transactiontype === "SELL" ? 0.5 : 1, // 👈 visual dim when disabled
+                          cursor: o.transactiontype === "SELL" ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        Sell
+                      </button>
+                    </td>
                     <td style={td}>{o.orderid}</td>
-                       <td style={td}>{o.variety}</td>
+                     
+                      
                     <td style={td} title={o.tradingsymbol}>
+                      
                       <strong>{o.tradingsymbol}</strong>
                     </td>
-                    <td style={td}>{o.transactiontype}</td>
-                    <td style={td}>{o.ordertype}</td>
-                    <td style={td}>{o.producttype}</td>
-                    <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}>
+                     <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}>
                       {o.quantity}
                     </td>
-                    <td style={td}>{o.price}</td>
+                      <td style={td}>{o.price}</td>
+
+                        <td style={td}>{o.fillsize}</td>
+                        <td style={td}>{o.fillprice}</td>
+                        <td style={td}>{o.filltime}</td>
+
+                      
+                    <td style={td}>{o.transactiontype}</td>
                     <td style={td}>
                       <span
                         style={{
@@ -487,6 +664,12 @@ export default function OrderTables() {
                         {o.status || o.orderstatus || "-"}
                       </span>
                     </td>
+                   
+                    <td style={td}>{o.ordertype}</td>
+                    <td style={td}>{o.producttype}</td>
+                   
+                  
+                   
                     <td style={{ ...td, maxWidth: 380 }}>
                       <span title={o.text} style={{ display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>
                         {o.text || "—"}
@@ -494,10 +677,14 @@ export default function OrderTables() {
                     </td>
                     {/* <td style={td}>{o.exchange}</td>
                     <td style={td}>{o.variety}</td> */}
+                    <td style={td}>{o.variety}</td>
+                     
+                      
+                      <td style={td}>{o.symboltoken}</td>
                     <td style={td}>{o.updatetime}</td>
                     <td style={td}>
                       <button
-                        onClick={() => handleBuyClick(o)}
+                        onClick={() => handleUpdateClick(o)}
                         style={{
                           display: "inline-block",
                           padding: "2px 8px",
@@ -566,90 +753,255 @@ export default function OrderTables() {
 
  {/* ✅ Modal Form */}
       {showForm && selectedItem && (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
-            <h3 className="text-lg font-semibold mb-4 text-center">
-              Buy Order
-            </h3>
+//     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+//           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+//             <h3 className="text-lg font-semibold mb-4 text-center">
+//               Sell Order
+//             </h3>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                 <div>
-                <label className="block text-sm font-medium">Order Id</label>
-                <input
-                  type="text"
-                  value={selectedItem.orderid}
-                  readOnly
-                  className="border p-2 w-full rounded bg-gray-100"
-                />
-              </div>
+//             <form onSubmit={handleSubmit} className="space-y-4">
+//                  <div>
+//                 <label className="block text-sm font-medium">Order Id</label>
+//                 <input
+//                   type="text"
+//                   value={selectedItem.orderid}
+//                   readOnly
+//                   className="border p-2 w-full rounded bg-gray-100"
+//                 />
+//               </div>
 
-                 <div>
-                <label className="block text-sm font-medium">Symbol </label>
-                <input
-                  type="text"
-                  value={selectedItem.tradingsymbol}
-                  readOnly
-                  className="border p-2 w-full rounded bg-gray-100"
-                />
-              </div>
+//                  <div>
+//                 <label className="block text-sm font-medium">Symbol </label>
+//                 <input
+//                   type="text"
+//                   value={selectedItem.tradingsymbol}
+//                   readOnly
+//                   className="border p-2 w-full rounded bg-gray-100"
+//                 />
+//               </div>
              
-                 <div>
-                <label className="block text-sm font-medium">Quantity </label>
-                <input
-                  type="text"
-                  value={selectedItem.quantity}
-                  onChange={(e) =>
-                setSelectedItem({ ...selectedItem, quantity: e.target.value })
-    }
-                  className="border p-2 w-full rounded bg-gray-100"
-                />
-              </div>
+//                  <div>
+//                 <label className="block text-sm font-medium">Quantity </label>
+//                 <input
+//                   type="text"
+//                   value={selectedItem.quantity}
+//                   onChange={(e) =>
+//                 setSelectedItem({ ...selectedItem, quantity: e.target.value })
+//     }
+//                   className="border p-2 w-full rounded bg-gray-100"
+//                 />
+//               </div>
             
-              <div>
-  <label className="block text-sm font-medium">Price</label>
-  <input
-    type="text"
-    value={selectedItem.price}
-    onChange={(e) =>
-      setSelectedItem({ ...selectedItem, price: e.target.value })
-    }
-    className="border p-2 w-full rounded bg-gray-100"
-  />
-</div>
-              <div>
-  <label className="block text-sm font-medium">Status</label>
-  <select
-    value={selectedItem.status}
-    onChange={(e) =>
-      setSelectedItem({ ...selectedItem, status: e.target.value })
-    }
-    className="border p-2 w-full rounded bg-gray-100"
-  >
-    <option value="open">Open</option>
-    <option value="cancelled">Cancelled</option>
-  </select>
-</div>
+//               <div>
+//   <label className="block text-sm font-medium">Price</label>
+//   <input
+//     type="text"
+//     value={getPrice}
+//     onChange={(e) =>
+//       setSelectedItem({ ...selectedItem, price: e.target.value })
+//     }
+//     className="border p-2 w-full rounded bg-gray-100"
+//   />
+// </div>
+//               <div>
+//   <label className="block text-sm font-medium">Order Type</label>
+//   <select
+//     value={selectedItem.ordertype}
+//     onChange={(e) =>
+//       setSelectedItem({ ...selectedItem, ordertype: e.target.value })
+//     }
+//     className="border p-2 w-full rounded bg-gray-100"
+//   >
+//     <option value="MARKET">MARKET</option>
+//     <option value="LIMIT">LIMIT</option>
+//     <option value="STOPLOSS_LIMIT">STOPLOSS_LIMIT</option>
+//     <option value="STOPLOSS_MARKET">STOPLOSS_MARKET</option>
+//   </select>
+// </div>
 
-              <div className="flex justify-between mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
 
-                <button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg"
-                >
-                  Submit Order
-                </button>
-              </div>
-            </form>
-          </div>
+
+//               <div className="flex justify-between mt-6">
+//                 <button
+//                   type="button"
+//                   onClick={() => setShowForm(false)}
+//                   className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+//                 >
+//                   Cancel
+//                 </button>
+
+//                 <button
+//                   type="submit"
+//                   className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg"
+//                 >
+//                   Submit Order
+//                 </button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+<div
+  style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)" }}
+  className="flex items-center justify-center z-[1000]"
+>
+  <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+    <h3 className="text-lg font-semibold mb-4 text-center">Sell Order</h3>
+
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Row 1: Order Id + Symbol */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Order Id</label>
+          <input
+            type="text"
+            value={selectedItem.orderid}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium">Symbol</label>
+          <input
+            type="text"
+            value={selectedItem.tradingsymbol}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+      </div>
+
+
+       <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Token</label>
+          <input
+            type="text"
+            value={selectedItem.symboltoken}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Variety</label>
+          <input
+            type="text"
+            value={selectedItem.variety}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+      </div>
+
+       <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Exchange</label>
+          <input
+            type="text"
+            value={selectedItem.exchange}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Product Type</label>
+          <input
+            type="text"
+            value={selectedItem.producttype}
+            readOnly
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+      </div>
+
+    
+      {/* Row 2: Quantity + Price */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Quantity</label>
+          <input
+            type="number"
+            min={1}
+            value={selectedItem.quantity}
+            onChange={(e) =>
+              setSelectedItem({ ...selectedItem, quantity: e.target.value })
+            }
+            className="border p-2 w-full rounded bg-gray-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">
+            Price {selectedItem.ordertype === "MARKET" ? "(auto)" : ""}
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={
+              selectedItem.ordertype === "MARKET"
+                ? (getPrice ?? "")
+                : (selectedItem.price ?? getPrice ?? "")
+            }
+            onChange={(e) =>
+              setSelectedItem({ ...selectedItem, price: e.target.value })
+            }
+            readOnly={selectedItem.ordertype === "MARKET"}
+            className={`border p-2 w-full rounded ${
+              selectedItem.ordertype === "MARKET"
+                ? "bg-gray-100 cursor-not-allowed"
+                : "bg-white"
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Order Type (full width) */}
+      <div>
+        <label className="block text-sm font-medium">Order Type</label>
+        <select
+          value={selectedItem.ordertype}
+          onChange={(e) =>
+            setSelectedItem({
+              ...selectedItem,
+              ordertype: e.target.value,
+              ...(e.target.value === "MARKET" ? { price: "" } : {}),
+            })
+          }
+          className="border p-2 w-full rounded bg-gray-100"
+        >
+          <option value="MARKET">MARKET</option>
+          <option value="LIMIT">LIMIT</option>
+          <option value="STOPLOSS_LIMIT">STOPLOSS_LIMIT</option>
+          <option value="STOPLOSS_MARKET">STOPLOSS_MARKET</option>
+        </select>
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-between mt-6">
+        <button
+          type="button"
+          onClick={() => setShowForm(false)}
+          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg"
+        >
+          Submit Order
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
       )}
+
+     
 
 
     </div>

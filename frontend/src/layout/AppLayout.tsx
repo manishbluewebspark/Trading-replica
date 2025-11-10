@@ -3,14 +3,31 @@ import { Outlet } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import AddAppSidebarAdmin from "./AddSidebarAdmin";
+import React from "react";
+
+
+
+
+
+
+
+
 
 const LayoutContent: React.FC = () => {
+
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+
+  const storedUser = localStorage.getItem("user");
+
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  
 
   return (
     <div className="min-h-screen xl:flex">
       <div>
-        <AppSidebar />
+       {user?.role === "admin" ? <AddAppSidebarAdmin /> : <AppSidebar />}
+        {/* <AppSidebar /> */}
         <Backdrop />
       </div>
       <div

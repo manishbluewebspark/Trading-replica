@@ -91,6 +91,8 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
             />
           </Link>
 
+          
+
           <button
             onClick={toggleApplicationMenu}
             className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
@@ -110,6 +112,8 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
               />
             </svg>
           </button>
+
+          
 
           <div className="hidden lg:block">
             <form action="https://formbold.com/s/unique_form_id" method="POST">
@@ -150,9 +154,14 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
             isApplicationMenuOpen ? "flex" : "hidden"
           } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
         >
+
+         
           <div className="flex items-center gap-2 2xsm:gap-3">
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
+           
+           <div>Nifty 50</div>
+
             {/* <!-- Dark Mode Toggler --> */}
             <NotificationDropdown />
             {/* <!-- Notification Menu Area --> */}

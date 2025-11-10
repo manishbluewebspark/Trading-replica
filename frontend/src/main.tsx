@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+// import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "swiper/swiper-bundle.css";
@@ -10,11 +10,18 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css"; // or alpine/quartz/balloon
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  // <StrictMode>
+  //   <ThemeProvider>
+  //     <AppWrapper>
+  //       <App />
+  //     </AppWrapper>
+  //   </ThemeProvider>
+  // </StrictMode>,
+  
     <ThemeProvider>
       <AppWrapper>
         <App />
       </AppWrapper>
     </ThemeProvider>
-  </StrictMode>,
+  
 );

@@ -13,6 +13,8 @@ export default function ForgotPasswordForm() {
     setLoading(true);
 
     try {
+
+      
       const res = await fetch(`${apiUrl}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
