@@ -87,8 +87,11 @@ export default function UsersTables() {
   const start = (currentPage - 1) * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
 
-  const fmtDate = (iso?: string) =>
+   (iso?: string) =>
     iso ? new Date(iso).toLocaleString("en-IN") : "-";
+
+    // const fmtDate = (iso?: string) =>
+    // iso ? new Date(iso).toLocaleString("en-IN") : "-";
 
   const fullName = (u: User) =>
     [u.firstName, u.lastName].filter(Boolean).join(" ") || "-";

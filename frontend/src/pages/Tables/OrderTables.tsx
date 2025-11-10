@@ -98,6 +98,9 @@ export default function OrderTables() {
 
   const [getPrice, setOnlyPrice] = useState("");
   const [getslotSIze, setSlotSIze] = useState("");
+
+  console.log(getslotSIze);
+  
   
 
 

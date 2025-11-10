@@ -12,13 +12,16 @@ export default function UserDropdown() {
   const [userName, setUserName] = useState("User");
     const [userNameId, setUserNameId] = useState("User");
   const [userEmail, setUserEmail] = useState("user@example.com");
-  const [userImage, setUserImage] = useState("");
+
   const [userRole, setUserRole] = useState("U");
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
+
+
+
       try {
         const parsedUser = JSON.parse(storedUser);
 
@@ -26,7 +29,6 @@ export default function UserDropdown() {
         
         setUserNameId(parsedUser.username || "User");
         setUserEmail(parsedUser.email || "user@example.com");
-        setUserImage(parsedUser.image || "");
         setUserRole(parsedUser.role || "U");
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);

@@ -1546,7 +1546,7 @@ export default function InstrumentFormAdmin() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  const [fundData, setFundData] = useState<number>(0);
+  // const [fundData, setFundData] = useState<number>(0);
 
   const [data, setData] = useState<any[]>([]);
     const [dataexcel, setDataExcel] = useState<any[]>([]);
@@ -1570,33 +1570,33 @@ export default function InstrumentFormAdmin() {
 
 
 
-    function formatOptionSymbol(symbol:any) {
+//     function formatOptionSymbol(symbol:any) {
 
-    symbol = String(symbol).toUpperCase().trim();
+//     symbol = String(symbol).toUpperCase().trim();
 
-    // Regex patterns
-    const optionPattern = /^(NIFTY|BANKNIFTY)(\d{2})([A-Z]{3})(\d{2})(\d+)(CE|PE)$/;
-    const futurePattern = /^(NIFTY|BANKNIFTY)(\d{2})([A-Z]{3})(\d{2})FUT$/;
+//     // Regex patterns
+//     const optionPattern = /^(NIFTY|BANKNIFTY)(\d{2})([A-Z]{3})(\d{2})(\d+)(CE|PE)$/;
+//     const futurePattern = /^(NIFTY|BANKNIFTY)(\d{2})([A-Z]{3})(\d{2})FUT$/;
 
-    // 👉 Option format: NIFTY30DEC2530000PE
-    const opt = symbol.match(optionPattern);
-    if (opt) {
-      const [, underlying, day, month, year, strike, optionType] = opt;
-      const expiry = `${day}${month}${year}`;
-      return `${underlying} ${expiry} ${Number(strike)} ${optionType}`;
-    }
+//     // 👉 Option format: NIFTY30DEC2530000PE
+//     const opt = symbol.match(optionPattern);
+//     if (opt) {
+//       const [, underlying, day, month, year, strike, optionType] = opt;
+//       const expiry = `${day}${month}${year}`;
+//       return `${underlying} ${expiry} ${Number(strike)} ${optionType}`;
+//     }
 
-    // 👉 Future format: NIFTY25NOV25FUT
-    const fut = symbol.match(futurePattern);
-    if (fut) {
-      const [, underlying, day, month, year] = fut;
-      const expiry = `${day}${month}${year}`;
-      return `${underlying} ${expiry} FUT`;
-    }
+//     // 👉 Future format: NIFTY25NOV25FUT
+//     const fut = symbol.match(futurePattern);
+//     if (fut) {
+//       const [, underlying, day, month, year] = fut;
+//       const expiry = `${day}${month}${year}`;
+//       return `${underlying} ${expiry} FUT`;
+//     }
 
-  // 👉 Fallback (like NIFTY, Nifty 50, etc.)
-  return symbol;
-}
+//   // 👉 Fallback (like NIFTY, Nifty 50, etc.)
+//   return symbol;
+// }
 
 
 

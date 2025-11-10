@@ -16,7 +16,9 @@ type ServerToClientEvents = {
   "feed_status": { connected: boolean; error?: string; ts?: number };
   "orders:count": { total: number };
   //  tick: (tick: Tick) => void;
-  "tick": Tick; // 👈 add this
+  // "tick": Tick; // 👈 add this
+
+   tick: (tick: Tick) => void;       
 
   "niftyreal": Tick;
 };

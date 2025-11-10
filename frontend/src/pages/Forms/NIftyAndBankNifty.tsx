@@ -847,7 +847,6 @@ export default function NIftyAndBankNifty() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  const [fundData, setFundData] = useState<number>(0);
 
   const [data, setData] = useState<any[]>([]);
     const [dataexcel, setDataExcel] = useState<any[]>([]);

@@ -45,7 +45,7 @@ import Home from "./pages/Dashboard/Home";
 import InstrumentFormAdmin from "./pages/Forms/instrumentFormAdmin";
 import AngelOrderTable from "./pages/Tables/AngelOrderTable";
 import AngelTradeTable from "./pages/Tables/AngelTradeTable";
-import NIftyAndBankNifty from "./pages/Forms/NIftyAndBankNifty";
+// import NIftyAndBankNifty from "./pages/Forms/NIftyAndBankNifty";
 import UsersTables from "./pages/Tables/UsersTables";
 import OrderTableAdmin from "./pages/Tables/OrderTableAdmin";
 

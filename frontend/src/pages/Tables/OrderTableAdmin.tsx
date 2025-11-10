@@ -99,6 +99,8 @@ export default function OrderTableAdmin() {
   const [getPrice, setOnlyPrice] = useState("");
   const [getslotSIze, setSlotSIze] = useState("");
   
+  console.log(getslotSIze);
+  
 
 
 
