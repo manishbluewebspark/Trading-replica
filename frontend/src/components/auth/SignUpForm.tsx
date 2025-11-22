@@ -211,6 +211,7 @@ export default function SignUpForm() {
       <option value="AliceBlue">AliceBlue</option>
       <option value="Binance">Binance</option>
       <option value="BitBns">BitBns</option>
+       <option value="kite">Kite</option>
     </select>
   </div>
 

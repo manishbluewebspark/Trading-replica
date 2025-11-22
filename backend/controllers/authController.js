@@ -1,5 +1,4 @@
 import User from '../models/userModel.js';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { KiteConnect } from "kiteconnect";
 import { sendResetMail } from '../utils/sendEmail.js';
@@ -11,10 +10,11 @@ import { generateRandomNumbers } from "../utils/randomWords.js";
 import axios from 'axios';
 import { generateTOTP } from '../utils/generateTOTP.js';
 import AngelOneCredentialer from '../models/angelOneCredential.js'
-import {  connectSmartSocket,isSocketReady} from "../services/smartapiFeed.js"
-import angelApi from "../utils/angelApiClient.js"; // <- the shared axios client
+import {  connectSmartSocket,emitOrderGet,isSocketReady} from "../services/smartapiFeed.js"
+import UserSession from '../models/userSession.js';
+import BrokerModel from '../models/borkerModel.js';
 
-
+import { encrypt,decrypt } from "../utils/passwordUtils.js"
 const GROWW_CLIENT_ID = process.env.GROWW_CLIENT_ID;
 const GROWW_CLIENT_SECRET = process.env.GROWW_CLIENT_SECRET;
 const GROWW_REDIRECT_URI = process.env.GROWW_REDIRECT_URI;
@@ -24,15 +24,39 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 // ===================== auth controller start ================================
 
 
-let BrokerNameAndImageLink = [
-   {brokerName:'Angelone',link:'https://upload.wikimedia.org/wikipedia/commons/2/28/AngelOne_logo.png'},
-   {brokerName:'5Paisa',link:'https://cdn.techjockey.com/web/assets/images/techjockey/products/18508_5Paisalogo.jpg'},
-   {brokerName:'AliceBlue',link:'https://tvblog-static.tradingview.com/uploads/2024/06/alice-blue-now-on-tradingview-preview.jpg'},
-   {brokerName:'Binance',link:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj97fmjaCYgkevu7aFhgWDjXPfuNxt8bWk5w&s'},
-   {brokerName:'BitBns',link:'https://images.seeklogo.com/logo-png/42/1/bitbns-bns-logo-png_seeklogo-426572.png'},
-]
+export async function fetchGooglFromSerpApi(req,res,next) {
 
+  try {
 
+    const url = "https://serpapi.com/search.json";
+
+    const response = await axios.get(url, {
+      params: {
+        engine: "google_finance",
+        q: "GOOGL:NASDAQ",
+        // api_key: SERPAPI_KEY,
+      },
+    });
+
+      return res.json({
+              status: true,
+              data:response.data,
+              statusCode:2001,
+              message:null
+          });
+    
+
+  } catch (err) {
+
+    return res.json({
+              status: true,
+              data:null,
+              statusCode:2001,
+              message:err.message
+          });
+
+  }
+}
 
 async function generateUniqueUsername() {
   let username;
@@ -56,9 +80,12 @@ async function generateUniqueUsername() {
 
 export const register = async (req, res) => {
 
-  const { firstName, lastName, email, password,mob, isChecked,broker } = req.body;
+const { firstName, lastName,mob, isChecked,broker } = req.body;
+const email = (req.body.email || "").trim();
+const password = (req.body.password || "").trim();
 
   try {
+    
     if (!isChecked) {
 
        return res.json({
@@ -115,15 +142,27 @@ export const register = async (req, res) => {
 
     } 
 
-    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Find broker in the array (case-insensitive)
-    const matchedBroker = BrokerNameAndImageLink.find(
-      (item) => item.brokerName.toLowerCase() === broker?.toLowerCase()
-    );
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Get the image link (or fallback)
-    const brokerImage = matchedBroker ? matchedBroker.link : null;
+      const hashedPassword = await encrypt(password, process.env.CRYPTO_SECRET);
+
+      const brokerLower = broker?.toString().trim().toLowerCase();
+
+
+     const brokerData = await BrokerModel.findOne({
+          where: { brokerName: brokerLower },
+          raw: true,
+        });
+
+    if (!brokerData) {
+          return res.json({
+            status: false,
+            message: "Invalid broker selected",
+          });
+        }
+
+    const brokerLink = brokerData.brokerLink;
 
      let saveUser = await User.create({
       firstName,
@@ -134,11 +173,18 @@ export const register = async (req, res) => {
       role:'user',
       password: hashedPassword,
       isChecked,
-      brokerName:broker,
-      brokerImageLink:brokerImage
+      brokerName:brokerLower,
+      brokerImageLink:brokerLink
     });
     
-     const token = jwt.sign({ id: saveUser.id,role:saveUser.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+     const token = jwt.sign({ id: saveUser.id,role:saveUser.role,broker:saveUser.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+     // create a new login session
+      await UserSession.create({
+      userId: saveUser.id,
+      login_at: new Date(),
+      is_active: true,
+    });
 
 
    
@@ -168,13 +214,20 @@ export const register = async (req, res) => {
 };
 
 
-
-
 export const login = async (req, res) => {
 
-  const { email, password } = req.body;
+const email = (req.body.email || "").trim();
+const password = (req.body.password || "").trim();
 
   try {
+
+    // Get start and end of today
+      const now = new Date();
+      const startOfDay = new Date(now.setHours(0, 0, 0, 0)); // Midnight today
+      const endOfDay = new Date(now.setHours(23, 59, 59, 999)); // End of today
+
+       console.log(email,password,'llllll');
+    
 
     // const user = await User.findOne({ where: { email } });
 
@@ -187,7 +240,12 @@ export const login = async (req, res) => {
       },
     });
 
+   
+
     if (!user) {
+
+      console.log(user,'user');
+      
 
       return res.json({
             status: false,
@@ -197,9 +255,37 @@ export const login = async (req, res) => {
         });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+     // Count logins for the user today
+      const loginCount = await UserSession.count({
+        where: {
+          userId: user.id,
+          is_active:true,
+          login_at: {
+            [Op.not]: null, // Ensure login_at is not null
+            [Op.between]: [startOfDay, endOfDay], // Check if login_at is today
+          },
+        },
+      });
 
-    if (!isMatch){
+      if(loginCount>=2&&user.role!=='admin') {
+        
+          return res.json({
+            status: false,
+            statusCode:401,
+            message: "Only Two User Login Same Crendential",
+            error: null,
+        });
+      }
+
+      console.log('crypto code start ');
+      
+
+    const originalPass = decrypt(user.password,process.env.CRYPTO_SECRET)
+
+      console.log('crypto code end ');
+
+  
+    if (originalPass!==password){
 
       return res.json({
             status: false,
@@ -210,24 +296,136 @@ export const login = async (req, res) => {
 
     } 
 
-    const token = jwt.sign({ id: user.id,role:user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+     // create a new login session
+       await UserSession.create({
+      userId:  user.id,
+      login_at: new Date(),
+      is_active: true,
+    });
 
-     if(isSocketReady) {
-      console.log("🟢 SmartAPI socket already ready for");
-     }else{
-         connectSmartSocket(user.authToken,user.feedToken)
-     }
+    // 2️⃣ Find any user where angelLoginUser = true AND updated today
+      const activeAngelUser = await User.findOne({
+        where: {
+          angelLoginUser: true,
+          updatedAt: {
+            [Op.between]: [startOfDay, endOfDay],
+          },
+        },
+        raw:true
+      });
+      
+    const token = jwt.sign({ id: user.id,role:user.role,borker:user.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' })
 
-   
+     if(user.role==='admin') {
 
-     return res.json({
+       if(activeAngelUser) {
+      
+          let adminCren = {
+              authToken:activeAngelUser.authToken,
+              feedToken:activeAngelUser.feedToken,
+              refreshToken:activeAngelUser.refreshToken
+          }
+
+        if (isSocketReady(user.id)) {
+
+         emitOrderGet(user.authToken)
+      } else {
+          connectSmartSocket(user.id,activeAngelUser.authToken,activeAngelUser.feedToken,'abc')
+      }
+
+      return res.json({
             status: true,
             statusCode:400,
-             token, user,
-            message: "User registered successfully",
+            token, user,
+            message: "User login successfully",
+            angelTokens:adminCren,
             error: null,
         });
 
+    }else{
+        return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            message: "User login successfully",
+            angelTokens:{},
+            error: null,
+        });
+    }
+      
+     }else{
+
+        // 2️⃣ Find any user where angelLoginUser = true AND updated today
+      const angelCrendentialData = await AngelOneCredentialer.findOne({
+        where: {
+          userId:user.id ,
+        },
+        raw:true
+      });
+
+       if(angelCrendentialData) {
+
+        if (isSocketReady(user.id)) {
+
+            console.log('socket already connection',isSocketReady(user.id));
+
+        emitOrderGet(user.authToken)
+        
+      } else {
+          connectSmartSocket(user.id,user.authToken,user.feedToken,angelCrendentialData?.clientId)
+      }
+
+     let userCren = {
+              authToken:user.authToken,
+              feedToken:user.feedToken,
+              refreshToken:user.refreshToken
+          }
+
+      
+     return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:userCren,
+            message: "User login successfully",
+            error: null,
+        });
+
+
+       }else if(user.brokerName==='kite') {
+
+        return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:{
+              authToken:user.authToken,
+              feedToken:user.feedToken,
+              refreshToken:user.refreshToken
+            },
+            message: "User login successfully",
+            error: null,
+        });
+
+       }else{
+         
+         return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:{
+              authToken:"",
+              feedToken:"",
+              refreshToken:""
+            },
+            message: "User login successfully",
+            error: null,
+        });
+
+       }
+
+     }
+  
   } catch (error) {
 
     console.log(error);
@@ -248,6 +446,9 @@ export const login = async (req, res) => {
 
 
 
+
+
+
 // Step 1: Redirect to AngelOne login
 export const loginWithAngelOne = async (req, res) => {
 
@@ -262,10 +463,37 @@ export const loginWithAngelOne = async (req, res) => {
 
 
 // Step 2: Get AngelOne Profile
-export const loginWithTOTPInAngelOne = async function (req,res,next) {
+export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
     try {
+
+       // Get start and end of today
+      const now = new Date();
+      const startOfDay = new Date(now.setHours(0, 0, 0, 0)); // Midnight today
+      const endOfDay = new Date(now.setHours(23, 59, 59, 999)); // End of today
+
+    // Count logins for the user today
+      const loginCount = await UserSession.count({
+        where: {
+          userId: req.headers.userid,
+            is_active:true,
+          login_at: {
+            [Op.not]: null, // Ensure login_at is not null
+            [Op.between]: [startOfDay, endOfDay], // Check if login_at is today
+          },
+        },
+      });
+
+      if(loginCount>=2) {
         
-    let existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
+          return res.json({
+            status: false,
+            statusCode:401,
+            message: "Only Two User Login Same Crendential",
+            error: null,
+        });
+      }  
+        
+    let existing = await AngelOneCredentialer.findOne({ where: { userId:req.headers.userid  } });
 
     if (!existing) {
       return res.json({
@@ -314,20 +542,119 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
         angelLoginUser:true,
       },
       {
+        where: { id: req.headers.userid },
+        returning: true, // optional, to get the updated record
+      }
+    );
+
+        
+
+        if (isSocketReady(req.headers.userid)) {
+        console.log('✅ WebSocket is connected!');
+      } else {
+          connectSmartSocket(req.headers.userid,data.data.jwtToken,data.data.feedToken,createdData.clientId)
+      }
+
+      return res.status(200).json({
+              status: true,
+              data: data.data
+          });
+
+     }else{
+
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:data.errorCode,
+              message:data.message
+          });
+     }
+
+  } catch (error) {
+
+
+    console.log(error);
+    
+
+    return res.json({
+              status: false,
+              data:null,
+              statusCode:401,
+              message:error.message
+          });
+  }
+}
+
+// Step 2: Get AngelOne Profile
+export const loginWithTOTPInAngelOne = async function (req,res,next) {
+    try {
+        
+    let existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
+
+    if (!existing) {
+      return res.json({
+        status: false,
+        statusCode: 404,
+        message: "No credentials found for this user.",
+        data: null,
+      });
+    }
+
+   const createdData = existing.dataValues;
+
+   let totpCode = await generateTOTP(createdData.totpSecret) 
+
+   
+     
+      var data2 = JSON.stringify({
+      "clientcode":createdData.clientId,
+      "password":createdData.password,
+      "totp":totpCode, 
+    });
+
+      var config = {
+      method: 'post',
+       url: 'https://apiconnect.angelone.in//rest/auth/angelbroking/user/v1/loginByPassword',
+
+      headers : {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      },
+      data:data2
+    };
+
+    let {data} = await axios(config);
+
+
+
+     if(data.status==true) {
+
+      await User.update( {
+        authToken: data.data.jwtToken,
+        feedToken: data.data.feedToken,
+        refreshToken: data.data.refreshToken,
+        angelLoginUser:true,
+      },
+      {
         where: { id: req.userId },
         returning: true, // optional, to get the updated record
       }
     );
 
+        console.log(isSocketReady(req.userId),'gggg');
+        
 
-
-        if (isSocketReady()) {
+        if (isSocketReady(req.userId)) {
         console.log('✅ WebSocket is connected!');
       } else {
-          connectSmartSocket( data.data.jwtToken,data.data.feedToken)
+          connectSmartSocket(req.userId,data.data.jwtToken,data.data.feedToken,createdData.clientId)
       }
-
-
 
       return res.status(200).json({
               status: true,
@@ -624,7 +951,7 @@ export const getAngelOneProfileFund = async function (req,res,next) {
               status: false,
               data:null,
               statusCode:data.errorCode,
-              message:data.error.message
+              message:data.message
           });
      }
 
@@ -765,20 +1092,55 @@ export const angelOneCallback = async (req, res) => {
 
 
 // ---------- ZERODHA ----------
+// controllers/kiteController.js
 const kite = new KiteConnect({
   api_key: process.env.KITE_API_KEY,
 });
 
+
+
+
+
 export const kiteLogin = (req, res) => {
-  const loginUrl = kite.getLoginURL();
-  res.redirect(loginUrl);
+  try {
+
+    const loginUrl = kite.getLoginURL();
+
+    console.log(loginUrl,'loginUrl');
+    
+
+    // Return JSON response instead of redirect
+    return res.status(200).json({
+      status: true,
+      message: "Kite login URL generated successfully",
+      data: {
+        loginUrl: loginUrl
+      }
+    });
+    
+  } catch (error) {
+    console.error('Kite login URL generation error:', error);
+    return res.status(500).json({
+      status: false,
+      message: "Failed to generate login URL",
+      error: error.message
+    });
+  }
 };
 
 export const kiteCallback = async (req, res) => {
+  
   const { request_token } = req.query;
 
+  console.log(request_token,'request_token kiteCallback');
+  
+
   if (!request_token) {
-    return res.status(400).json({ message: "Missing request_token" });
+
+    return res.status(400).json({ 
+      status: false,
+      message: "Missing request_token" 
+    });
   }
 
   try {
@@ -787,33 +1149,42 @@ export const kiteCallback = async (req, res) => {
       process.env.KITE_API_SECRET
     );
 
-    console.log("✅ Zerodha Session:", session);
 
-    // Here you decide how to identify the logged-in user
-    // For example: req.user.email if logged in, or create a temp user
-    const userEmail = `${session.user_id}@zerodha.com`; // Example fallback
+    console.log(session,'kite user login session');
+    
 
-    let user = await User.findOne({ email: userEmail });
-    if (!user) {
-      user = await User.create({
-        email: userEmail,
-        name: session.user_name || "Zerodha User",
-        kiteToken: session.access_token,
-      });
-    } else {
-      user.kiteToken = session.access_token;
-      await user.save();
+   
+    // 1️⃣ Find user by email
+    const user = await User.findOne({
+      where: { email:session.email }
+    });
+
+     if (!user) {
+
+       return res.redirect(
+      `${process.env.FRONTEND_URL}/kite-login-failed?error : User not found`
+    );
     }
 
+    // 2️⃣ Update tokens
+    await user.update({
+      authToken:session.access_token,
+      feedToken:session.public_token,
+      refreshToken:session.enctoken
+    });
+    
+    // Redirect to frontend success page
     return res.redirect(
-      `${process.env.FRONTEND_URL}/kite-login-success?token=${session.access_token}&user_id=${user._id}`
+      `${process.env.FRONTEND_URL}/dashboard?access_token=${session.access_token}`
     );
+    
   } catch (err) {
     console.error("❌ Zerodha Auth Error:", err);
-    return res.redirect(`${process.env.FRONTEND_URL}/kite-login-failed`);
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/kite-login-failed?error=${err.message}`
+    );
   }
 };
-
 
 
 // 1. Redirect to Groww authorize page
@@ -1058,31 +1429,42 @@ export const verifyCode = async (req, res) => {
 
 export const newPassword = async (req, res) => {
   try {
+
     const { email, newPassword, confirmPassword } = req.body;
 
     if(!email || !newPassword || !confirmPassword) {
+
       return res.status(400).json({ message: "all field are required" });
     }
 
     if(newPassword !== confirmPassword) {
+
       return res.status(400).json({ message: "password do not match" });
     }
 
     const user = await User.findOne({where: { email }});
+
     if(!user) {
+
       return res.status(404).json({ message: "user not found" });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await encrypt(existingUser.password, process.env.CRYPTO_SECRET);
 
     user.password = hashedPassword;
+
     user.resetCode = null;
+
     await user.save();
 
     return res.status(200).json({ message: "password reset successfully" });
+
   } catch (error) {
+
     console.error(" new password error", error);
+
     return res.status(500).json({ message: "internal server error" })
+
   }
 };
 
@@ -1152,32 +1534,158 @@ export const updatePassword = async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
 
   try {
+
     const existingUser = await User.findByPk(req.userId);
+
     if (!existingUser) {
+
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
-    if (!isMatch) {
+    const originalPass = await decrypt( existingUser.password,process.env.CRYPTO_SECRET);
+
+    if (originalPass!==currentPassword) {
+
       return res.status(400).json({ message: "Current password is incorrect" });
+
     }
 
     if (newPassword !== confirmPassword) {
+
       return res.status(400).json({ message: "Passwords do not match" });
+
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await encrypt( newPassword,process.env.CRYPTO_SECRET);
 
     existingUser.password = hashedPassword;
+
     await existingUser.save();
 
     res.status(200).json({ message: "Password changed successfully" });
+
   } catch (err) {
+
     console.error("Error in updatePassword:", err);
+
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
+
+
+export const testGetAngelOneProfileFund = async function (req,res,next) {
+    try {
+
+      let token = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkFSSk1BMTkyMSIsInJvbGVzIjowLCJ1c2VydHlwZSI6IlVTRVIiLCJ0b2tlbiI6ImV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNKOS5leUoxYzJWeVgzUjVjR1VpT2lKamJHbGxiblFpTENKMGIydGxibDkwZVhCbElqb2lkSEpoWkdWZllXTmpaWE56WDNSdmEyVnVJaXdpWjIxZmFXUWlPalFzSW5OdmRYSmpaU0k2SWpNaUxDSmtaWFpwWTJWZmFXUWlPaUl4WlROa04yWTVZUzAwTkRWaUxUTmtZelV0T1RFeFlTMDJOR1ZtT1RZNE5qQTFZbVFpTENKcmFXUWlPaUowY21Ga1pWOXJaWGxmZGpJaUxDSnZiVzVsYldGdVlXZGxjbWxrSWpvMExDSndjbTlrZFdOMGN5STZleUprWlcxaGRDSTZleUp6ZEdGMGRYTWlPaUpoWTNScGRtVWlmU3dpYldZaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lRVkpLVFVFeE9USXhJaXdpWlhod0lqb3hOell6TVRnM05qTXdMQ0p1WW1ZaU9qRTNOak14TURFd05UQXNJbWxoZENJNk1UYzJNekV3TVRBMU1Dd2lhblJwSWpvaU0yRXpZMk5pWWpBdFlUbGtOaTAwTm1Ga0xUbG1ObUl0WmpKak5EUTVabVkwWXpZM0lpd2lWRzlyWlc0aU9pSWlmUS5weTFNamFRQXg5X0lyTVdqektyVWRPaU9ZZWl4UkxhNmVqbmFqcGprS3luY0VqMDJwUTdrVEFfY3VLc0ZQaVd2cnRWemw5OXhXcW5LLV9iOGItTUtCZXZKQ0dDTEZmcmV2c3VXRnM0amhxWC14VGl6Qm1WODVLTkg0NGR4bFZzQlhpOXVpLXFJc2Q5R1VGX3M5T1FyblMwWE5scW9VRFpjWFNOakRfZThBaUkiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjMxMDEyMzAsImV4cCI6MTc2MzE0NTAwMH0.yzO3Ka-9N0-Ta96mop8yiwLBpASR7AiMEDtPmqYjE4jpSP2GuMWjA3yTXuLP5ey7_m5OHHznuLeZNOnTqESt1A'
+    
+
+      var config = {
+      method: 'get',
+      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getRMS',
+
+      headers : {
+        // 'Authorization': `Bearer ${auth_token}`,
+         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      }
+    };
+
+    let {data} = await axios(config);
+
+    console.log(data,'test fund');
+    
+
+
+     if(data.status==true) {
+
+     
+  return res.json({
+              status: true,
+              statusCode:200,
+              data: data.data,
+          });
+      
+
+     }else{
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:data.errorCode,
+              message:data.message
+          });
+     }
+
+  } catch (error) {
+
+    return res.json({
+              status: false,
+              data:null,
+              statusCode:401,
+              message:error.message
+          });
+  }
+}
+
+export const testGetAngelOneProfile = async function (req,res,next) {
+    try {
+
+
+    let token = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkFSSk1BMTkyMSIsInJvbGVzIjowLCJ1c2VydHlwZSI6IlVTRVIiLCJ0b2tlbiI6ImV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNKOS5leUoxYzJWeVgzUjVjR1VpT2lKamJHbGxiblFpTENKMGIydGxibDkwZVhCbElqb2lkSEpoWkdWZllXTmpaWE56WDNSdmEyVnVJaXdpWjIxZmFXUWlPalFzSW5OdmRYSmpaU0k2SWpNaUxDSmtaWFpwWTJWZmFXUWlPaUl4WlROa04yWTVZUzAwTkRWaUxUTmtZelV0T1RFeFlTMDJOR1ZtT1RZNE5qQTFZbVFpTENKcmFXUWlPaUowY21Ga1pWOXJaWGxmZGpJaUxDSnZiVzVsYldGdVlXZGxjbWxrSWpvMExDSndjbTlrZFdOMGN5STZleUprWlcxaGRDSTZleUp6ZEdGMGRYTWlPaUpoWTNScGRtVWlmU3dpYldZaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lRVkpLVFVFeE9USXhJaXdpWlhod0lqb3hOell6TVRnM05qTXdMQ0p1WW1ZaU9qRTNOak14TURFd05UQXNJbWxoZENJNk1UYzJNekV3TVRBMU1Dd2lhblJwSWpvaU0yRXpZMk5pWWpBdFlUbGtOaTAwTm1Ga0xUbG1ObUl0WmpKak5EUTVabVkwWXpZM0lpd2lWRzlyWlc0aU9pSWlmUS5weTFNamFRQXg5X0lyTVdqektyVWRPaU9ZZWl4UkxhNmVqbmFqcGprS3luY0VqMDJwUTdrVEFfY3VLc0ZQaVd2cnRWemw5OXhXcW5LLV9iOGItTUtCZXZKQ0dDTEZmcmV2c3VXRnM0amhxWC14VGl6Qm1WODVLTkg0NGR4bFZzQlhpOXVpLXFJc2Q5R1VGX3M5T1FyblMwWE5scW9VRFpjWFNOakRfZThBaUkiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjMxMDEyMzAsImV4cCI6MTc2MzE0NTAwMH0.yzO3Ka-9N0-Ta96mop8yiwLBpASR7AiMEDtPmqYjE4jpSP2GuMWjA3yTXuLP5ey7_m5OHHznuLeZNOnTqESt1A'
+     
+    var config = {
+      method: 'get',
+      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile',
+      headers : {
+         'Authorization': `Bearer ${token}`,
+          // 'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      }
+    };
+
+    let {data} = await axios(config);
+
+     if(data.status==true) {
+
+      return res.status(200).json({
+              status: true,
+              data: data.data
+          });
+
+     }else{
+
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:data.errorCode,
+              message:data.message
+          });
+     }
+
+  } catch (error) {
+
+    return res.json({
+              status: false,
+              data:null,
+              statusCode:401,
+              message:error.message
+          });
+  }
+}
 
 
 // ====================== profile controller end ==========================

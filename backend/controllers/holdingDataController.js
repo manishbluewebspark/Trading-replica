@@ -5,7 +5,6 @@ import axios from 'axios';
 export const getHoldingDataInAngelOne = async (req, res,next) => {
     try {
 
-
       var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/portfolio/v1/getAllHolding',
@@ -24,17 +23,111 @@ export const getHoldingDataInAngelOne = async (req, res,next) => {
     };
 
     let resData = await axios(config)
-
-    console.log(resData);
-    
-     if(resData?.data?.status==true) {
+ 
+     if(resData?.data?.status==true&&resData?.data?.data?.holdings.length) {
 
          return res.json({
             status: true,
             statusCode:200,
-            data: resData.data,
+            data: resData.data.data,
             message:''
         });
+     }else if (resData?.data?.status==true){
+
+     let resObj =   {
+          "holdings": [
+               {
+                    "tradingsymbol": "TATASTEE",
+                    "exchange": "NSE",
+                    "isin": "INE081A01020",
+                    "t1quantity": 0,
+                    "realisedquantity": 2,
+                    "quantity": 2,
+                    "authorisedquantity": 0,
+                    "product": "DELIVERY",
+                    "collateralquantity": null,
+                    "collateraltype": null,
+                    "haircut": 0,
+                    "averageprice": 111.87,
+                    "ltp": 130.15,
+                    "symboltoken": "3499",
+                    "close": 129.6,
+                    "profitandloss": 37,
+                    "pnlpercentage": 16.34
+               },
+               {
+                    "tradingsymbol": "PARAGMILK",
+                    "exchange": "NSE",
+                    "isin": "INE883N01014",
+                    "t1quantity": 0,
+                    "realisedquantity": 2,
+                    "quantity": 2,
+                    "authorisedquantity": 0,
+                    "product": "DELIVERY",
+                    "collateralquantity": null,
+                    "collateraltype": null,
+                    "haircut": 0,
+                    "averageprice": 154.03,
+                    "ltp": 201,
+                    "symboltoken": "17130",
+                    "close": 192.1,
+                    "profitandloss": 94,
+                    "pnlpercentage": 30.49
+               },
+               {
+                    "tradingsymbol": "SBIN",
+                    "exchange": "NSE",
+                    "isin": "INE062A01020",
+                    "t1quantity": 0,
+                    "realisedquantity": 8,
+                    "quantity": 8,
+                    "authorisedquantity": 0,
+                    "product": "DELIVERY",
+                    "collateralquantity": null,
+                    "collateraltype": null,
+                    "haircut": 0,
+                    "averageprice": 573.1,
+                    "ltp": 579.05,
+                    "symboltoken": "3045",
+                    "close": 570.5,
+                    "profitandloss": 48,
+                    "pnlpercentage": 1.04
+               },
+                {
+                    "tradingsymbol": "NIFTY 50",
+                    "exchange": "NSE",
+                    "isin": "INE062A01020",
+                    "t1quantity": 0,
+                    "realisedquantity": 8,
+                    "quantity": 8,
+                    "authorisedquantity": 0,
+                    "product": "DELIVERY",
+                    "collateralquantity": null,
+                    "collateraltype": null,
+                    "haircut": 0,
+                    "averageprice": 573.1,
+                    "ltp": 579.05,
+                    "symboltoken": "3045",
+                    "close": 570.5,
+                    "profitandloss": 48,
+                    "pnlpercentage": 1.04
+               }
+          ],
+          "totalholding": {
+               "totalholdingvalue": 5294,
+               "totalinvvalue": 5116,
+               "totalprofitandloss": 178.14,
+               "totalpnlpercentage": 3.48
+          }
+     }
+
+       return res.json({
+            status: true,
+            statusCode:200,
+            data: resObj,
+            message:'Testing Data'
+        });
+
      }else{
        
         return res.json({

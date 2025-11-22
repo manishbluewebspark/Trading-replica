@@ -12,56 +12,48 @@ import http from "http";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import { initSocket } from "./socket/index.js";
-
-import { connectSmartSocket } from "./services/smartapiFeed.js";
-import {bulkInsertPostgre} from "./script/postgre.js"
+import "./scheduler/scheduler.js"
 import {seedAdmin} from './script/adminInsert.js'
 
 
-
-
-import { getPublicIP, getMACAddress } from './script/getData.js';
-
-async function main() {
-  const publicIP = await getPublicIP();
-  const macAddress = await getMACAddress();
-  console.log("Public IP:", publicIP);
-  console.log("MAC Address:", macAddress);
-  // Use publicIP and macAddress in your login logic here
-}
-
-// Call the async function
-main().catch(console.error);
-
-
-
+import { connectSmartSocket } from "./services/smartapiFeed.js";
+import {bulkInsertPostgre} from "./script/postgre.js"
 
 // bulkInsertPostgre()
 // bulkUpdateSyFieldsJS()
 
 dotenv.config();
-const corsOptions = {
-  origin: [  
-        process.env.CROSS_ORIGIN_APP_1,   // your React/Vite app
-        process.env.CROSS_ORIGIN_APP_2,
-        process.env.CROSS_ORIGIN_APP_3,
-        process.env.CROSS_ORIGIN_APP_4,
+
+// const corsOptions = {
+//   origin: [  
+//         process.env.CROSS_ORIGIN_APP_1,   // your React/Vite app
+//         process.env.CROSS_ORIGIN_APP_2,
+//         process.env.CROSS_ORIGIN_APP_3,
+//         process.env.CROSS_ORIGIN_APP_4,
+//         process.env.CROSS_ORIGIN_APP_5,
  
-  ],
-  // credentials: true,  
-  // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], 
-  // allowedHeaders: ['Content-Type', 'Authorization'] 
-};
+//   ],
+//   // credentials: true,  
+//   // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], 
+//   // allowedHeaders: ['Content-Type', 'Authorization'] 
+// };
+
+
+
 const app = express();
 
 app.use(cookieParser()); // <– parses cookies automatically
-app.use(cors(corsOptions)); 
+
+app.use(
+  cors({
+    origin: "*",  
+  })
+);
+
+
 app.use(express.json());
 
-
-
-  // connectSmartSocket(process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN)
-
+// connectSmartSocket(19,process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN)
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -85,14 +77,11 @@ app.get("/test/point", (req, res) => {
 
 
 app.use("/uploads", express.static(path.join("uploads")));
-
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use("/api/licenses", licenseRoutes);
 app.use('/api/order', orderRoute);
 app.use('/api/admin', adminRoute);
-
-
 
 
 const server = http.createServer(app);
@@ -102,16 +91,14 @@ initSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
-// server.listen(PORT, () => {
-//     console.log(`🚀 Server running on http://localhost:${PORT}`);
-//   });
+
 
 sequelize.sync({ force: false }).then(() => {
   console.log('✅ Database connected & synced');
 
   server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    // seedAdmin()
+    seedAdmin()
   });
 }).catch(err => {
   console.error('❌ DB connection error:', err);
@@ -129,17 +116,22 @@ sequelize.sync({ force: false }).then(() => {
 
 
 
-// https://smartapi.angelbroking.com/
-
-
-//  https://pleadingly-misshapen-wilber.ngrok-free.dev/       =====>>this is my forntend url
 
 
 
-// refresh_token = eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJSRUZSRVNILVRPS0VOIjoiZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SjFjMlZ5WDNSNWNHVWlPaUpqYkdsbGJuUWlMQ0owYjJ0bGJsOTBlWEJsSWpvaWRISmhaR1ZmY21WbWNtVnphRjkwYjJ0bGJpSXNJbWR0WDJsa0lqb3dMQ0p6YjNWeVkyVWlPaUl6SWl3aVpHVjJhV05sWDJsa0lqb2lNV1V6WkRkbU9XRXRORFExWWkwelpHTTFMVGt4TVdFdE5qUmxaamsyT0RZd05XSmtJaXdpYTJsa0lqb2lkSEpoWkdWZmEyVjVYM1l5SWl3aWIyMXVaVzFoYm1GblpYSnBaQ0k2TUN3aWFYTnpJam9pYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrRlNTazFCTVRreU1TSXNJbVY0Y0NJNk1UYzJNVFkwTlRVMk1pd2libUptSWpveE56WXhOVFU0T1RneUxDSnBZWFFpT2pFM05qRTFOVGc1T0RJc0ltcDBhU0k2SW1NME9UTXdaalV5TFRWbFpHTXROREkxTnkxaE1HRTJMVEZpWWpVME1URXhZalF5WXlJc0lsUnZhMlZ1SWpvaUluMC54dnczTFJPeG4wZlVwNldVdmdfallBS0VxbjdCLVpuLXJBLUdKbUtnYUs4NXN2dXZxM1pCQXNIckx4T0pIbFpkeTljSmRQaDltNGFjVVNWNTF6S3FXMkpBS3VveG4tc2prLW5ER3FhV2FyY3F1Z2hYNmNYSGtvaWVMalktaFhiM1o5UFZ1V1ZyaVVCRHRfdURnODM4aW4wMjMzRUgxREtLdmJRY3FranJFX1EiLCJpYXQiOjE3NjE1NTkxNjJ9.jn9DJ7Vp6frTP0WjPBCwuZqqQclvjvw9WbDRVVBEmT0Pf39QQv2304w86cNKBBQVyq3hF92yX0f67NGG3DviSA
 
-//  token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzYxNjI1ODUzLCJleHAiOjE3NjE3MTIyNTN9.tAnJRzX4Svdb9xqJDc6zGlmJ3ZLyUbFLTMjjQKGMnTw
+// import { exec } from "child_process";
 
+// const ssid = "Airtel_BWS411";
 
-
+// exec(
+//   `security find-generic-password -D "AirPort network password" -a "${ssid}" -w`,
+//   (err, stdout) => {
+//     if (err) {
+//       console.error("Cannot read password. Need permission:", err.message);
+//       return;
+//     }
+//     console.log("WiFi Password:", stdout.trim());
+//   }
+// );
 

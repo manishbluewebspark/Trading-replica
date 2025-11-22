@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import Order from '../models/orderModel.js';
 
 
 
@@ -802,8 +802,23 @@ const pnlData = calculatePnL(orders);
 
 export const getOrderDataForDeshboard = async (req, res,next) => {
     try {
- 
+
        
+        console.log('hy req.headers.angelonetoken; 1');
+
+          const angelToken = req.headers.angelonetoken;
+
+            if (!angelToken) {
+
+               console.log('hy req.headers.angelonetoken;');
+              
+              return res.json({
+                      status: false,
+                      statusCode:401,
+                      message: "Login In AngelOne Account",
+                      error: null,
+                  });
+            }
 
         var config = {
             method: 'get',
@@ -850,6 +865,22 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
 
     try{
 
+      let totalBuyLength = 0
+         const angelToken = req.headers.angelonetoken;
+
+            if (!angelToken) {
+
+              return res.json({
+                      status: false,
+                      statusCode:401,
+                      message: "Login In AngelOne Account",
+                      error: null,
+                  });
+            }
+
+
+          
+
         var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook',
@@ -867,7 +898,7 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
         };
 
         let response = await axios(config)
-
+        
         if(response.data.status===true&&response.data.data===null) {
 
            return res.json({
@@ -875,7 +906,9 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
                     statusCode:203,
                     message: "getting data",
                     data:[],
+                     totalTraded:totalBuyLength,
                     pnl:0,
+
                     error:null,
                 });
 
@@ -934,14 +967,11 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
         // // ---- Run and print as JSON ----
         const pnlData = calculatePnL(response.data.data);
 
-         console.log('lll',response.data,'hhhhh');
-         
-        
-
         const trades = response.data.data;  // or paste your array directly
 
         let totalBuy = 0;
         let totalSell = 0;
+        
 
         trades?.forEach((trade) => {
         const type = String(trade.transactiontype).toUpperCase();
@@ -949,18 +979,32 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
 
         if (type === "BUY") {
             totalBuy += value;
+            totalBuyLength++
         } else if (type === "SELL") {
             totalSell += value;
         }
         });
 
-        
+
+//    dcascacas
+                const openCount = await Order.count({
+            where: {
+              userId:req.userId,
+              orderstatuslocaldb: "OPEN"
+            }
+          });
+
+       
+     
+
         return res.json({
                     status: true,
                     statusCode:203,
                     message: "getting data",
                     data:pnlData,
                     pnl:totalSell-totalBuy,
+                    totalTraded:totalBuyLength,
+                    totalOpen:openCount,
                     error:null,
                 });
 
@@ -970,6 +1014,7 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
                     statusCode:203,
                     message: "getting data",
                     data:[],
+                     totalTraded:totalBuyLength,
                     pnl:0,
                     error:null,
                 });
@@ -979,12 +1024,17 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
     
 
     }catch(error) {
-
-
-      console.log(error);
       
-
         console.log(error.message,'hello bye');
+
+         return res.json({
+                    status: true,
+                    statusCode:203,
+                    message: "getting data",
+                    data:[],
+                    pnl:0,
+                    error:null,
+                });
         
 
     }

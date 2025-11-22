@@ -1,385 +1,66 @@
-
-// import React, { useEffect, useMemo, useState } from "react";
-// import axios from "axios";
-// import { toast } from "react-toastify";
-// import "antd/dist/reset.css";
-// import { getSocket } from "../../socket/Socket";
-
-
-// type LiteTick = { token: string; ltp: number };
-
-
-
-// /** ====== Trade row type (from API) ====== **/
-// type Trade = {
-//   exchange: string;
-//   producttype: string;
-//   symboltoken: string;
-//   tradingsymbol: string;
-//   instrumenttype: string;
-//   optiontype: string;
-//   transactiontype: string; // "BUY" | "SELL"
-//   orderid: string;
-//   uniqueorderid: string;
-//   lotsize:string;
-//   price:string;
-//   createdAt:string
-//   status:string;
-//   variety:string;
-//   ordertype:string;
-//   exchtime:string;
-//   fillid:string;
-//   token:string;
-//   fillsize:string;
-//   symbolgroup:string;
-//   expirydate:string;
-//   filltime:string;
-// };
-
-// function useDebounced<T>(value: T, delay = 250) {
-//   const [v, setV] = useState(value);
-//   useEffect(() => {
-//     const t = setTimeout(() => setV(value), delay);
-//     return () => clearTimeout(t);
-//   }, [value, delay]);
-//   return v as T;
-// }
-
-// const PAGE_SIZE_DEFAULT = 100;
-
-// const td: React.CSSProperties = {
-//   padding: "10px 12px",
-//   fontSize: 14,
-//   color: "#0f172a",
-//   whiteSpace: "nowrap",
-//   verticalAlign: "top",
-// };
-
-// const thStyle: React.CSSProperties = {
-//   textAlign: "left",
-//   padding: "10px 12px",
-//   fontSize: 13,
-//   color: "#475569",
-//   borderBottom: "1px solid #e5e7eb",
-//   whiteSpace: "nowrap",
-//   position: "sticky",
-//   top: 0,
-//   background: "#f8fafc",
-//   zIndex: 1,
-// };
-
-// const btn = (disabled: boolean): React.CSSProperties => ({
-//   padding: "8px 12px",
-//   borderRadius: 8,
-//   border: "1px solid #e5e7eb",
-//   background: disabled ? "#f1f5f9" : "white",
-//   color: disabled ? "#94a3b8" : "#0f172a",
-//   cursor: disabled ? "not-allowed" : "pointer",
-// });
-
-// /** Soft row color based on transaction type */
-// const rowBg = (txn: string): React.CSSProperties => {
-//   const s = (txn || "").toLowerCase();
-//   if (s === "buy")
-//     return { backgroundColor: "rgba(22,163,74,0.08)" }; // soft green
-//   if (s === "sell")
-//     return { backgroundColor: "rgba(239,68,68,0.08)" }; // soft red
-//   return {};
-// };
-
-
-
-// export default function TradeTables() {
-
-//   const apiUrl = import.meta.env.VITE_API_URL;
-
-
-
-//   const [trades, setTrades] = useState<Trade[]>([]);
-
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   // Live ticks: keep a token -> current LTP map
-// const [ltpByToken, setLtpByToken] = useState<Record<string, LiteTick>>({});
-
- 
-      
-
-//   // simple UI states
-
-//   const debouncedSearch = useDebounced("", 250);
-//   // const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_DEFAULT);
-//   const [page, setPage] = useState<number>(1);
-
-
-
-//   // Socket: listen to "tick" and update the LTP map
-//   useEffect(() => {
-//     const socket = getSocket();
-
-//     const onTick = (tick:any) => {
-
-//       // console.log(tick);
-
-//       setLtpByToken({ token:tick.token, ltp: tick.ltp });
-      
-
-//     };
-
-//     socket.on("tick", onTick);
-
- 
-//   }, []);
-
-//   // Fetch table data
-//   useEffect(() => {
-//     let cancelled = false;
-
-//     async function fetchTrades() {
-//       try {
-//         const res = await axios.get(`${apiUrl}/order/get/table/tradebook`, {
-//           headers: {
-//             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//             AngelOneToken: localStorage.getItem("angel_token") || "",
-//           },
-//         });
-        
-
-//         if (!cancelled) {
-//           if (res.data?.status === true) {
-//             setTrades(res.data.data || []);
-//             setLoading(false);
-//           } else {
-//             setLoading(false);
-//             toast.error(res.data?.message || "Something went wrong");
-//           }
-//         }
-//       } catch (err: any) {
-//         if (!cancelled) {
-//           setLoading(false);
-//           setError(err?.message || "Failed to load trades");
-//         }
-//       }
-//     }
-
-//     fetchTrades();
-//     return () => {
-//       cancelled = true;
-//     };
-//   }, [apiUrl]);
-
-//   // reset to page 1 on search or page size change
-//   useEffect(() => {
-//     setPage(1);
-//   }, [debouncedSearch, PAGE_SIZE_DEFAULT]);
-
-//   // filter by search
-
-//   const filtered = useMemo(() => {
-//     const q = debouncedSearch.trim().toLowerCase();
-//     if (!q) return trades;
-
-//     return trades.filter((t) => {
-//       const haystack =
-//         [
-//           t.fillid,
-//           t.orderid,
-//           t.tradingsymbol,
-//           t.transactiontype,
-//           t.producttype,
-//           t.exchange,
-//           t.instrumenttype,
-//           t.symbolgroup,
-//           t.optiontype,
-//           t.expirydate,
-//           t.filltime,
-//         ]
-//           .filter(Boolean)
-//           .join(" ")
-//           .toLowerCase() 
-//       return haystack.includes(q);
-//     });
-//   }, [trades, debouncedSearch]);
-
-
-
-
-//   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE_DEFAULT));
-//   const current = useMemo(() => {
-//     const start = (page - 1) * PAGE_SIZE_DEFAULT;
-//     return filtered.slice(start, start + PAGE_SIZE_DEFAULT);
-//   }, [filtered, page, PAGE_SIZE_DEFAULT]);
-
- 
-//   return (
-//     <div style={{ padding: 16, fontFamily: "system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" }}>
-//       {/* <h2 style={{ marginBottom: 12 }}>Trades</h2> */}
-
-    
-      
-//       {/* Table */}
-//       <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }} className="max-w-[1080px]">
-//         <div style={{ overflowX: "auto" }}>
-//           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-//             <thead style={{ background: "#f8fafc" }}>
-//               <tr>
-//                 {[
-//                   "Order ID",               
-//                   "Symbol",               
-//                   "Transaction Type",                 
-//                   "Fill Price",
-//                   "Current Price",
-//                    "Quantity",
-//                     "PnL",
-//                    "Time",
-//                     "Exchange",
-//                    "Product",
-//                     "Token",
-//                    "variety",
-//                   "ordertype",
-//                   "Status",
-//                   "CreateAt",
-//                 ].map((h) => (
-//                   <th key={h} style={thStyle}>
-//                     {h}
-//                   </th>
-//                 ))}
-//               </tr>
-//             </thead>
-
-//             <tbody>
-//               {loading && (
-//                 <tr>
-//                   <td colSpan={13} style={{ padding: 16, textAlign: "center" }}>
-//                     Loading trades…
-//                   </td>
-//                 </tr>
-//               )}
-
-//               {error && !loading && (
-//                 <tr>
-//                   <td colSpan={13} style={{ padding: 16, color: "#ef4444" }}>
-//                     {error}
-//                   </td>
-//                 </tr>
-//               )}
-
-//               {!loading && !error && current.length === 0 && (
-//                 <tr>
-//                   <td colSpan={13} style={{ padding: 16, textAlign: "center", color: "#64748b" }}>
-//                     No trades found.
-//                   </td>
-//                 </tr>
-//               )}
-
-//               {!loading &&
-//                 !error &&
-//                 current.map((t) => {
-//                   const live = t.token ? ltpByToken?.token : undefined;
-//                   return (
-//                     <tr key={t.fillid} style={{ borderBottom: "1px solid #f1f5f9", ...rowBg(t.transactiontype) }}>
-                     
-
-                      
-//                       <td style={td}>{t.orderid}</td>
-                     
-//                       <td style={td}>{t.tradingsymbol}</td>
-                   
-//                       <td style={td} title={t.transactiontype}>
-//                         <strong>{t.transactiontype}</strong>
-//                       </td>
-                    
-                     
-//                       <td style={td}>{t.price}</td>
-//                       <td style={{ ...td, fontWeight: 600 }}>
-//                         {live}
-//                       </td>
-//                        <td style={td}>{t.lotsize}</td>
-//                          <td style={td}>    {live !== undefined ? live?.toFixed(2) : "—"}</td>
-//                         <td style={td}>
-//                       {t.exchtime ? t.exchtime.split(" ")[1].slice(0, 5) : ""}
-//                     </td>
-                   
-//                      <td style={td}>{t.exchange}</td>
-//                         <td style={td}>{t.producttype}</td>
-//                          <td style={td}>{t.symboltoken}</td>
-//                         <td style={td}>{t.variety}</td>
-//                       <td style={td}>{t.ordertype}</td>
-//                         <td style={td}>{t.status}</td>
-                       
-                     
-//                        <td style={td}>{t.createdAt}</td>
-//                     </tr>
-//                   );
-//                 })}
-//             </tbody>
-//           </table>
-//         </div>
-
-//         {/* Footer / pagination */}
-//         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12 }}>
-//           <div style={{ fontSize: 13, color: "#475569" }}>
-//             Showing <strong>{current.length}</strong> of <strong>{filtered.length}</strong> filtered (
-//             {trades.length} total)
-//           </div>
-//           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-//             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={btn(page === 1)}>
-//               Prev
-//             </button>
-//             <span style={{ fontSize: 13 }}>
-//               Page <strong>{page}</strong> / {totalPages}
-//             </span>
-//             <button
-//               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-//               disabled={page >= totalPages}
-//               style={btn(page >= totalPages)}
-//             >
-//               Next
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//        {/* ✅ Modal Form */}
-  
-//     </div>
-//   );
-// }
-
-
-
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import * as XLSX from 'xlsx';
+import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
 import { toast } from "react-toastify";
-import "antd/dist/reset.css";
 import { getSocket } from "../../socket/Socket";
+import { useBrokerApi } from "../../api/brokers/brokerSelector";
 
-type Tick = { token: string; ltp: number }; // incoming socket tick
-type Trade = {
-  exchange: string;
-  producttype: string;
-  symboltoken: string;
-  tradingsymbol: string;
-  instrumenttype: string;
-  optiontype: string;
-  transactiontype: string; // "BUY" | "SELL"
-  orderid: string;
-  uniqueorderid: string;
-  lotsize: string;
-  price: string;
-  createdAt: string;
-  status: string;
-  variety: string;
-  ordertype: string;
-  exchtime: string;
-  fillid: string;
-  token: string;
-  fillsize: string;
-  symbolgroup: string;
-  expirydate: string;
-  filltime: string;
+type Tick = {
+  mode: 1 | 2 | 3;
+  exchangeType: number;
+  token: string;              // e.g. "47667"
+  sequenceNumber: number;
+  exchangeTimestamp: string;  // ISO
+  ltpPaiseOrRaw: number;      // e.g. 10225
+  ltp: number;                // e.g. 102.25
 };
 
+type Order = {
+  variety: string;
+  ordertype: string;
+  producttype: string;
+  duration: string;
+  price: number;
+  triggerprice: number;
+  quantity: string;
+  disclosedquantity: string;
+  squareoff: number;
+  stoploss: number;
+  trailingstoploss: number;
+  tradingsymbol: string;
+  transactiontype: string;
+  exchange: string;
+  symboltoken: string;
+  ordertag: string;
+  instrumenttype: string;
+  strikeprice: number;
+  optiontype: string;
+  expirydate: string;
+  lotsize: string;
+  cancelsize: string;
+  averageprice: number;
+  filledshares: string;
+  unfilledshares: string;
+  orderid: string;
+  text: string;
+  status: string;        // e.g., "rejected"
+  orderstatus: string;   // duplicate in your sample; we’ll show `status`
+  updatetime: string;    // e.g., "24-Oct-2025 13:21:19"
+  exchtime: string;
+  exchorderupdatetime: string;
+  fillid: string;
+  filltime: string;
+  fillprice:string;
+  fillsize:string;
+  parentorderid: string;
+  uniqueorderid: string;
+  exchangeorderid: string;
+  updatedAt:any;
+  createdAt:any
+};
+
+// util: tiny debounce hook so search feels snappy
 function useDebounced<T>(value: T, delay = 250) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -389,186 +70,341 @@ function useDebounced<T>(value: T, delay = 250) {
   return v as T;
 }
 
-const PAGE_SIZE_DEFAULT = 100;
+const PAGE_SIZE_DEFAULT = 10;
 
-const td: React.CSSProperties = {
-  padding: "10px 12px",
-  fontSize: 14,
-  color: "#0f172a",
-  whiteSpace: "nowrap",
-  verticalAlign: "top",
+const statusColor = (status: string) => {
+  const s = status?.toLowerCase();
+  if (s === "complete" || s === "filled" || s === "success") return "#16a34a"; // green
+  if (s === "rejected" || s === "cancelled" || s === "canceled") return "#ef4444"; // red
+  if (s === "pending" || s === "open" || s === "queued") return "#f59e0b"; // amber
+  return "#64748b"; // slate
 };
 
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  padding: "10px 12px",
-  fontSize: 13,
-  color: "#475569",
-  borderBottom: "1px solid #e5e7eb",
-  whiteSpace: "nowrap",
-  position: "sticky",
-  top: 0,
-  background: "#f8fafc",
-  zIndex: 1,
-};
+export default function TradeTable () {
 
-const btn = (disabled: boolean): React.CSSProperties => ({
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: "1px solid #e5e7eb",
-  background: disabled ? "#f1f5f9" : "white",
-  color: disabled ? "#94a3b8" : "#0f172a",
-  cursor: disabled ? "not-allowed" : "pointer",
-});
-
-const rowBg = (txn: string): React.CSSProperties => {
-  const s = (txn || "").toLowerCase();
-  if (s === "buy") return { backgroundColor: "rgba(22,163,74,0.08)" };
-  if (s === "sell") return { backgroundColor: "rgba(239,68,68,0.08)" };
-  return {};
-};
-
-export default function TradeTables() {
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const { api } = useBrokerApi();  // Auto-select AngelOne or Kite
+
+  const [profitAndLossData, setProfitAndLossData] = useState<number>(0);
+
+  const [orders, setOrders] = useState<Order[]>([]);
+   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Live ticks: token -> current LTP (number)
-  const [ltpByToken, setLtpByToken] = useState<Record<string, number>>({});
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search, 50);
 
-  const debouncedSearch = useDebounced("", 250);
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_DEFAULT);
   const [page, setPage] = useState<number>(1);
 
-  // ✅ Socket: listen to "tick" and update the LTP map (with cleanup)
+
+
+  // Live ticks: keep a token -> current LTP map
+  const [ltpByToken, setLtpByToken] = useState<Record<string, number>>({});
+
+  
   useEffect(() => {
-    const socket = getSocket();
 
-    const onTick = (tick: Tick) => {
-      setLtpByToken((prev) =>
-        prev[tick.token] === tick.ltp ? prev : { ...prev, [tick.token]: tick.ltp }
-      );
-    };
 
-    socket.on("tick", onTick);
-    return () => {
-      socket.off("tick", onTick);
-    };
+            const socket = getSocket();
+          
+              const onTick = (tick: Tick) => {
+                
+                setLtpByToken((prev) => {
+                  const curr = prev[tick.token];
+                  if (curr === tick.ltp) return prev; // avoid useless re-render
+                  return { ...prev, [tick.token]: tick.ltp };
+                });
+              };
+          
+              socket.on("tick", onTick);
+
+
+    let cancelled = false;
+
+    async function fetchOrders() {
+     
+      try {
+        const {data} = await axios.get(`${apiUrl}/order/get/tabletradebook`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+              "AngelOneToken": localStorage.getItem("angel_token") || "",
+             
+            },
+          });
+
+
+          console.log(data);
+          
+
+       if(data.status==true) {
+
+        setOrders(data.data);
+
+       }else if(data.status==false&&data.message=='Unauthorized'){
+
+         toast.error('Unauthorized User');
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+           
+       }else{
+
+        setError("Something went wrong")
+         toast.error(data?.message||"Something went wrong");
+          // alert(data?.message)
+       }
+        
+      } catch (err: any) {
+
+        console.log(err);
+        
+         toast.error(err?.message || "Something went wrong");
+         
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+
+      let tradeRes = await api.getTodayTrade()
+
+      setProfitAndLossData(tradeRes.data.pnl || 0);
+     
+    }
+
+    fetchOrders();
+ 
   }, []);
 
-  // Fetch table data
+  // reset to page 1 whenever the search or page size changes
   useEffect(() => {
-    let cancelled = false;
-    (async function fetchTrades() {
-      try {
-        const res = await axios.get(`${apiUrl}/order/get/table/tradebook`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-            AngelOneToken: localStorage.getItem("angel_token") || "",
-          },
-        });
+   setPage(1);
+  }, [debouncedSearch, pageSize]);
 
-        if (!cancelled) {
-          if (res.data?.status === true) {
-            setTrades(res.data.data || []);
-            setLoading(false);
-          } else {
-            setLoading(false);
-            toast.error(res.data?.message || "Something went wrong");
-          }
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          setLoading(false);
-          setError(err?.message || "Failed to load trades");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [apiUrl]);
-
-  // reset to page 1 on search or page size change
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-
-  // filter by search
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return trades;
-    return trades.filter((t) => {
-      const haystack = [
-        t.fillid,
-        t.orderid,
-        t.tradingsymbol,
-        t.transactiontype,
-        t.producttype,
-        t.exchange,
-        t.instrumenttype,
-        t.symbolgroup,
-        t.optiontype,
-        t.expirydate,
-        t.filltime,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    if (!q) return orders;
+
+    return orders.filter((o) => {
+      // fields to search across
+      const haystack =
+        [
+          o.orderid,
+          o.uniqueorderid,
+          o.tradingsymbol,
+          o.transactiontype,
+          o.instrumenttype,
+          o.ordertype,
+          o.producttype,
+          o.status,
+          o.exchange,
+          o.text,
+          o.updatetime,
+          o.exchangeorderid,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase() +
+        // also allow searching numbers like price/quantity
+        ` ${o.price ?? ""} ${o.quantity ?? ""} ${o.averageprice ?? ""}`;
       return haystack.includes(q);
     });
-  }, [trades, debouncedSearch]);
+  }, [orders, debouncedSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE_DEFAULT));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE_DEFAULT;
-    return filtered.slice(start, start + PAGE_SIZE_DEFAULT);
-  }, [filtered, page]);
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+
+
+
+   
+     const handleExcelDownload = () => {
+
+
+      //  window.open(`${apiUrl}/users/export/orders`, "_blank");
+
+        // Convert data to worksheet
+        const worksheet = XLSX.utils.json_to_sheet(orders);
+        // Create a workbook
+        const workbook = XLSX.utils.book_new();
+        // Append the worksheet to the workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+        // Generate an Excel file
+        XLSX.writeFile(workbook, "orders.xlsx");
+      };
+
+
+     const td: React.CSSProperties = {
+      padding: "8px 12px",
+      fontSize: 13,
+      color: "#0f172a",
+      borderBottom: "1px solid #e5e7eb",
+      whiteSpace: "nowrap",
+    };
+
 
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" }}>
+      <h2 style={{ marginBottom: 12 }}>Current Position</h2>
+
+      <div
+  style={{
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 12,
+  }}
+>
+  
+
+  
+
+<div>
+  
+</div>
+ 
+
+    
+
+
+      
+  
+</div>
+
+
+  
+ 
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+  <input
+    type="text"
+    placeholder="Search by Order ID, Symbol, Type, Status, Exchange, Message..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    style={{
+      flex: "1 1 320px",
+      minWidth: 240,
+      padding: "10px 12px",
+      borderRadius: 8,
+      border: "1px solid #e5e7eb",
+      outline: "none",
+    }}
+  />
+
+  <div className="flex items-center gap-3 mt-4">
+  <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-2 text-center">
+    <div className="text-xs text-gray-500 font-medium">PNL</div>
+    <div
+      className={`text-lg font-semibold mt-0.5 ${
+        profitAndLossData >= 0 ? 'text-emerald-600' : 'text-red-600'
+      }`}
+    >
+      ₹{profitAndLossData?.toFixed(2)}
+    </div>
+  </div>
+</div>
+
+
+
+  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#475569" }}>
+    Rows per page
+    <select
+      value={pageSize}
+      onChange={(e) => setPageSize(Number(e.target.value))}
+      style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e7eb" }}
+    >
+      {[10, 20, 50, 100].map((n) => (
+        <option key={n} value={n}>
+          {n}
+        </option>
+      ))}
+    </select>
+  </label>
+  {/* Excel Download Button */}
+  <button
+    onClick={handleExcelDownload}
+    style={{
+      padding: "10px 16px",
+      backgroundColor: "#3b82f6", // Blue-500
+      color: "white",
+      border: "none",
+      borderRadius: 8,
+      cursor: "pointer",
+      fontSize: 14,
+      transition: "background-color 0.2s",
+    }}
+    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")} // Blue-600 on hover
+    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#3b82f6")}
+  >
+    Excel Download
+  </button>
+</div>
+
+
+      {/* Table */}
       <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }} className="max-w-[1080px]">
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "#f8fafc" }}>
               <tr>
                 {[
-                  "Order ID",
-                  "Symbol",
-                  "Transaction Type",
-                  "Fill Price",
-                  "Current Price",
-                  "Quantity",
-                  "PnL",
-                  "Time",
-                  "Exchange",
-                  "Product",
-                  "Token",
-                  "variety",
+                   "SYMBOL",
+                  "instrument",
+                 " Type",
                   "ordertype",
-                  "Status",
-                  "CreateAt",
+                  "ProductType",
+                  "Price",
+                    "PnL",
+                      "OrderQty",
+                  //  "Time",
+                  "TradedQty",
+                  "OrderID",
+                    "TradeID",
+                    "Status",
+                       "Message",
+                    "updatedAt",
+                  "createdAt",
                 ].map((h) => (
-                  <th key={h} style={thStyle}>
-                    {h}
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      fontSize: 13,
+                      color: "#475569",
+                      borderBottom: "1px solid #e5e7eb",
+                      whiteSpace: "nowrap",
+                      position: "sticky",
+                      top: 0,
+                      background: "#f8fafc",
+                      zIndex: 1,
+                    }}
+                  >
+                      {h.toUpperCase()}
                   </th>
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={15} style={{ padding: 16, textAlign: "center" }}>
-                    Loading trades…
+                  <td colSpan={11} style={{ padding: 16, textAlign: "center" }}>
+                    Loading orders…
                   </td>
                 </tr>
               )}
 
               {error && !loading && (
                 <tr>
-                  <td colSpan={15} style={{ padding: 16, color: "#ef4444" }}>
+                  <td colSpan={11} style={{ padding: 16, color: "#ef4444" }}>
                     {error}
                   </td>
                 </tr>
@@ -576,48 +412,93 @@ export default function TradeTables() {
 
               {!loading && !error && current.length === 0 && (
                 <tr>
-                  <td colSpan={15} style={{ padding: 16, textAlign: "center", color: "#64748b" }}>
-                    No trades found.
+                  <td colSpan={11} style={{ padding: 16, textAlign: "center", color: "#64748b" }}>
+                    No orders found.
                   </td>
                 </tr>
               )}
 
               {!loading &&
                 !error &&
-                current.map((t) => {
-                  // ✅ correct dynamic lookup (NOT ltpByToken.token)
-                  const live = t.token ? ltpByToken[t.token] : undefined; // number | undefined
-                  const qty = Number(t.lotsize) || 0;
-                  const fillPrice = Number(t.price) || 0;
-                  const pnl =
-                    live !== undefined
-                      ? (t.transactiontype === "BUY" ? live - fillPrice : fillPrice - live) * qty
-                      : undefined;
+                current.map((o) => {
 
+                
+          const live = o.symboltoken ? ltpByToken[o.symboltoken] : undefined;
+          
+            // colors for transaction type
+            const isBuy = o.transactiontype === "BUY";
+            const isSell = o.transactiontype === "SELL";
+
+            const txnBg = isBuy
+              ? "#dcfce7"
+              : isSell
+              ? "#fee2e2"
+              : "#e5e7eb";
+            const txnColor = isBuy
+              ? "#166534"
+              : isSell
+              ? "#991b1b"
+              : "#374151";
+
+                
                   return (
-                    <tr key={t.fillid} style={{ borderBottom: "1px solid #f1f5f9", ...rowBg(t.transactiontype) }}>
-                      <td style={td}>{t.orderid}</td>
-                      <td style={td}>{t.tradingsymbol}</td>
-                      <td style={td} title={t.transactiontype}>
-                        <strong>{t.transactiontype}</strong>
-                      </td>
-                      <td style={td}>{t.price}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>
-                        {live !== undefined ? live.toFixed(2) : "—"}
-                      </td>
-                      <td style={td}>{t.lotsize}</td>
-                      <td style={td}>{pnl !== undefined ? pnl.toFixed(2) : "—"}</td>
-                      <td style={td}>{t.exchtime ? t.exchtime.split(" ")[1]?.slice(0, 5) : ""}</td>
-                      <td style={td}>{t.exchange}</td>
-                      <td style={td}>{t.producttype}</td>
-                      <td style={td}>{t.symboltoken}</td>
-                      <td style={td}>{t.variety}</td>
-                      <td style={td}>{t.ordertype}</td>
-                      <td style={td}>{t.status}</td>
-                      <td style={td}>{t.createdAt}</td>
-                    </tr>
-                  );
-                })}
+                  <tr key={o.orderid} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                   
+                     <td style={td} title={o.tradingsymbol}><strong>{o.tradingsymbol}</strong> </td>
+                       <td style={td} title={o.instrumenttype}> {o.instrumenttype} </td>
+                        <td style={td}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 10px",
+                              borderRadius: 999,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              backgroundColor: txnBg,
+                              color: txnColor,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {o.transactiontype || "-"}
+                          </span>
+                        </td>
+                         <td style={td}>{o.ordertype}</td>
+                          <td style={td}>{o.producttype}</td>
+                            <td style={td}>{o.fillprice}</td>
+                             <td style={td}>
+                      {live !== undefined
+                        ? ((  live-Number(o.fillprice)) * Number(o.fillsize)).toFixed(2)
+                        : "—"}
+                    </td>
+                            <td style={td}>{o.quantity}</td>
+                             <td style={td}>{o.fillsize}</td>
+                               <td style={td}>{o.orderid}</td>
+                                <td style={td}>{o.fillid}</td>
+                                  <td style={td}>
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      padding: "2px 8px",
+                                      borderRadius: 999,
+                                      fontSize: 12,
+                                      color: "white",
+                                      background: statusColor(o.status),
+                                      textTransform: "capitalize",
+                                    }}
+                                    title={o.orderstatus}
+                                  >
+                                    {o.status || o.orderstatus || "-"}
+                                  </span>
+                                </td>
+                        <td style={{ ...td, maxWidth: 380 }}>
+                      <span title={o.text} style={{ display: "inline-block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>
+                        {o.text || "—"}
+                      </span>
+                    </td>
+                    <td style={td}>{o.updatedAt}</td>
+                    <td style={td}>{o.createdAt}</td>
+                  </tr>
+                )})}
             </tbody>
           </table>
         </div>
@@ -626,10 +507,14 @@ export default function TradeTables() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12 }}>
           <div style={{ fontSize: 13, color: "#475569" }}>
             Showing <strong>{current.length}</strong> of <strong>{filtered.length}</strong> filtered (
-            {trades.length} total)
+            {orders.length} total)
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={btn(page === 1)}>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={btn(page === 1)}
+            >
               Prev
             </button>
             <span style={{ fontSize: 13 }}>
@@ -645,6 +530,30 @@ export default function TradeTables() {
           </div>
         </div>
       </div>
+
+
+
+
+     
+
+
     </div>
   );
 }
+
+// const td: React.CSSProperties = {
+//   padding: "10px 12px",
+//   fontSize: 14,
+//   color: "#0f172a",
+//   whiteSpace: "nowrap",
+//   verticalAlign: "top",
+// };
+
+const btn = (disabled: boolean): React.CSSProperties => ({
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid #e5e7eb",
+  background: disabled ? "#f1f5f9" : "white",
+  color: disabled ? "#94a3b8" : "#0f172a",
+  cursor: disabled ? "not-allowed" : "pointer",
+});

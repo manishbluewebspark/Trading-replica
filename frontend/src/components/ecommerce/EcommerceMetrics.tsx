@@ -18,36 +18,38 @@ export default function EcommerceMetrics() {
   const handleGenerateToken = async () => {
     try{
           
-         const {data} = await axios.get(
-          `${apiUrl}/admin/login/users`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-            },
-          }
-        );
+      //    const {data} = await axios.get(
+      //     `${apiUrl}/admin/login/users`,
+      //     {
+      //       headers: {
+      //         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      //       },
+      //     }
+      //   );
 
 
-        console.log(data,'admin login users');
+      //   console.log(data,'admin login users');
         
 
-       if(data.status==true) {
+      //  if(data.status==true) {
        
-       let angel_auth_token = data.data.authToken
-      //  let angel_refresh_token = data.data.refreshToken
-      //  let angel_feed_token = data.data.feedToken
+      //  let angel_auth_token = data.data.authToken
+      // //  let angel_refresh_token = data.data.refreshToken
+      // //  let angel_feed_token = data.data.feedToken
 
-       localStorage.setItem("angel_token", angel_auth_token);
-      //  localStorage.setItem("angel_feed_token", angel_refresh_token);
-      //   localStorage.setItem("angel_refresh_token", angel_feed_token);
+      //  localStorage.setItem("angel_token", angel_auth_token);
+      // //  localStorage.setItem("angel_feed_token", angel_refresh_token);
+      // //   localStorage.setItem("angel_refresh_token", angel_feed_token);
 
     
-        toast.success("Login Successful in AngelOne!");
+      //   toast.success("Login Successful in AngelOne!");
+
+      toast.success("Currently Not Working This Button");
 
   
-      }else{
-            toast.error(data.message);
-      }
+      // }else{
+      //       toast.error(data.message);
+      // }
 
        }catch(err:any) {
 
@@ -148,6 +150,8 @@ export default function EcommerceMetrics() {
           </Badge>
         </div>
       </div>
+
+      
       {/* <!-- Metric Item End --> */}
 
      

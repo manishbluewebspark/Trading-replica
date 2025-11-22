@@ -10,6 +10,7 @@ import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
 
 export default function SignInUser() {
+
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -23,17 +24,42 @@ export default function SignInUser() {
     e.preventDefault();
     setLoading(true);
 
+
+
+    
+
     try {
       const response = await axios.post(`${apiUrl}/auth/login`, {
         email: emailOrUsername,
         password,
       });
 
+          console.log(response,'login req',`${apiUrl}/auth/login`);
+
       if(response.data.status==true) {
 
-      const { token, user } = response.data;
+      const { token, user,angelTokens } = response.data;
+
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(user)); 
+      
+      
+      console.log(angelTokens,'angelTokens');
+      
+
+    if (angelTokens) {
+
+          localStorage.setItem("angel_token", angelTokens.authToken);
+          localStorage.setItem("angel_feed_token", angelTokens.feedToken);
+          localStorage.setItem("angel_refresh_token", angelTokens.refreshToken);
+
+    } else {
+      // Optional: remove if they existed previously
+      localStorage.removeItem("angel_token");
+      localStorage.removeItem("angel_feed_token");
+      localStorage.removeItem("angel_refresh_token");
+    }
+
       toast.success("Login successful!");
 
        if(user.role=='admin') {

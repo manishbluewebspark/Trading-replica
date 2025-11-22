@@ -6,19 +6,16 @@ import {
   HorizontaLDots,
   // ListIcon,
   PieChartIcon,
-  TableIcon,
+  // TableIcon,
   // UserCircleIcon,
 } from "../icons";
-// import UsersIcon from "../icons/users.svg"
-// import BrokerIcon from "../icons/broker.svg";
-// import { RiBroadcastFill } from "react-icons/ri";
-// import { TbLogs } from "react-icons/tb";
+
 
 
 import {
   LayoutDashboard,
   ClipboardList,
-  BarChart2,
+  // BarChart2,
   // FileText,
   // Settings,
   // Activity,
@@ -26,9 +23,21 @@ import {
   // Radio,
   // HelpCircle,
   // Briefcase,
-  LineChart,
+  // LineChart,
   // Layers,
   // ChartCandlestick,
+} from "lucide-react";
+
+import {
+  // LayoutDashboard,
+  TrendingUp,
+  Briefcase,
+  // ClipboardList,
+  BookText,
+  Headphones,
+  Settings,
+  BarChart2,
+  // ChevronDown,
 } from "lucide-react";
 
 
@@ -64,146 +73,53 @@ const navItems: NavItem[] = [
     roles: ["admin", "user"],
   },
 
-  // {
-  //   icon: <ChartCandlestick size={20} />,
-  //   name: "Watch List",
-  //   path: "/new-watch",
-  //   roles: ["admin", "user"],
-  // },
+    {
+    icon: <TrendingUp size={20} />,
+    name: "Current Position",
+    path: "/currentposition",
+    roles: ["admin", "user"],
+  },
 
-  {
+   {
+    icon: <Briefcase size={20} />,
+    name: "Holding",
+    path: "/holding/order",
+    roles: ["admin", "user"],
+  },
+
+   {
     icon: <ClipboardList size={20} />,
-    name: "Orders",
+    name: "Orders History",
     path: "/order",
     roles: ["admin", "user"],
   },
-  {
-    icon: <BarChart2 size={20} />,
-    name: "Instrument",
-    path: "/instrument",
+   {
+    icon: <BookText size={20} />,
+    name: "User Manual",
+    path: "/user/usermanual",
     roles: ["admin", "user"],
   },
-  // {
-  //   icon: <Layers size={20} />,
-  //   name: "Nifty-Bank Instrument",
-  //   path: "/instrument/niftyandbanknifty",
-  //   roles: ["admin", "user"],
-  // },
   {
-    icon: <LineChart size={20} />,
-    name: "Trades",
-    path: "/trades",
+    icon: <Headphones size={20} />,
+    name: "Support",
+    path: "/user/support",
+    roles: ["admin", "user"],
+  },
+   {
+    icon: <Settings size={20} />,
+    name: "Settings",
+    path: "/user/setting",
+    roles: ["admin", "user"],
+  },
+   {
+    icon: <BarChart2 size={20} />,
+    name: "Market Data",
+    path: "/user/marketdata",
     roles: ["admin", "user"],
   },
   
-  // {
-  //   icon: <Briefcase size={20} />,
-  //   name: "Management",
-  //   path: "/management",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <FileText size={20} />,
-  //   name: "Order Logs",
-  //   path: "/order-logs",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <Activity size={20} />,
-  //   name: "Activity Logs",
-  //   path: "/activity-logs",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <Settings size={20} />,
-  //   name: "Trade Setting",
-  //   path: "/trade-setting",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <PieChart size={20} />,
-  //   name: "Option Analytics",
-  //   path: "/option-analytics",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <Radio size={20} />,
-  //   name: "Broadcast Messages",
-  //   path: "/broadcast-analytics",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <HelpCircle size={20} />,
-  //   name: "Support",
-  //   path: "/support",
-  //   roles: ["admin", "user"],
-  // },
-
  
-  // {
-  //   icon: <img src={BrokerIcon} alt="Users" className="w-5 h-5" />,
-  //   name: "User Position",
-  //   path: "",
-  //   roles: ["admin", "user"],
-  // },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Users",
-  //   subItems: [
-  //     { name: "All Users", path: "/all-users", roles: ["admin"] },
-  //     { name: "Users Report", path: "/user-reports", roles: ["admin", "user"] },
-  //   ],
-  //   roles: ["admin"],
-  // },
-  // {
-  //   icon: <img src={UsersIcon} alt="Users" className="w-5 h-5" />,
-  //   name: "Brokers",
-  //   path: "/brokers",
-  //   roles: ["admin"],
-  // },
-  //   {
-  //   icon: <RiBroadcastFill />,
-  //   name: "Broadcast",
-  //   path: "/broadcast",
-  //   roles: ["admin"],
-  // },
-  //   {
-  //   icon: <TbLogs />,
-  //   name: "Activity Logs",
-  //   path: "/activity-logs",
-  //   roles: ["admin"],
-  // },  
-  //   {
-  //   name: "Reports",
-  //   icon: <ListIcon />,
-  //   subItems: [
-  //     { name: "License Report", path: "/license-report", roles: ["admin"] },
-  //     { name: "PPO Report", path: "/error-404", roles: ["admin"] },
-  //   ],
-  //   roles: ["admin"],
-  // },
-  // {
-  //   name: "Forms",
-  //   icon: <ListIcon />,
-  //   subItems: [
-  //     { name: "Form Elements", path: "/form-elements", roles: ["admin"] },],
-  //   roles: ["admin"],
-  // },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", roles: ["admin"] }],
-    roles: ["admin"],
-  },
-  // {
-  //   name: "Pages",
-  //   icon: <PageIcon />,
-  //   subItems: [
-  //     { name: "Blank Page", path: "/blank", roles: ["admin"] },
-  //     { name: "404 Error", path: "/error-404", roles: ["admin", "user"] },
-  //   ],
-  //   roles: ["admin", "user"],
-  // },
+ 
 ];
 
 
@@ -231,15 +147,7 @@ const othersItems: NavItem[] = [
     ],
     roles: ["admin"],
   },
-  // {
-  //   icon: <PlugInIcon />,
-  //   name: "Authentication",
-  //   subItems: [
-  //     { name: "Sign In", path: "/signin", roles: ["admin", "user"] },
-  //     { name: "Sign Up", path: "/signup", roles: ["admin", "user"] },
-  //   ],
-  //   roles: ["admin", "user"],
-  // },
+  
 ];
 
 const filterNavItems = (items: NavItem[], role: Role): NavItem[] => {
@@ -445,14 +353,16 @@ const AppSidebar: React.FC = () => {
             <>
               <img
                 className="dark:hidden items-center justify-center ml-15"
-                src="/images/logo/logo.png"
+                // src="/images/logo/logo.png"
+                  src="/images/logo/new-artha-logo.jpeg"
                 alt="Logo"
                 width={100}
                 height={20}
               />
               <img
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                // src="/images/logo/logo-dark.svg"
+                  src="/images/logo/new-artha-logo.jpeg"
                 alt="Logo"
                 width={150}
                 height={40}
@@ -460,7 +370,8 @@ const AppSidebar: React.FC = () => {
             </>
           ) : (
             <img
-              src="/images/logo/logo-icon.svg"
+              // src="/images/logo/logo-icon.svg"
+               src="/images/logo/new-artha-logo.jpeg"
               alt="Logo"
               width={32}
               height={32}
@@ -500,3 +411,6 @@ const AppSidebar: React.FC = () => {
 };
 
 export default AppSidebar;
+
+
+

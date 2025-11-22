@@ -1,7 +1,8 @@
 // scheduler.js
 import cron from "node-cron";
-import { bulkInsertPostgre } from "./scripts/bulkInsertPostgre.js";
-import { bulkUpdateSyFields } from "./scripts/bulkUpdateSyFields.js"; 
+import { bulkInsertPostgre } from "../script/postgre.js";
+import { bulkUpdateSyFieldsJS } from "../script/postgre.js"; 
+
 
 
 // Prevent overlapping runs
@@ -36,25 +37,30 @@ cron.schedule("40 9 * * *", async () => {          // every day at 09:40
 
 
 
+
+
+
+
+
 // Example: second job at 09:55
-cron.schedule("55 9 * * *", async () => {
+// cron.schedule("55 9 * * *", async () => {
 
-  if (running.update) return console.log("Update already running, skip.");
+//   if (running.update) return console.log("Update already running, skip.");
 
-  running.update = true;
+//   running.update = true;
 
-  console.log("▶️ bulkUpdate @ 09:55 IST");
-  try {
-     await bulkUpdateSyFields();
-     }
+//   console.log("▶️ bulkUpdate @ 09:55 IST");
+//   try {
+//      await bulkUpdateSyFieldsJS();
+//      }
 
-  catch (e) {
-     console.error("bulkUpdate error:", e);
+//   catch (e) {
+//      console.error("bulkUpdate error:", e);
 
-   }
-  finally {
-     running.update = false; 
-    }
-}, { timezone: "Asia/Kolkata" });
+//    }
+//   finally {
+//      running.update = false; 
+//     }
+// }, { timezone: "Asia/Kolkata" });
 
 // keep process alive (start this file with PM2 or node)

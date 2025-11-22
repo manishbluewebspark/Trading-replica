@@ -170,7 +170,7 @@
 // }
 
 import { useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -187,12 +187,14 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
+
   const apiUrl = import.meta.env.VITE_API_URL;
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+
+     console.log('login req');
 
     try {
       const response = await axios.post(`${apiUrl}/auth/login`, {
@@ -200,14 +202,25 @@ export default function SignInForm() {
         password,
       });
 
+
+      console.log(response,'response');
+      
+
       const { token, user } = response.data;
 
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
+      console.log(user,'login user');
+      
+
+       localStorage.setItem("angel_token", user?.authToken);
+       localStorage.setItem("angel_feed_token", user?.refreshToken);
+        localStorage.setItem("angel_refresh_token", user?.feedToken);
+
       toast.success("Login successful!");
-      navigate("/dashboard");
+      // navigate("/dashboard");
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Login failed. Please try again."

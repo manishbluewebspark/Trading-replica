@@ -32,7 +32,7 @@ const User = sequelize.define('User', {
     allowNull: true
   },
   role: {
-    type: DataTypes.ENUM('admin', 'user'),
+    type: DataTypes.ENUM('admin', 'user','clone-user'),
     allowNull: false,
     defaultValue: 'user'
   },
@@ -63,7 +63,10 @@ angelLoginUser:{
   type: DataTypes.BOOLEAN,
   allowNull: true,
 },
-
+DematFund: {
+  type: DataTypes.DECIMAL(10, 2), // 10 digits total, 2 decimals
+  defaultValue: 0,
+},
 authToken: {
   type: DataTypes.TEXT,
   allowNull: true,
@@ -83,7 +86,33 @@ resetCode:{
 resetCodeExpire:{
   type: DataTypes.TEXT,
   allowNull: true,
+},
+strategyName: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+strategyDis:{
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
+packageName:{
+   type: DataTypes.STRING,
+  allowNull: true,
+},
+packageDis:{
+   type: DataTypes.TEXT,
+  allowNull: true,
+},
+// to date for package
+packageDate:{
+   type: DataTypes.DATE,
+      allowNull: true,
+},
+packageFromDate:{
+   type: DataTypes.DATE,
+      allowNull: true,
 }
+
 }, {
   tableName: 'users',
   timestamps: true,

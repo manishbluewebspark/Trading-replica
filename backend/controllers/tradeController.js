@@ -8,417 +8,120 @@ import { Op } from 'sequelize';
 
 
 let saveData = [
-   
     {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-      "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 5343.75,
-      "transactiontype": "SELL",
-      "fillprice": 23.75,
-      "fillsize": "225",
-      "orderid": "251104000500889",
-      "fillid": "9090605",
-      "filltime": "12:36:33"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-      "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 5295,
-      "transactiontype": "BUY",
-      "fillprice": 70.6,
-      "fillsize": "75",
-      "orderid": "251104000364251",
-      "fillid": "7456081",
-      "filltime": "11:41:04"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 7185,
-      "transactiontype": "BUY",
-      "fillprice": 47.9,
-      "fillsize": "150",
-      "orderid": "251104000346164",
-      "fillid": "5983388",
-      "filltime": "11:08:55"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 7203.75,
-      "transactiontype": "BUY",
-      "fillprice": 96.05,
-      "fillsize": "75",
-      "orderid": "251104000678569",
-      "fillid": "13815937",
-      "filltime": "14:23:32"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 7267.5,
-      "transactiontype": "SELL",
-      "fillprice": 48.45,
-      "fillsize": "150",
-      "orderid": "251104000353321",
-      "fillid": "6017088",
-      "filltime": "11:09:33"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 6618.75,
-      "transactiontype": "BUY",
-      "fillprice": 17.65,
-      "fillsize": "375",
-      "orderid": "251104000598481",
-      "fillid": "11326669",
-      "filltime": "13:38:33"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 1275,
-      "transactiontype": "BUY",
-      "fillprice": 17,
-      "fillsize": "75",
-      "orderid": "251104000524797",
-      "fillid": "9938105",
-      "filltime": "13:03:00"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 1350,
-      "transactiontype": "SELL",
-      "fillprice": 18,
-      "fillsize": "75",
-      "orderid": "251104000545842",
-      "fillid": "10285949",
-      "filltime": "13:12:37"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 10402.5,
-      "transactiontype": "BUY",
-      "fillprice": 69.35,
-      "fillsize": "150",
-      "orderid": "251104000589656",
-      "fillid": "13041972",
-      "filltime": "14:11:02"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 7203.75,
-      "transactiontype": "BUY",
-      "fillprice": 96.05,
-      "fillsize": "75",
-      "orderid": "251104000678569",
-      "fillid": "13815938",
-      "filltime": "14:23:32"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 8625,
-      "transactiontype": "BUY",
-      "fillprice": 23,
-      "fillsize": "375",
-      "orderid": "251104000501622",
-      "fillid": "9369389",
-      "filltime": "12:45:19"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 14137.5,
-      "transactiontype": "SELL",
-      "fillprice": 18.85,
-      "fillsize": "750",
-      "orderid": "251104000601341",
-      "fillid": "11376146",
-      "filltime": "13:39:12"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 6720,
-      "transactiontype": "BUY",
-      "fillprice": 22.4,
-      "fillsize": "300",
-      "orderid": "251104000482889",
-      "fillid": "8974404",
-      "filltime": "12:31:35"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 4563.75,
-      "transactiontype": "SELL",
-      "fillprice": 60.85,
-      "fillsize": "75",
-      "orderid": "251104000424302",
-      "fillid": "7572110",
-      "filltime": "11:44:16"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 6618.75,
-      "transactiontype": "BUY",
-      "fillprice": 17.65,
-      "fillsize": "375",
-      "orderid": "251104000598481",
-      "fillid": "11326670",
-      "filltime": "13:38:33"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 8868.75,
-      "transactiontype": "SELL",
-      "fillprice": 23.65,
-      "fillsize": "375",
-      "orderid": "251104000516707",
-      "fillid": "9437400",
-      "filltime": "12:47:46"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 10560,
-      "transactiontype": "SELL",
-      "fillprice": 70.4,
-      "fillsize": "150",
-      "orderid": "251104000668755",
-      "fillid": "13077155",
-      "filltime": "14:11:27"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700PE",
-        "token":"47667",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "PE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 11955,
-      "transactiontype": "SELL",
-      "fillprice": 79.7,
-      "fillsize": "150",
-      "orderid": "251104000722837",
-      "fillid": "14007983",
-      "filltime": "14:29:29"
-    },
-    {
-      "exchange": "NFO",
-      "producttype": "INTRADAY",
-      "tradingsymbol": "NIFTY04NOV2525700CE",
-       "token":"47664",
-      "instrumenttype": "OPTIDX",
-      "symbolgroup": "XX",
-      "strikeprice": 25700,
-      "optiontype": "CE",
-      "expirydate": "04NOV2025",
-      "marketlot": "75",
-      "precision": "2",
-      "multiplier": "-1",
-      "tradevalue": 1785,
-      "transactiontype": "SELL",
-      "fillprice": 23.8,
-      "fillsize": "75",
-      "orderid": "251104000500889",
-      "fillid": "9090604",
-      "filltime": "12:36:33"
-    }
+    
+    "userId": 19,
+    "variety": "NORMAL",
+    "ordertype": "MARKET",
+    "producttype": "INTRADAY",
+    "duration": "DAY",
+    "price": 392.8,
+    "triggerprice": 0,
+    "quantity": "75",
+    "disclosedquantity": "0",
+    "squareoff": 0,
+    "stoploss": 0,
+    "trailingstoploss": 0,
+    "tradingsymbol": "NIFTY25NOV2525400CE",
+    "transactiontype": "BUY",
+    "exchange": "NFO",
+    "symboltoken": "52839",
+    "instrumenttype": "OPTIDX",
+    "strikeprice": 25400,
+    "optiontype": "CE",
+    "expirydate": "25NOV2025",
+    "lotsize": "75",
+    "cancelsize": "0",
+    "averageprice": 0,
+    "filledshares": "0",
+    "unfilledshares": "75",
+    "orderid": "251111000415701",
+    "text": null,
+    "status": "cancelled",
+    "orderstatus": "cancelled",
+    "updatetime": "11-Nov-2025 11:56:57",
+    "exchtime": null,
+    "exchorderupdatetime": null,
+    "fillid": "4133501",
+    "filltime": "11:56:57",
+    "parentorderid": null,
+    "ordertag": null,
+    "uniqueorderid": "a9e36c91-a5bf-4933-ba5b-349520ed4a15",
+    "createdAt": "2025-11-11T06:26:57.487Z",
+    "updatedAt": "2025-11-11T06:49:13.273Z",
+    "totalPrice": 28747.5,
+    "actualQuantity": "75",
+    "tradedValue": 28796.25,
+    "fillprice": 383.95,
+    "fillsize": 75
+  },
+  {
+    "userId": 19,
+    "variety": "NORMAL",
+    "ordertype": "MARKET",
+    "producttype": "INTRADAY",
+    "duration": "DAY",
+    "price": 414.4,
+    "triggerprice": 0,
+    "quantity": "75",
+    "disclosedquantity": "0",
+    "squareoff": 0,
+    "stoploss": 0,
+    "trailingstoploss": 0,
+    "tradingsymbol": "NIFTY25NOV2525400CE",
+    "transactiontype": "SELL",
+    "exchange": "NFO",
+    "symboltoken": "52839",
+    "instrumenttype": "OPTIDX",
+    "strikeprice": 25400,
+    "optiontype": "CE",
+    "expirydate": "25NOV2025",
+    "lotsize": "75",
+    "cancelsize": "0",
+    "averageprice": 0,
+    "filledshares": "0",
+    "unfilledshares": "75",
+    "orderid": "251111000584816",
+    "text": null,
+    "status": "open",
+    "orderstatus": null,
+    "updatetime": "11-Nov-2025 13:26:38",
+    "exchtime": null,
+    "exchorderupdatetime": null,
+    "fillid": "5450015",
+    "filltime": "13:26:38",
+    "parentorderid": null,
+    "ordertag": null,
+    "uniqueorderid": "24f0e431-51c9-4ea3-a4b6-dbab1b64fce9",
+    "createdAt": "2025-11-11T07:56:38.247Z",
+    "updatedAt": "2025-11-11T07:56:38.445Z",
+    "totalPrice": 31875,
+    "actualQuantity": "75",
+    "tradedValue": 31871.25,
+    "fillprice": 424.95,
+    "fillsize": 75
+  }
+  
   ]
 
   const saveTradeData = async function () {
-      
-       await Trade.bulkCreate(saveData, { ignoreDuplicates: true });
+       try {
 
-       console.log('save trade data');
+         await Order.bulkCreate(saveData, { ignoreDuplicates: true });
+
+        console.log('save trade data');
+        
+       } catch (error) {
+
+          console.log(error);
+          
+       }
+      
+      
        
   } 
 
-//   saveTradeData()
+  // saveTradeData()
 
 
 
@@ -482,6 +185,19 @@ export const getPerticularTradeBook = async (req, res) => {
 export const getTradeBook = async (req, res) => {
     try {
         
+
+    const angelToken = req.headers.angelonetoken;
+
+  if (!angelToken) {
+    
+     return res.json({
+            status: false,
+            statusCode:401,
+            message: "Login In AngelOne Account",
+            error: null,
+        });
+  }
+  
     var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook',
@@ -501,13 +217,29 @@ export const getTradeBook = async (req, res) => {
 
         const {data} = await axios(config);
 
-         if(data.status==true) {
+    
+         if(data.status==true&&data.data!==null) {
+
+         const sorted  =   data.data.sort((a, b) => {
+
+         return new Date(`1970-01-01T${b.filltime}`) - new Date(`1970-01-01T${a.filltime}`);
+           
+        });
 
             return res.json({
             status: true,
             statusCode:200,
-            data: data.data,
+            data: sorted,
             message:'get data'
+        });
+
+         }else if(data.status==true&&data.data===null){
+
+            return res.json({
+            status: false,
+            statusCode:200,
+            data: [],
+            message:'Angel Trading Data is Empty'
         });
 
          }else{
@@ -523,7 +255,7 @@ export const getTradeBook = async (req, res) => {
         
     } catch (error) {
 
-        console.log('start',error,'hello');
+        
         
 
          return res.json({
@@ -565,16 +297,11 @@ export const getTradeBookWithDateFilter = async (req, res) => {
 
          if(data.status==true) {
 
-
-            
-
              // ✅ Filter trades within the date range
             const filtered = data.data.filter((t) => {
             const tradeTime = dayjs(t.updatetime, "DD-MMM-YYYY HH:mm:ss");
             return tradeTime.isAfter(from) && tradeTime.isBefore(to);
         });
-
-        console.log(filtered,'qaz hello');
 
             return res.json({
             status: true,
@@ -596,7 +323,7 @@ export const getTradeBookWithDateFilter = async (req, res) => {
         
     } catch (error) {
 
-        console.log('start',error,'hello');
+        
         
 
          return res.json({
@@ -615,16 +342,27 @@ export const getTradeBookWithDateFilter = async (req, res) => {
 export const getTradeBookInTable = async (req, res) => {
     try {
       
+        const from = dayjs(req.body[0]);
+        const to = dayjs(req.body[1]);
+
+       
+        
+
      const tradesData = await Order.findAll({
       where: {
         status: { [Op.in]: ['complete', 'completed'] },
         userId:req.userId,
+         createdAt: {
+      [Op.between]: [from, to],  // 👈 date filter
+    },
         
       },
       order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
       raw: true,
     });
         
+
+
 
       return res.json({
             status: true,
@@ -643,5 +381,193 @@ export const getTradeBookInTable = async (req, res) => {
             error: error.message,
         });
 
+    }
+};
+
+
+
+export const testGetTradeBook = async (req, res) => {
+    try {
+
+     let token = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTXpRME1qSTNOeXdpYm1KbUlqb3hOell6TXpVMU5qazNMQ0pwWVhRaU9qRTNOak16TlRVMk9UY3NJbXAwYVNJNklqZzBaVE0yWW1VMkxUWTBNamN0TkdJNU5TMDVPR013TFRSbE1HRTFNRGd6T1RFMk1DSXNJbFJ2YTJWdUlqb2lJbjAuTlg4emVUMUgzRFMyWng3ZHB2S0lLV0xkMEdZc1V4ZXFqTzByOWl4a0U2OEtZZEtOdXFJWTFta1N5NUJXeGY4bnF2ZXVVQnc2blM1cF9kRWlpaGtGS1ZDTlE5VUZPbWJQV2ZMa3JoaXY5YnpXNE9IbVZyY3drRmRUYTNrbmtXVTJjQS0yRXR3bFc0dlhYYV8tS1o0T0EwU09rRFpOeTJINDlHZnhSY19Kdlk0IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzYzMzU1ODc3LCJleHAiOjE3NjM0MDQyMDB9.oykRs9YIE0c8mtts4kDQDYQz-63NJgQUS1Tu0ANsCiu3dsZMjd64mTsBVa1rXvtHplaSx1ms9YE3JnsZG8D50A'
+    
+    var config = {
+        method: 'get',
+        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook',
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            //  'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json', 
+            'X-UserType': 'USER', 
+            'X-SourceID': 'WEB', 
+             'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+        },
+        };
+
+        const {data} = await axios(config);
+
+         if(data.status==true) {
+
+            return res.json({
+            status: true,
+            statusCode:200,
+            data: data.data,
+            message:'get data'
+        });
+
+         }else{
+
+        return res.json({
+            status: false,
+            statusCode:data.errorcode,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: data.message,
+        });
+    }
+        
+    } catch (error) {
+
+       
+        
+
+         return res.json({
+            status: false,
+            statusCode:500,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: error.message,
+        });
+
+    }
+};
+
+
+export const testGetOrder = async (req, res,next) => {
+    try {
+
+    let token = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTXpVeU5UVTVOaXdpYm1KbUlqb3hOell6TkRNNU1ERTJMQ0pwWVhRaU9qRTNOak0wTXprd01UWXNJbXAwYVNJNkltRTNNbVF4WVRZd0xUWmxaVEF0TkRFNU9TMWlaR0kzTFdVd1pHWXlNMk0wTXpGalpDSXNJbFJ2YTJWdUlqb2lJbjAuUmFSZ2cyNk9hQ1oyZ2pMRmk3a2hLZlRXQTYtbkQ5QWVKN3R3QVdSeWdaaVFfMVFKZnd6NmRmOUJTZUhNeHZBczNKM1VCUTZFYXdJRHRMQXU4MmpjbHVFaW5CdFI5U0psQlczdk1MUTlaWmcwTGE2Z1dyTHZKOUF6Skh1RlVsbjlYNWJBR3BOY1dXSnRtWEFLakIydDYzSWE3b05TeEl0cllXUUt3RFgyOVFnIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzYzNDM5MTk2LCJleHAiOjE3NjM0OTA2MDB9.J5Z9x52-VRyZeNphEwGpPF9esa4_7eE0xg3ssfQUOyLaEp_Vw3YupxBFZIEcDdiTZMJhFG6mupv7ATuJOq-9uA'
+    
+    var config = {
+        method: 'get',
+        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition',
+        headers: { 
+           'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json', 
+            'X-UserType': 'USER', 
+            'X-SourceID': 'WEB', 
+            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+        },
+      
+        };
+
+        let {data} = await axios(config)
+
+        //  emitOrderGet(data.data)
+
+        if(data.status==true) {
+
+            return res.json({
+            status: true,
+            statusCode:200,
+           data: data?.data ?? [],
+            message:'get data'
+        });
+
+         }else{
+
+        return res.json({
+            status: false,
+            statusCode:data.errorcode,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: data.message,
+        });
+    }
+
+    } catch (error) {
+
+
+        
+        
+
+        return res.json({
+            status: false,
+            statusCode:500,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: error.message,
+        });
+    }
+};
+
+export const testGetPerticularOrder = async (req, res,next) => {
+    try {
+
+    let token = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTXpRME1qSTNOeXdpYm1KbUlqb3hOell6TXpVMU5qazNMQ0pwWVhRaU9qRTNOak16TlRVMk9UY3NJbXAwYVNJNklqZzBaVE0yWW1VMkxUWTBNamN0TkdJNU5TMDVPR013TFRSbE1HRTFNRGd6T1RFMk1DSXNJbFJ2YTJWdUlqb2lJbjAuTlg4emVUMUgzRFMyWng3ZHB2S0lLV0xkMEdZc1V4ZXFqTzByOWl4a0U2OEtZZEtOdXFJWTFta1N5NUJXeGY4bnF2ZXVVQnc2blM1cF9kRWlpaGtGS1ZDTlE5VUZPbWJQV2ZMa3JoaXY5YnpXNE9IbVZyY3drRmRUYTNrbmtXVTJjQS0yRXR3bFc0dlhYYV8tS1o0T0EwU09rRFpOeTJINDlHZnhSY19Kdlk0IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzYzMzU1ODc3LCJleHAiOjE3NjM0MDQyMDB9.oykRs9YIE0c8mtts4kDQDYQz-63NJgQUS1Tu0ANsCiu3dsZMjd64mTsBVa1rXvtHplaSx1ms9YE3JnsZG8D50A'
+    
+    let uniqueOrderId = 'f002cdce-9da9-472e-b045-76e0c17cac2b'
+    var config = {
+        method: 'get',
+        url: `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/details/${uniqueOrderId}`,
+        headers: { 
+           'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json', 
+            'Accept': 'application/json', 
+            'X-UserType': 'USER', 
+            'X-SourceID': 'WEB', 
+            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+        },
+      
+        };
+
+        let {data} = await axios(config)
+
+        //  emitOrderGet(data.data)
+
+        if(data.status==true) {
+
+            return res.json({
+            status: true,
+            statusCode:200,
+           data: data?.data ?? [],
+            message:'get data'
+        });
+
+         }else{
+
+        return res.json({
+            status: false,
+            statusCode:data.errorcode,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: data.message,
+        });
+    }
+
+    } catch (error) {
+
+
+        
+        
+
+        return res.json({
+            status: false,
+            statusCode:500,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: error.message,
+        });
     }
 };

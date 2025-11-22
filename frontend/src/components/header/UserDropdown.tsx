@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import {  useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+
 import axios from "axios";
 
 export default function UserDropdown() {
@@ -13,8 +15,15 @@ export default function UserDropdown() {
     const [userNameId, setUserNameId] = useState("User");
   const [userEmail, setUserEmail] = useState("user@example.com");
 
+   const [userPackageName, setUserPackageName] = useState("");
+  const [userUserPackageDate, setUserPackageDate] = useState("");
+
   const [userRole, setUserRole] = useState("U");
   const navigate = useNavigate();
+
+
+  console.log(userPackageName,userUserPackageDate,userRole);
+  
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -48,19 +57,20 @@ export default function UserDropdown() {
 
          if(resData.status==true){
 
-           console.log(resData.data);
-
            let UserNameDb = resData.data.firstName+' '+resData.data.lastName
 
            setUserName(resData.data.username);
+           setUserPackageName(resData.data.packageName)
+           setUserPackageDate(resData.data.packageDate)
            setUserNameId( UserNameDb);
 
          }else{
-          // alert('Error fetching user data')
+           toast.error("Something went wrong");
          }
         
       } catch (error) {
-        console.error("Error fetching user data:", error);
+         toast.error("Something went wrong");
+       
       }
     };
 
@@ -68,10 +78,10 @@ export default function UserDropdown() {
 
   }, []);
 
-  const userInitial =
-    userRole?.trim()?.length > 0 ? userRole.trim()[0].toUpperCase() : "U";
+  // const userInitial =
+  //   userRole?.trim()?.length > 0 ? userRole.trim()[0].toUpperCase() : "U";
 
-    console.log(userInitial);
+  //   console.log(userInitial);
     
 
   function toggleDropdown() {
@@ -84,10 +94,13 @@ export default function UserDropdown() {
 
   async function handleSignOut() {
 
-
-  
       try {
-        const response = await axios.get(`${API_URL}/users/logout`, {
+
+        let token = localStorage.getItem("token")
+
+         if(token) {
+
+           const response = await axios.get(`${API_URL}/users/logout`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`, // optional
           },
@@ -97,31 +110,33 @@ export default function UserDropdown() {
 
          if(resData.status==true){
 
-           console.log(resData.data);
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              localStorage.removeItem("termsAccepted");
+              localStorage.removeItem("angel_feed_token");
+              localStorage.removeItem("angel_refresh_token");
+              localStorage.removeItem("angel_token");
+               localStorage.removeItem("userID");
+              
 
-           let UserNameDb = resData.data.firstName+' '+resData.data.lastName
-
-           setUserName(resData.data.username);
-           setUserNameId( UserNameDb);
+              navigate("/");
 
          }else{
-          // alert('Error fetching user data')
+
+          toast.error("Error fetching user data");
+         
          }
+
+         }else{
+          navigate("/");
+         }
+       
         
       } catch (error) {
-        console.error("Error fetching user data:", error);
+
+        toast.error("Error fetching user data");
+        
       }
-
-
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("termsAccepted");
-    localStorage.removeItem("angel_feed_token");
-    localStorage.removeItem("angel_refresh_token");
-    localStorage.removeItem("angel_token");
-
-    navigate("/");
   }
 
   return (

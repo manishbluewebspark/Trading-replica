@@ -776,3 +776,36 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+
+
+/* Compact table look */
+.compact-grid .ag-cell {
+  padding: 6px 8px !important;   /* 🔥 Smaller padding */
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+/* Header clean look */
+.compact-grid .ag-header-cell {
+  padding: 6px 8px !important;
+  font-size: 13px;
+  background: #f4f4f4;
+  font-weight: 600;
+  border-bottom: 1px solid #d6d6d6;
+}
+
+/* Row borders like a trading terminal */
+.compact-grid .ag-row {
+  border-bottom: 1px solid #e2e2e2 !important;
+}
+
+/* Hover highlight */
+.compact-grid .ag-row:hover {
+  background-color: #f5faff !important;
+}
+
+/* Stripe rows */
+.compact-grid .ag-row:nth-child(even) {
+  background-color: #fbfbfb !important;
+}

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import * as XLSX from 'xlsx';
-import { Select, DatePicker,Button } from "antd";
-import dayjs from "dayjs";
+import { Select} from "antd";
+// import dayjs from "dayjs";
 import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -60,7 +60,7 @@ function useDebounced<T>(value: T, delay = 250) {
   return v as T;
 }
 
-const PAGE_SIZE_DEFAULT = 1000;
+const PAGE_SIZE_DEFAULT = 10;
 
 const statusColor = (status: string) => {
   const s = status?.toLowerCase();
@@ -96,7 +96,7 @@ export default function AngelOrderTable() {
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounced(search, 250);
+  const debouncedSearch = useDebounced(search, 50);
 
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_DEFAULT);
   const [page, setPage] = useState<number>(1);
@@ -109,7 +109,7 @@ export default function AngelOrderTable() {
 
 
 
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  // const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
     // Live ticks: keep a token -> current LTP map
     const [ltpByToken, setLtpByToken] = useState<Record<string, number>>({});
@@ -160,9 +160,12 @@ export default function AngelOrderTable() {
             },
           });
 
+
+           console.log(data);
+
        if(data.status==true) {
 
-        console.log(data.data);
+       
         
 
         setOrders(data.data);
@@ -170,6 +173,7 @@ export default function AngelOrderTable() {
        }else if(data.status==false&&data.message=='Unauthorized'){
 
          toast.error('Unauthorized User');
+         setError("Unauthorized User")
 
             localStorage.removeItem("token");
             localStorage.removeItem("user");
@@ -178,6 +182,8 @@ export default function AngelOrderTable() {
             localStorage.removeItem("refresh_token");
            
        }else{
+
+         toast.error(data?.message);
           // alert(data?.message)
        }
         
@@ -250,55 +256,55 @@ export default function AngelOrderTable() {
   }, [filtered, page, pageSize]);
 
 
-    const handleBuyClick = async(item: any) => {
+    // const handleBuyClick = async(item: any) => {
 
-        setSelectedItem(item);
-        setShowForm(true);
+    //     setSelectedItem(item);
+    //     setShowForm(true);
         
-    }
+    // }
 
-    const handleCancelClick = async (item: any) => {
+    // const handleCancelClick = async (item: any) => {
 
-    try {
-         let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-              "AngelOneToken": localStorage.getItem("angel_token") || "",
-            },
-          })
+    // try {
+    //      let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
+    //         headers: {
+    //           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    //           "AngelOneToken": localStorage.getItem("angel_token") || "",
+    //         },
+    //       })
 
 
-          console.log(res.data);
+    //       console.log(res.data);
           
 
-      if(res.data.status==true) {
+    //   if(res.data.status==true) {
 
-         toast.success(res.data.message);
+    //      toast.success(res.data.message);
 
         
 
-      }else if(res.data.status==false&&res.data.status=='Unauthorized'){
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("termsAccepted");
-            localStorage.removeItem("feed_token");
-            localStorage.removeItem("refresh_token");
+    //   }else if(res.data.status==false&&res.data.status=='Unauthorized'){
+    //         localStorage.removeItem("token");
+    //         localStorage.removeItem("user");
+    //         localStorage.removeItem("termsAccepted");
+    //         localStorage.removeItem("feed_token");
+    //         localStorage.removeItem("refresh_token");
            
-       }
-       else{
+    //    }
+    //    else{
 
-        toast.error(res.data.message || "Something went wrong");
+    //     toast.error(res.data.message || "Something went wrong");
          
-      }   
-    } catch (error:any) {
+    //   }   
+    // } catch (error:any) {
 
-      setError(error.message)
+    //   setError(error.message)
 
-        toast.error(error.messagee || "Something went wrong");
+    //     toast.error(error.messagee || "Something went wrong");
 
-    }
+    // }
 
-      }
+    //   }
 
       // ✅ Handle Form Submit
     const handleSubmit = async(e: React.FormEvent) => {
@@ -351,41 +357,42 @@ export default function AngelOrderTable() {
       };
 
 
-      const handleGetDates = async ()=>{
+      // const handleGetDates = async ()=>{
           
-        let res = await axios.post(`${apiUrl}/order/datefilter/order`, dateRange, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-                "AngelOneToken": localStorage.getItem("angel_token") || "",
-                 "AngelOneFeed": localStorage.getItem("angel_feed_token") || "",
-            },
-          }) 
+      //   let res = await axios.post(`${apiUrl}/order/datefilter/order`, dateRange, {
+      //       headers: {
+      //         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      //           "AngelOneToken": localStorage.getItem("angel_token") || "",
+      //            "AngelOneFeed": localStorage.getItem("angel_feed_token") || "",
+      //       },
+      //     }) 
 
-          if(res.data.status==true) {
+      //     if(res.data.status==true) {
 
-            console.log(res.data);
+      //       console.log(res.data);
             
 
-             setOrders(res.data.data);
+      //        setOrders(res.data.data);
 
-         toast.success(res.data.message);
+      //    toast.success(res.data.message);
 
-      }else if(res.data.status==false&&res.data.status=='Unauthorized'){
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("termsAccepted");
-            localStorage.removeItem("feed_token");
-            localStorage.removeItem("refresh_token");  
-       }
-       else{
+      // }else if(res.data.status==false&&res.data.status=='Unauthorized'){
+      //       localStorage.removeItem("token");
+      //       localStorage.removeItem("user");
+      //       localStorage.removeItem("termsAccepted");
+      //       localStorage.removeItem("feed_token");
+      //       localStorage.removeItem("refresh_token");  
+      //  }
+      //  else{
 
-         toast.error(res.data.message || "Something went wrong");
-      }   
+      //    toast.error(res.data.message || "Something went wrong");
+      // }   
           
-      }
+      // }
 
 
   // 🧩 Function to handle selection
+ 
   const handleSelectChange = (value: string) => {
 
     setSelectedScrip(value)
@@ -394,7 +401,7 @@ export default function AngelOrderTable() {
       
         navigate(`/angel/order`);
      }else{
-       navigate(`/order`);
+       navigate(`/admin/order`);
      }
   };
 
@@ -431,31 +438,7 @@ export default function AngelOrderTable() {
 <div>
   
 </div>
-  <DatePicker.RangePicker
-    style={{ width: 300 }}
-    value={dateRange}
-    onChange={(val) => setDateRange(val as [dayjs.Dayjs, dayjs.Dayjs])}
-    // format="DD MMM YYYY hh:mm A"
-    // showTime={{ format: "hh:mm A" }}
-    ranges={{
-      Today: [dayjs().startOf("day"), dayjs().endOf("day")],
-      Yesterday: [
-        dayjs().subtract(1, "day").startOf("day"),
-        dayjs().subtract(1, "day").endOf("day"),
-      ],
-      "Last 7 Days": [dayjs().subtract(6, "day").startOf("day"), dayjs().endOf("day")],
-      "Last 30 Days": [dayjs().subtract(29, "day").startOf("day"), dayjs().endOf("day")],
-      "This Month": [dayjs().startOf("month"), dayjs().endOf("month")],
-      "Last Month": [
-        dayjs().subtract(1, "month").startOf("month"),
-        dayjs().subtract(1, "month").endOf("month"),
-      ],
-    }}
-  />
-    <Button onClick={handleGetDates} className="ml-3">
-        Get Dates
-      </Button>
-
+  
     <div className="flex items-center gap-3 mt-4">
   <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-2 text-center">
     <div className="text-xs text-gray-500 font-medium">PNL</div>
@@ -542,9 +525,11 @@ export default function AngelOrderTable() {
                   "Transaction Type",
                   "Type",
                   "Product Type",
-                  "Qty",
-                  "Price",
+                  " Traded Qty",
+                  " Traded Price",
+                  "Traded Value",
                   "Current Price",
+                  "Current Traded Value",
                   "PnL",
                   "Status",
                    "Exchange",
@@ -553,8 +538,8 @@ export default function AngelOrderTable() {
                  
                   // "Variety",
                   "Updated At",
-                   "Update",
-                   "Cancel"
+                  //  "Update",
+                  //  "Cancel"
                 ].map((h) => (
                   <th
                     key={h}
@@ -604,10 +589,7 @@ export default function AngelOrderTable() {
               {!loading &&
                 !error &&
                 current.map((o) => {
-               const live = o.symboltoken ? ltpByToken[o.symboltoken] : undefined;
-
-               console.log(live,'hhhhhhh live');
-               
+               const live = o.symboltoken ? ltpByToken[o.symboltoken] : undefined; 
                   return(
                   <tr key={o.orderid} style={{ borderBottom: "1px solid #f1f5f9" }}>
                     <td style={td}>{o.orderid}</td>
@@ -623,14 +605,18 @@ export default function AngelOrderTable() {
                       {o.quantity}
                     </td>
 
-                    <td style={td}>{o.price}</td>
+                    <td style={td}>{o.averageprice}</td>
+                     <td style={td}>{Number(o.averageprice)*Number(o.quantity)}</td>
                      <td style={{ ...td, fontWeight: 600 }}>
                         {live}
+                      </td>
+                       <td style={{ ...td, fontWeight: 600 }}>
+                        {Number(live)*Number(o.quantity)}
                       </td>
 
                        <td style={td}>
                       {live !== undefined
-                        ? ((  live-Number(o.price)) * Number(1)).toFixed(2)
+                        ? ((  live-Number(o.averageprice)) * Number(o.quantity)).toFixed(2)
                         : "—"}
                     </td>
                     <td style={td}>
@@ -658,6 +644,8 @@ export default function AngelOrderTable() {
                    
                     {/* <td style={td}>{o.variety}</td>  */}
                     <td style={td}>{o.updatetime}</td>
+
+{/* 
                     <td style={td}>
                       <button
                         onClick={() => handleBuyClick(o)}
@@ -674,8 +662,10 @@ export default function AngelOrderTable() {
                       >
                         Update
                       </button>
-                    </td>
-                     <td style={td}>
+                    </td> */}
+
+
+                     {/* <td style={td}>
                       <button
                         onClick={() => handleCancelClick(o)}
                         style={{
@@ -691,7 +681,11 @@ export default function AngelOrderTable() {
                       >
                         Cancel
                       </button>
-                    </td>
+                    </td> */}
+
+
+
+
                   </tr>
                   )
 })}

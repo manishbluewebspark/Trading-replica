@@ -17,11 +17,13 @@
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.1",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "fs": "^0.0.1-security",
+    "fuse.js": "^7.1.0",
     "https": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
     "kiteconnect": "^5.1.0",
@@ -36,6 +38,7 @@
     "smartapi-javascript": "^1.0.27",
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
+    "uuid": "^13.0.0",
     "ws": "^8.18.3"
   }
 }

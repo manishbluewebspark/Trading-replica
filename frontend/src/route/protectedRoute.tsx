@@ -25,6 +25,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  
   const location = useLocation();
 
   // Extract token from URL on mount

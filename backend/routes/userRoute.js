@@ -1,9 +1,10 @@
 import express from 'express';
-import { getAllUsers, getUserById, updateUserProfile, userLogout } from '../controllers/userController.js';
-import { getAngelOneProfile, getAngelOneProfileFund, loginWithTOTPInAngelOne, logoutAngelOne, reGenerateTokenWithAngelOne } from '../controllers/authController.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import { getAllUsers, getUserById, updateUserPakage, updateUserProfile, userLogout } from '../controllers/userController.js';
+import { getAngelOneProfile, getAngelOneProfileFund, loginWithTOTPInAngelOne, logoutAngelOne, reGenerateTokenWithAngelOne, testGetAngelOneProfile, testGetAngelOneProfileFund } from '../controllers/authController.js';
+import {authMiddleware} from '../middleware/authMiddleware.js';
 import { downloadOrderData, downloadUserAngelOneCredential, downloadUserExcelFile } from '../excelFiles/downloadExcel.js';
 import multer from "multer";
+import { testGetOrder, testGetPerticularOrder, testGetTradeBook } from '../controllers/tradeController.js';
 
 
 // Store uploaded images in /uploads folder
@@ -28,9 +29,19 @@ router.get('/logout/user/profile',authMiddleware, logoutAngelOne);   // our code
 
 router.put('/profile/update',upload.single("image"), updateUserProfile);
 
+router.put('/package/update', updateUserPakage);
+
 router.get('/getuser/profile',authMiddleware, getUserById);
 
 router.get('/logout',authMiddleware, userLogout);
+
+
+//  test apis
+router.get('/test/get/user/fund', testGetAngelOneProfileFund); 
+router.get('/test/get/user/profile', testGetAngelOneProfile); 
+router.get('/test/get/user/trade', testGetTradeBook); 
+router.get('/test/get/user/order', testGetOrder); 
+router.get('/test/get/user/perticular/order', testGetPerticularOrder); 
 
 
 
@@ -39,6 +50,9 @@ router.get('/logout',authMiddleware, userLogout);
 // router.get('/export/users',authMiddleware, downloadUserExcelFile);
 // router.get('/export/angelone/credential',authMiddleware, downloadUserAngelOneCredential);
 // router.get('/export/orders',authMiddleware, downloadOrderData);
+
+
+
 
 
 

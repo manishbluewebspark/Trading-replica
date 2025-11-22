@@ -5,8 +5,6 @@ const authMiddleware = (req, res, next) => {
 
 const token = req.headers.authorization?.split(' ')[1];
 
-const angelToken = req.headers.angelonetoken;
-
   if (!token) {
     
      return res.json({
@@ -16,24 +14,14 @@ const angelToken = req.headers.angelonetoken;
             error: null,
         });
   }
-
-  // if(req.url!=='/login/totp/angelone'&&!angelToken) {
-
-  //     return res.json({
-  //           status: false,
-  //           statusCode:401,
-  //           message: "Angel Token not Found",
-  //           error: null,
-  //       });
-           
-  // }
-
-
  
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    req.role = decoded.role
     req.userId = decoded.id;
+    req.borker = decoded.borker;
     
     next();
 
@@ -44,20 +32,46 @@ const angelToken = req.headers.angelonetoken;
 };
 
 
-const authMiddlewareAngelOne = (req, res, next) => {
+const AdminAuthMiddleware = (req, res, next) => {
   
   const token = req.headers.authorization?.split(' ')[1];
 
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  const userid = req.headers?.userid
+
+  if (!token) {
+     return res.json({
+            status: false,
+            statusCode:401,
+            message: 'Unauthorized',
+            error: null,
+        });
+  }
+
+   if (!userid) {
+     return res.json({
+            status: false,
+            statusCode:401,
+            message: 'Please Again Login',
+            error: null,
+        });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.userId = decoded
+    req.userId = userid
+    req.AdminId = decoded.id
+
     next();
+
   } catch (err) {
-    return res.status(403).json({ message: 'Token invalid or expired' });
+    return res.json({
+            status: false,
+            statusCode:401,
+            message: err.message,
+            error: null,
+        });
   }
 };
 
-export default authMiddleware;
+export  {authMiddleware,AdminAuthMiddleware};

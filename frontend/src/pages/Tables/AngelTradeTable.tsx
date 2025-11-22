@@ -6,20 +6,20 @@ import { toast } from "react-toastify";
 import { Select, DatePicker, Button } from "antd";
 import dayjs from "dayjs";
 import "antd/dist/reset.css";
-import { getSocket } from "../../socket/Socket";
+// import { getSocket } from "../../socket/Socket";
 import { useNavigate } from "react-router-dom";
 
 
 /** ====== Live Tick type (from your socket) ====== **/
-type Tick = {
-  mode: 1 | 2 | 3;
-  exchangeType: number;
-  token: string;              // e.g. "47667"
-  sequenceNumber: number;
-  exchangeTimestamp: string;  // ISO
-  ltpPaiseOrRaw: number;      // e.g. 10225
-  ltp: number;                // e.g. 102.25
-};
+// type Tick = {
+//   mode: 1 | 2 | 3;
+//   exchangeType: number;
+//   token: string;              // e.g. "47667"
+//   sequenceNumber: number;
+//   exchangeTimestamp: string;  // ISO
+//   ltpPaiseOrRaw: number;      // e.g. 10225
+//   ltp: number;                // e.g. 102.25
+// };
 
 /** ====== Trade row type (from API) ====== **/
 type Trade = {
@@ -53,7 +53,7 @@ function useDebounced<T>(value: T, delay = 250) {
   return v as T;
 }
 
-const PAGE_SIZE_DEFAULT = 100;
+const PAGE_SIZE_DEFAULT = 10;
 
 const td: React.CSSProperties = {
   padding: "10px 12px",
@@ -96,13 +96,13 @@ const rowBg = (txn: string): React.CSSProperties => {
 };
 
 /** Status pill color example (you can use it for buttons if needed) */
-const statusColor = (status: string) => {
-  const s = (status || "").toLowerCase();
-  if (s === "complete" || s === "filled" || s === "success") return "#16a34a";
-  if (s === "rejected" || s === "cancelled" || s === "canceled") return "#ef4444";
-  if (s === "pending" || s === "open" || s === "queued") return "#f59e0b";
-  return "#64748b";
-};
+// const statusColor = (status: string) => {
+//   const s = (status || "").toLowerCase();
+//   if (s === "complete" || s === "filled" || s === "success") return "#16a34a";
+//   if (s === "rejected" || s === "cancelled" || s === "canceled") return "#ef4444";
+//   if (s === "pending" || s === "open" || s === "queued") return "#f59e0b";
+//   return "#64748b";
+// };
 
 export default function AngelTradeTable () {
 
@@ -116,11 +116,11 @@ export default function AngelTradeTable () {
   const [error, setError] = useState<string | null>(null);
 
   // Live ticks: keep a token -> current LTP map
-  const [ltpByToken, setLtpByToken] = useState<Record<string, number>>({});
+  // const [ltpByToken, setLtpByToken] = useState<Record<string, number>>({});
 
   // simple UI states
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounced(search, 250);
+  const debouncedSearch = useDebounced(search, 50);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_DEFAULT);
   const [page, setPage] = useState<number>(1);
   const [selectedScrip, setSelectedScrip] = useState<string>("LOCAL_TABLE");
@@ -129,22 +129,22 @@ export default function AngelTradeTable () {
 
   // Socket: listen to "tick" and update the LTP map
   useEffect(() => {
-    const socket = getSocket();
+    // const socket = getSocket();
 
-    const onTick = (tick: Tick) => {
-      // Update single token's price; cheap & simple
-      setLtpByToken((prev) => {
-        const curr = prev[tick.token];
-        if (curr === tick.ltp) return prev; // avoid useless re-render
-        return { ...prev, [tick.token]: tick.ltp };
-      });
-    };
+    // const onTick = (tick: Tick) => {
+    //   // Update single token's price; cheap & simple
+    //   setLtpByToken((prev) => {
+    //     const curr = prev[tick.token];
+    //     if (curr === tick.ltp) return prev; // avoid useless re-render
+    //     return { ...prev, [tick.token]: tick.ltp };
+    //   });
+    // };
 
-    socket.on("tick", onTick);
+    // socket.on("tick", onTick);
 
-    return () => {
-      socket.off("tick", onTick);
-    };
+    // return () => {
+    //   socket.off("tick", onTick);
+    // };
   }, []);
 
   // Fetch table data
@@ -237,7 +237,7 @@ export default function AngelTradeTable () {
       
         navigate(`/angel/trades`);
      }else{
-       navigate(`/trades`);
+       navigate(`/admin/trades`);
      }
 
 }
@@ -265,10 +265,10 @@ export default function AngelTradeTable () {
     }
   };
 
-  const handleUpdateClick = (row: Trade) => {
-    // Example: you can open a modal/place order/etc.
-    console.log("Update clicked for", row);
-  };
+  // const handleUpdateClick = (row: Trade) => {
+  //   // Example: you can open a modal/place order/etc.
+  //   console.log("Update clicked for", row);
+  // };
 
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" }}>
@@ -386,7 +386,7 @@ export default function AngelTradeTable () {
             <thead style={{ background: "#f8fafc" }}>
               <tr>
                 {[
-                  "Action",
+                  // "Action",
                   "Fill ID",
                   "Order ID",
                   "Symbol",
@@ -395,8 +395,8 @@ export default function AngelTradeTable () {
                   "Product",
                   "Exchange",
                   "Fill Price",
-                  "Current Price",
-                  "PnL",
+                  // "Current Price",
+                  // "PnL",
                   "Fill Size",
                   "Trade Value",
                   "Trade Time",
@@ -436,10 +436,10 @@ export default function AngelTradeTable () {
               {!loading &&
                 !error &&
                 current.map((t) => {
-                  const live = t.token ? ltpByToken[t.token] : undefined;
+                  // const live = t.token ? ltpByToken[t.token] : undefined;
                   return (
                     <tr key={t.fillid} style={{ borderBottom: "1px solid #f1f5f9", ...rowBg(t.transactiontype) }}>
-                      <td style={td}>
+                      {/* <td style={td}>
                         <button
                           onClick={() => handleUpdateClick(t)}
                           style={{
@@ -454,7 +454,7 @@ export default function AngelTradeTable () {
                         >
                           Sell
                         </button>
-                      </td>
+                      </td> */}
                       <td style={td}>{t.fillid}</td>
                       <td style={td}>{t.orderid}</td>
                       <td style={td}>{t.tradingsymbol}</td>
@@ -465,10 +465,10 @@ export default function AngelTradeTable () {
                       <td style={td}>{t.producttype}</td>
                       <td style={td}>{t.exchange}</td>
                       <td style={td}>{t.fillprice}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>
+                      {/* <td style={{ ...td, fontWeight: 600 }}>
                         {live !== undefined ? live.toFixed(2) : "—"}
                       </td>
-                        <td style={td}>    {live !== undefined ? live.toFixed(2) : "—"}</td>
+                        <td style={td}>    {live !== undefined ? live.toFixed(2) : "—"}</td> */}
                       <td style={td}>{t.fillsize}</td>
                       <td style={td}>{t.tradevalue}</td>
                       <td style={td}>{t.filltime}</td>

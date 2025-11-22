@@ -16,6 +16,7 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    
     producttype: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -123,25 +124,16 @@ const Order = sequelize.define(
     status: {
       type: DataTypes.STRING,
       allowNull: true,
-      defaultValue: 'pending'
+      defaultValue: "PENDING",
+      set(value) {
+        this.setDataValue("status", value ? value.toUpperCase() : null);
+      }
     },
     orderstatus: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    updatetime: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    exchtime: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    exchorderupdatetime: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    parentorderid: {
+    orderstatuslocaldb: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -166,6 +158,26 @@ const Order = sequelize.define(
     fillsize: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    buyvalue:{
+        type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    buyprice:{
+       type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    buysize:{
+       type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    pnl:{
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0,
     },
     fillid: {
       type: DataTypes.STRING,

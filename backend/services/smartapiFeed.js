@@ -2,7 +2,7 @@
 import WebSocket from "ws";
 import { emitTick, emitFeedStatus } from "../socket/index.js"; // ← import helper
 import axios from 'axios';
-import Trade from "../models/tradeModel.js"
+import Trade from "../models/orderModel.js"
 import User from '../models/userModel.js';
 import { Op } from "sequelize";
 let ws = null
@@ -67,10 +67,6 @@ export const getOrderFunction1 =  async function (token) {
 
           }
           
-             
-
-
-         
          }else{
 
          return { status:false,data:[] }
@@ -83,6 +79,7 @@ export const getOrderFunction1 =  async function (token) {
 }
 
 function buildTokenList1(trades) {
+
   // group tokens by exchangeType
   const buckets = new Map(); // key: exchangeType -> Set(tokens)
 
@@ -107,13 +104,14 @@ function buildTokenList1(trades) {
 
 
 function buildTokenList(trades) {
+
   // group tokens by exchangeType
   const buckets = new Map(); // key: exchangeType -> Set(tokens)
 
   for (const t of trades) {
     const exch = (t.exchange || "").toUpperCase().trim();
     const exchangeType = EXCHANGE_TYPE[exch];
-    const token = t.token && String(t.token).trim();
+    const token = t.symboltoken && String(t.symboltoken).trim();
 
     if (!exchangeType || !token) continue;
 
@@ -138,6 +136,10 @@ export const getOrderFunction = async function () {
         endOfToday.setHours(23, 59, 59, 999);
 
 
+        console.log(startOfToday,endOfToday,'getOrderFunction');
+        
+
+
        const tradesData = await Trade.findAll({
         where: {
           createdAt: {
@@ -147,17 +149,24 @@ export const getOrderFunction = async function () {
         raw: true, // plain JS objects
       });
 
-      console.log(tradesData,'tradesData socket');
+
+      console.log(tradesData,'tradesData');
+      
+    
       
 
 
             const uniqueTrades = [
         ...new Map(
-            tradesData.map(item => [`${item.tradingsymbol}-${item.token}`, item])
+            tradesData.map(item => [`${item.tradingsymbol}-${item.symboltoken}`, item])
           ).values()
         ];
 
+        console.log(uniqueTrades,'uniqueTrades');
+
       const tokenList = buildTokenList(uniqueTrades);
+
+       console.log(tokenList,'tokenList');
 
 
       return tokenList
@@ -170,10 +179,10 @@ export const getOrderFunction = async function () {
 
 
  
+const userSockets = new Map(); // key = userId or token
 
 
-
-export  function connectSmartSocket(authToken,feedToken) {
+export  function connectSmartSocket(userId,authToken,feedToken,clientId,) {
 
 
   const WS_URL = process.env.SMART_WS_URL;
@@ -182,35 +191,48 @@ export  function connectSmartSocket(authToken,feedToken) {
     headers: {
       Authorization: `Bearer ${authToken}`, // jwt from login
       "x-api-key": process.env.PRIVATE_KEY,                   // API key
-      "x-client-code": process.env.SMART_ANGEL_ID,            // client code
+      "x-client-code": clientId,            // client code
       "x-feed-token": feedToken,           // feed token
     },
   });
+
+  const now = new Date();
+
+  // 🗃️ Store everything inside map
+    userSockets.set(userId, {
+      ws,
+      clientId,
+      connectedAt: now.toISOString(),
+      connectedDate: now.toLocaleDateString(),
+      connectedTime: now.toLocaleTimeString(),
+    });
 
     console.log(ws.readyState,'ws.readyState');
 
   if(ws.readyState !== 'OPEN') {
 
-    console.log(ws.readyState,'ws.readyState if inside');
+    console.log(ws.readyStarste,'ws.readyState if inside');
     
   }
 
-  ws.on("open", async() => {
+ 
 
-    console.log("✅ Connected to SmartAPI WebSocket");
+  ws.on("open", async() => {
 
      emitFeedStatus({ connected: true });
 
-    let ordersData  = await getOrderFunction1(authToken)
+    let ordersData  = await getOrderFunction(authToken)
 
-     ordersData.data.push({ exchangeType: 1, tokens: ["99926009","99926000"] });
+      console.log(ordersData,'socket inside');
+
+     ordersData.push({ exchangeType: 1, tokens: ["99926009","99926000"] });
           
     const subscribeMessage = {
       correlationID: "abcde12345",
       action: 1, // 1=subscribe
       params: {
         mode: 1, // 1=LTP, 2=Quote, 3=SnapQuote
-         tokenList: ordersData.data
+         tokenList: ordersData
         // tokenList: [
         //   // { exchangeType: 13, tokens: ["99918002"] }, // NFO 
         //   //  { exchangeType: 4, tokens: ["889719"] }, // NSE
@@ -268,28 +290,48 @@ export  function connectSmartSocket(authToken,feedToken) {
     }
   });
 
-  ws.on("error", (err) => console.error("⚠️ WS error:", err));
+  ws.on("error", (err) => console.error("⚠️ Smart WS error:", err));
 
  // ❌ Auto-reconnect on close
   ws.on("close", () => {
     console.warn("❌ WS closed ");
-    setTimeout(() => {
-      connectSmartSocket(authToken,feedToken);
-    }, reconnectInterval);
+    // setTimeout(() => {
+    //   connectSmartSocket(authToken,feedToken);
+    // }, reconnectInterval);
   });
 }
 
-export function isSocketReady() {
-  // if ws not initialized yet
-  if (!ws) {
-    console.log("⚠️ WebSocket instance not created yet");
+export function isSocketReady(userId) {
+
+  const userInfo = userSockets.get(userId); // stored object { ws, connectedAt, ... }
+
+  if (!userInfo || !userInfo.ws) {
+    console.log(`⚠️ No WebSocket found for ${userId}`);
     return false;
   }
 
+  const { ws, connectedAt } = userInfo;
   const ready = ws.readyState === WebSocket.OPEN;
-  console.log(`Socket ready: ${ready} (state: ${ws.readyState})`);
-  return ready;
+
+  // ⏱️ Check if connection is older than 5 hours
+  const connectedTime = new Date(connectedAt).getTime();
+  const now = Date.now();
+  const hoursElapsed = (now - connectedTime) / (1000 * 60 * 60);
+
+  const withinFiveHours = hoursElapsed <= 5;
+
+  // ✅ Final decision
+  const isValid = ready && withinFiveHours;
+
+  console.log(
+    `Socket ready (${userId}): ${isValid} | ReadyState=${ws.readyState} | Connected ${hoursElapsed.toFixed(
+      2
+    )} hrs ago`
+  );
+
+  return isValid;
 }
+
 
 
 
@@ -365,31 +407,51 @@ function startHeartbeat() {
   }, 25000);
 }
 
+export function disconnectUserSocket(userId) {
+
+  const ws = userSockets.get(userId);
+  
+  if (ws && ws.readyState === WebSocket.OPEN) {
+
+    console.log(`🔌 Disconnecting ${userId}...`);
+
+    ws.close(1000, "User manually disconnected");
+
+    userSockets.delete(userId);
+
+  } else {
+
+    console.log(`⚠️ No active socket found for ${userId}`);
+
+  }
+}
 
 
 /** 🔥 Emit a tick to useful rooms */
-export function emitOrderGet(orderData) {
+export async function emitOrderGet(authToken) {
 
   try {
-    
-      const uniqueTrades = [
-        ...new Map(
-            orderData.map(item => [`${item.tradingsymbol}-${item.symboltoken}`, item])
-          ).values()
-        ];
 
-      const tokenList = buildTokenList1(uniqueTrades);
+      let ordersData  = await getOrderFunction(authToken)
+
+      console.log(ordersData,'emitOrderGet');
+      
+
+     ordersData.push({ exchangeType: 1, tokens: ["99926009","99926000"] });
 
       const subscribeMessage = {
       correlationID: "abcde12345",
       action: 1, // 1=subscribe
       params: {
         mode: 1, // 1=LTP, 2=Quote, 3=SnapQuote
-         tokenList: tokenList
+         tokenList: ordersData
       },
     };
 
     ws.send(JSON.stringify(subscribeMessage));
+
+    console.log('done emit');
+    
       
 
   } catch (err) {
@@ -397,4 +459,5 @@ export function emitOrderGet(orderData) {
     console.warn("emitOrderGet skipped (socket not ready yet):", err.message);
   }
 }
+
 

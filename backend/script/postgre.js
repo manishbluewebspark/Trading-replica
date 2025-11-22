@@ -2,6 +2,7 @@ import axios from "axios";
 
 
 import InstrumentModel from "../models/instrumentPostgreModel.js";
+
 import sequelize from "../config/db.js";
 
 
@@ -26,7 +27,7 @@ function computeSy(inst) {
   const SyNum  = numMatch ? String(parseInt(numMatch[0], 10)) : null; // keep as string
   const syType = typeMatch ? typeMatch[0] : null;
 
-  return { SyNum, syType };
+  return { SyNum, syType,name };
 }
 
 export async function bulkUpdateSyFieldsJS(batchSize = 5000) {
@@ -43,9 +44,10 @@ export async function bulkUpdateSyFieldsJS(batchSize = 5000) {
     if (rows.length === 0) break;
 
     const updates = rows.map(r => {
-      const { SyNum, syType } = computeSy(r);
+      const { SyNum, syType,name } = computeSy(r);
       return {
         id: r.id,
+        name,
         SyNum,
         syType,
       };
@@ -55,8 +57,14 @@ export async function bulkUpdateSyFieldsJS(batchSize = 5000) {
     // simplest (but N queries):
     await sequelize.transaction(async (tx) => {
       for (const u of updates) {
+
+        console.log(u,'hhy');
+        
+
+        let concate =  u.name+u.SyNum+u.syType
         await InstrumentModel.update(
-          { SyNum: u.SyNum, syType: u.syType },
+          // { SyNum: u.SyNum, syType: u.syType },
+           { SyNum:  u.SyNum, syType: u.syType,nameStrickType:concate },
           { where: { id: u.id }, transaction: tx }
         );
         totalUpdated++;
@@ -143,3 +151,35 @@ export const bulkInsertPostgre = async () => {
 
 
 
+
+
+
+
+// import Fuse from "fuse.js";
+
+// const instruments = [
+//   { name: "NIFTY 50", token: 123,token1:"ac",token2:"tg g" },
+//   { name: "BANKNIFTY", token: 456 ,token1:"ac",token2:"tg g"},
+//   { name: "FINNIFTY", token: 789,token1:"ac",token2:"tg g" },
+//   { name: "NIFTY16DEC2527300PE", token: 48315,token1:"ac",token2:"tg g" },
+//    { name: "NIFTY16DEC2527400CE", token: 48318,token1:"ac",token2:"tg g" },
+//    {name:"BANKNIFTY27JAN2666500PE",token:2345,},
+//    {name:"BANKNIFTY27JAN2666000CE",token:2345,},
+//    {name:"BANKNIFTY27JAN2660600PE",token:2345,},
+//    {name:"BANKNIFTY27JAN2662000CE",token:2345,},
+//    {name:"BANKNIFTY27JAN2660300PE",token:2345,},
+//    {name:"BANKNIFTY30DEC2563600CE",token:1234}
+// ];
+
+// const fuse = new Fuse(instruments, {
+//   keys: ["name","token"],
+//   threshold: 0.3,
+//   ignoreLocation: true
+// });
+
+// const searchTerm = "63600";
+// const result = fuse.search(searchTerm);
+
+
+
+// console.log(result,'matchedInstrument');

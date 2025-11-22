@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
+
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import SignIn from "./pages/AuthPages/SignIn";
@@ -48,8 +50,22 @@ import AngelTradeTable from "./pages/Tables/AngelTradeTable";
 // import NIftyAndBankNifty from "./pages/Forms/NIftyAndBankNifty";
 import UsersTables from "./pages/Tables/UsersTables";
 import OrderTableAdmin from "./pages/Tables/OrderTableAdmin";
+import TradeAdmin from "./pages/Tables/TradeAdmin";
+import SupportPage from "./pages/Tables/SupportPage";
+import BrokerSettings from "./pages/Tables/BrokerSettings";
+import AssignStrategy from "./pages/Forms/AssignStrategy";
+import BrokerPage from "./pages/Forms/BrokerPage";
+import HoldingOrder from "./pages/Tables/HoldingOrder";
+import HoldingOrderAdmin from "./pages/Tables/HoldingOrderAdmin";
+import UserClone from "./pages/Forms/UserClone";
+import GooglChart from "./pages/Tables/GooglChart";
+import OrdersAdminPage from "./pages/Forms/OrderAdminPage";
+import UserManual from "./pages/Tables/UserManual";
 
 export default function App() {
+
+ 
+
   return (
     <>
           <ToastContainer
@@ -86,12 +102,35 @@ export default function App() {
             <Route path="/bar-chart" element={<ProtectedRoute><BarChart /></ProtectedRoute>} />
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
+            <Route
+              path="/order-admin/:userId"
+              element={
+                <ProtectedRoute>
+                  <OrdersAdminPage />
+                </ProtectedRoute>
+              }
+            />
+
+
 
             <Route path="/instrument" element={<ProtectedRoute><InstrumentForm /></ProtectedRoute>} />
  {/* <Route path="/instrument/niftyandbanknifty" element={<ProtectedRoute><NIftyAndBankNifty /></ProtectedRoute>} /> */}
 
+            <Route path="/user/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+
+  
+
+            <Route path="/user/setting" element={<ProtectedRoute><BrokerSettings /></ProtectedRoute>} />
+             <Route path="/user/marketdata" element={<ProtectedRoute><GooglChart /></ProtectedRoute>} />
+
+              <Route path="/user/usermanual" element={<ProtectedRoute><UserManual /></ProtectedRoute>} />
+
+             
+
+
+            <Route path="/holding/order" element={<ProtectedRoute><HoldingOrder /></ProtectedRoute>} />
             <Route path="/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} />
-            <Route path="/trades" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
+            <Route path="/currentposition" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
             <Route path="/angelonecredential" element={<ProtectedRoute><AngelOneCredential /></ProtectedRoute>} />
 
 
@@ -104,6 +143,12 @@ export default function App() {
                <Route path="/admin/usertable" element={<ProtectedRoute><UsersTables /></ProtectedRoute>} />
                 <Route path="/admin/order" element={<ProtectedRoute><OrderTableAdmin /></ProtectedRoute>} />
 
+                 <Route path="/admin/strategy" element={<ProtectedRoute><AssignStrategy /></ProtectedRoute>} />
+
+                  <Route path="/admin/broker" element={<ProtectedRoute><BrokerPage /></ProtectedRoute>} />
+                  <Route path="/admin/holding/order" element={<ProtectedRoute><HoldingOrderAdmin /></ProtectedRoute>} />
+
+
 
 
 
@@ -111,12 +156,20 @@ export default function App() {
 
 
           <Route path="/admin/instrument" element={<ProtectedRoute><InstrumentFormAdmin /></ProtectedRoute>} />
-           <Route path="/admin/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} />
-            <Route path="/admin/trades" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
+           {/* <Route path="/admin/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} /> */}
+            <Route path="/admin/trades" element={<ProtectedRoute><TradeAdmin /></ProtectedRoute>} />
 
 
             <Route path="/all-users" element={<ProtectedRoute><AllUser /></ProtectedRoute>} />
-            <Route path="/user-reports" element={<ProtectedRoute><UserReport /></ProtectedRoute>} />
+             <Route path="/admin/user-report" element={<ProtectedRoute><UserReport /></ProtectedRoute>} />
+
+              <Route path="/admin/user-clone" element={<ProtectedRoute><UserClone /></ProtectedRoute>} />
+
+              
+
+
+            
+            {/* <Route path="/user-reports" element={<ProtectedRoute><UserReport /></ProtectedRoute>} /> */}
             <Route path="/brokers" element={<ProtectedRoute><Broker /></ProtectedRoute>} />
             <Route path="/broadcast" element={<ProtectedRoute><Broadcast /></ProtectedRoute>} />
             <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
@@ -126,6 +179,7 @@ export default function App() {
           </Route>
 
           {/* Auth Layout */}
+         
           <Route path="/" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -136,6 +190,11 @@ export default function App() {
           <Route path="/kite-login-success" element={<KiteLoginSuccess/>}/>
           <Route path="/groww-login-success" element={<GrowwLoginSuccess/>}/>
 
+          {/* Auth Layout */}  
+
+
+            
+          
         
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

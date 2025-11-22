@@ -44,6 +44,11 @@ import sequelize from "../config/db.js";
         allowNull: true,
         defaultValue: "",
       },
+       nameStrickType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: "",
+      },
     },
     {
       tableName: "Instruments",
