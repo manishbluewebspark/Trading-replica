@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom"; // ✅ FIXED
+import { Link, useLocation } from "react-router-dom"; 
 import {
   BoxCubeIcon,
   ChevronDownIcon,
@@ -12,33 +12,11 @@ import {
 
 
 
-import {
-  LayoutDashboard,
-  ClipboardList,
-  // BarChart2,
-  // FileText,
-  // Settings,
-  // Activity,
-  // PieChart,
-  // Radio,
-  // HelpCircle,
-  // Briefcase,
-  // LineChart,
-  // Layers,
-  // ChartCandlestick,
-} from "lucide-react";
-
-import {
-  // LayoutDashboard,
-  TrendingUp,
-  Briefcase,
-  // ClipboardList,
-  BookText,
-  Headphones,
-  Settings,
-  BarChart2,
-  // ChevronDown,
-} from "lucide-react";
+import { MdDashboard, MdOutlineSupportAgent } from "react-icons/md";
+import { FaArrowTrendUp, FaClipboardList  } from "react-icons/fa6";
+import { FaHandHoldingUsd, FaBook } from "react-icons/fa";
+import { RiSettings5Fill } from "react-icons/ri";
+import { BsDatabaseFillUp } from "react-icons/bs";
 
 
 
@@ -67,52 +45,52 @@ type NavItem = {
 
 const navItems: NavItem[] = [
  {
-    icon: <LayoutDashboard size={20} />,
+    icon: <MdDashboard size={20} />,
     name: "Dashboard",
     path: "/new/deshboard",
     roles: ["admin", "user"],
   },
 
     {
-    icon: <TrendingUp size={20} />,
+    icon: <FaArrowTrendUp size={20} />,
     name: "Current Position",
     path: "/currentposition",
     roles: ["admin", "user"],
   },
 
    {
-    icon: <Briefcase size={20} />,
+    icon: <FaHandHoldingUsd size={20} />,
     name: "Holding",
     path: "/holding/order",
     roles: ["admin", "user"],
   },
 
    {
-    icon: <ClipboardList size={20} />,
+    icon: <FaClipboardList size={20} />,
     name: "Orders History",
     path: "/order",
     roles: ["admin", "user"],
   },
    {
-    icon: <BookText size={20} />,
+    icon: <FaBook size={20} />,
     name: "User Manual",
     path: "/user/usermanual",
     roles: ["admin", "user"],
   },
   {
-    icon: <Headphones size={20} />,
+    icon: <MdOutlineSupportAgent size={20} />,
     name: "Support",
     path: "/user/support",
     roles: ["admin", "user"],
   },
    {
-    icon: <Settings size={20} />,
+    icon: <RiSettings5Fill size={20} />,
     name: "Settings",
     path: "/user/setting",
     roles: ["admin", "user"],
   },
    {
-    icon: <BarChart2 size={20} />,
+    icon: <BsDatabaseFillUp  size={20} />,
     name: "Market Data",
     path: "/user/marketdata",
     roles: ["admin", "user"],
@@ -352,17 +330,17 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img
-                className="dark:hidden items-center justify-center ml-15"
+                className="dark:hidden items-center justify-center"
                 // src="/images/logo/logo.png"
-                  src="/images/logo/new-artha-logo.jpeg"
+                   src="/logo.svg"
                 alt="Logo"
-                width={100}
+                width={200}
                 height={20}
               />
               <img
                 className="hidden dark:block"
                 // src="/images/logo/logo-dark.svg"
-                  src="/images/logo/new-artha-logo.jpeg"
+                   src="/logo.svg"
                 alt="Logo"
                 width={150}
                 height={40}
@@ -371,10 +349,10 @@ const AppSidebar: React.FC = () => {
           ) : (
             <img
               // src="/images/logo/logo-icon.svg"
-               src="/images/logo/new-artha-logo.jpeg"
+               src="/logo.svg"
               alt="Logo"
-              width={32}
-              height={32}
+              width={30}
+              height={30}
             />
           )}
         </Link>

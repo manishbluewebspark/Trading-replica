@@ -21,6 +21,7 @@ const GROWW_REDIRECT_URI = process.env.GROWW_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 
 
+
 // ===================== auth controller start ================================
 
 
@@ -449,16 +450,7 @@ const password = (req.body.password || "").trim();
 
 
 
-// Step 1: Redirect to AngelOne login
-export const loginWithAngelOne = async (req, res) => {
 
-  const { ANGELONE_CLIENT_ID, ANGELONE_REDIRECT_URI } = process.env;
-
-  const authUrl = `https://smartapi.angelbroking.com/publisher-login?api_key=${ANGELONE_CLIENT_ID}&redirect_uri=${encodeURIComponent(ANGELONE_REDIRECT_URI)}`;
-
-  res.redirect(authUrl);
-
-};
 
 
 
@@ -586,105 +578,7 @@ export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
 }
 
 // Step 2: Get AngelOne Profile
-export const loginWithTOTPInAngelOne = async function (req,res,next) {
-    try {
-        
-    let existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
 
-    if (!existing) {
-      return res.json({
-        status: false,
-        statusCode: 404,
-        message: "No credentials found for this user.",
-        data: null,
-      });
-    }
-
-   const createdData = existing.dataValues;
-
-   let totpCode = await generateTOTP(createdData.totpSecret) 
-
-   
-     
-      var data2 = JSON.stringify({
-      "clientcode":createdData.clientId,
-      "password":createdData.password,
-      "totp":totpCode, 
-    });
-
-      var config = {
-      method: 'post',
-       url: 'https://apiconnect.angelone.in//rest/auth/angelbroking/user/v1/loginByPassword',
-
-      headers : {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-UserType': 'USER',
-        'X-SourceID': 'WEB',
-        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-      },
-      data:data2
-    };
-
-    let {data} = await axios(config);
-
-
-
-     if(data.status==true) {
-
-      await User.update( {
-        authToken: data.data.jwtToken,
-        feedToken: data.data.feedToken,
-        refreshToken: data.data.refreshToken,
-        angelLoginUser:true,
-      },
-      {
-        where: { id: req.userId },
-        returning: true, // optional, to get the updated record
-      }
-    );
-
-        console.log(isSocketReady(req.userId),'gggg');
-        
-
-        if (isSocketReady(req.userId)) {
-        console.log('✅ WebSocket is connected!');
-      } else {
-          connectSmartSocket(req.userId,data.data.jwtToken,data.data.feedToken,createdData.clientId)
-      }
-
-      return res.status(200).json({
-              status: true,
-              data: data.data
-          });
-
-     }else{
-
-          return res.json({
-              status: false,
-              data:null,
-              statusCode:data.errorCode,
-              message:data.message
-          });
-     }
-
-  } catch (error) {
-
-
-    console.log(error);
-    
-
-    return res.json({
-              status: false,
-              data:null,
-              statusCode:401,
-              message:error.message
-          });
-  }
-}
 
 // export const loginWithTOTPInAngelOne = async (req, res, next) => {
 //   try {
@@ -785,307 +679,24 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 //   }
 // };
 
-export const getAngelOneProfile = async function (req,res,next) {
-    try {
 
-
-      var config = {
-      method: 'get',
-      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile',
-      headers : {
-         'Authorization': `Bearer ${req.headers.angelonetoken}`,
-          // 'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-UserType': 'USER',
-        'X-SourceID': 'WEB',
-        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-      }
-    };
-
-    let {data} = await axios(config);
-
-     if(data.status==true) {
-
-      return res.status(200).json({
-              status: true,
-              data: data.data
-          });
-
-     }else{
-
-          return res.json({
-              status: false,
-              data:null,
-              statusCode:data.errorCode,
-              message:data.message
-          });
-     }
-
-  } catch (error) {
-
-    return res.json({
-              status: false,
-              data:null,
-              statusCode:401,
-              message:error.message
-          });
-  }
-}
 
 // Step 3: Get AngelOne Profile
-export const logoutAngelOne = async function (req,res,next) {
-    try {
 
-      const obj = { clientcode:'M162423' };
-
-      const jsonString = JSON.stringify(obj);
-
-      var config = {
-      method: 'post',
-      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/logout',
-
-      headers : {
-        'Authorization': `Bearer ${process.env.ANGELONE_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-UserType': 'USER',
-        'X-SourceID': 'WEB',
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-      },
-       data : jsonString
-    };
-
-    let response = await axios(config);
-
-    const apiData = response.data;
-
-      return res.status(200).json({
-              success: true,
-              data: apiData
-          });
-
-  } catch (error) {
-    console.log('hhhy',error);
-  }
-
-
-}
 
 
 
 
 
 // Step 4: Get AngelOne Profile
-export const getAngelOneProfileFund = async function (req,res,next) {
-    try {
 
-      var config = {
-      method: 'get',
-      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getRMS',
-
-      headers : {
-        // 'Authorization': `Bearer ${auth_token}`,
-         'Authorization': `Bearer ${req.headers.angelonetoken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-UserType': 'USER',
-        'X-SourceID': 'WEB',
-        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-      }
-    };
-
-    let {data} = await axios(config);
-
-
-     if(data.status==true) {
-
-      var configTrade = {
-              method: 'get',
-              url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook',
-              headers: { 
-                 'Authorization': `Bearer ${req.headers.angelonetoken}`,
-                'Content-Type': 'application/json', 
-                'Accept': 'application/json', 
-                'X-UserType': 'USER', 
-                'X-SourceID': 'WEB', 
-               'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-              },
-              
-          };
-
-          
-      let getTradeData = await axios(configTrade);
-
-      if(getTradeData.data.status==true) {
-
-        return res.json({
-              status: true,
-              statusCode:200,
-              data: data.data,
-              totalOrders:getTradeData.data.data||0,
-          });
-      }else{
-          return res.json({
-              status: false,
-              data:null,
-              statusCode:getTradeData.data.errorCode,
-              message:getTradeData.error.message
-          });
-     }
-
-     }else{
-          return res.json({
-              status: false,
-              data:null,
-              statusCode:data.errorCode,
-              message:data.message
-          });
-     }
-
-  } catch (error) {
-
-    return res.json({
-              status: false,
-              data:null,
-              statusCode:401,
-              message:error.message
-          });
-  }
-}
 
 
 
 // Step 5: Generate Token
-export const reGenerateTokenWithAngelOne = async function (req,res,next) {
-    try {
-
-          var reqData = JSON.stringify({
-            "refreshToken":req.body.refresh_token
-          });
-
-          var config = {
-          method: 'post',
-          url: 'https://apiconnect.angelone.in/rest/auth/angelbroking/jwt/v1/generateTokens',
-          headers: {
-            'Authorization': `Bearer ${req.headers.angelonetoken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-UserType': 'USER',
-            'X-SourceID': 'WEB',
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-        },
-        data : reqData
-      };
-
-    let {data} = await axios(config);
-
-       if(data.status==true) {
-
-            return res.json({
-            success: true,
-            statusCode:200,
-            data: data.data,
-            message:'get data'
-        });
-
-         }else{
-
-        return res.json({
-            success: false,
-            statusCode:data.errorcode,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: data.message,
-        });
-    }
-
-  } catch (error) {
-
-    res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-
-  }
-}
-
-export const angelOneCallback = async (req, res) => {
-
-  const { auth_token, feed_token, refresh_token } = req.query;
-
-  if (!auth_token) {
-    return res.status(400).json({ message: "Missing auth_token in callback" });
-  }
-
-  try {
-   
-     // Generate pseudo user
-    // const profileData = await fetchAngelOneProfile(refresh_token);
-
-    // console.log("✅ profileData:", profileData);
-
-    const angelUser = {
-      clientcode: `774795`,
-      name: "AngelOne User",
-      email: `jhaamit7747@gmail.com` 
-    };
 
 
-    // Save or update user in DB
-    let user = await User.findOne({ where: { angeloneId: angelUser.clientcode } });
 
-    if (!user) {
-      user = await User.create({
-        firstName: "AngelOne",
-        lastName: "User",
-        password: "dummyPassword123!", 
-        name: angelUser.name,
-        email: angelUser.email,
-        angeloneId: angelUser.clientcode,
-        authToken: auth_token,
-        feedToken: feed_token,
-        refreshToken: refresh_token
-      });
-      
-    } else {
-      user.name = angelUser.name;
-      user.email = angelUser.email || user.email;
-      user.authToken = auth_token;
-      user.feedToken = feed_token;
-      user.refreshToken = refresh_token;
-      await user.save();
-      
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    console.log("🎯 JWT generated:", token);
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/login-success?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`
-    );
-
-  } catch (error) {
-    console.error("💥 Error in AngelOne Callback:", error.message);
-    res.status(500).json({ message: "AngelOne login failed", error: error.message });
-  }
-};
 
 
 
@@ -1101,90 +712,7 @@ const kite = new KiteConnect({
 
 
 
-export const kiteLogin = (req, res) => {
-  try {
 
-    const loginUrl = kite.getLoginURL();
-
-    console.log(loginUrl,'loginUrl');
-    
-
-    // Return JSON response instead of redirect
-    return res.status(200).json({
-      status: true,
-      message: "Kite login URL generated successfully",
-      data: {
-        loginUrl: loginUrl
-      }
-    });
-    
-  } catch (error) {
-    console.error('Kite login URL generation error:', error);
-    return res.status(500).json({
-      status: false,
-      message: "Failed to generate login URL",
-      error: error.message
-    });
-  }
-};
-
-export const kiteCallback = async (req, res) => {
-  
-  const { request_token } = req.query;
-
-  console.log(request_token,'request_token kiteCallback');
-  
-
-  if (!request_token) {
-
-    return res.status(400).json({ 
-      status: false,
-      message: "Missing request_token" 
-    });
-  }
-
-  try {
-    const session = await kite.generateSession(
-      request_token,
-      process.env.KITE_API_SECRET
-    );
-
-
-    console.log(session,'kite user login session');
-    
-
-   
-    // 1️⃣ Find user by email
-    const user = await User.findOne({
-      where: { email:session.email }
-    });
-
-     if (!user) {
-
-       return res.redirect(
-      `${process.env.FRONTEND_URL}/kite-login-failed?error : User not found`
-    );
-    }
-
-    // 2️⃣ Update tokens
-    await user.update({
-      authToken:session.access_token,
-      feedToken:session.public_token,
-      refreshToken:session.enctoken
-    });
-    
-    // Redirect to frontend success page
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/dashboard?access_token=${session.access_token}`
-    );
-    
-  } catch (err) {
-    console.error("❌ Zerodha Auth Error:", err);
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/kite-login-failed?error=${err.message}`
-    );
-  }
-};
 
 
 // 1. Redirect to Groww authorize page
@@ -1250,112 +778,112 @@ export const growwCallback = async (req, res) => {
 
 
 
-// 1. Redirect to Fyers authorize page
+// // 1. Redirect to Fyers authorize page
 
-export const fyersLogin = async (req, res) => {
-  try {
-    const BASE = process.env.FYERS_BASE_URL || "https://api-t1.fyers.in";
-    const authUrl = `${BASE}/api/v3/generate-authcode` +
-      `?client_id=${encodeURIComponent(process.env.FYERS_APP_ID)}` +
-      `&redirect_uri=${encodeURIComponent(process.env.FYERS_REDIRECT_URI)}` +
-      `&response_type=code` +
-      `&state=fyers_${Date.now()}`;
+// export const fyersLogin = async (req, res) => {
+//   try {
+//     const BASE = process.env.FYERS_BASE_URL || "https://api-t1.fyers.in";
+//     const authUrl = `${BASE}/api/v3/generate-authcode` +
+//       `?client_id=${encodeURIComponent(process.env.FYERS_APP_ID)}` +
+//       `&redirect_uri=${encodeURIComponent(process.env.FYERS_REDIRECT_URI)}` +
+//       `&response_type=code` +
+//       `&state=fyers_${Date.now()}`;
 
-    return res.redirect(authUrl);
-  } catch (err) {
-    console.error("FYERS login redirect error:", err);
-    return res.status(500).json({ message: "Unable to start FYERS login" });
-  }
-};
+//     return res.redirect(authUrl);
+//   } catch (err) {
+//     console.error("FYERS login redirect error:", err);
+//     return res.status(500).json({ message: "Unable to start FYERS login" });
+//   }
+// };
 
-// Utility: appIdHash (FYERS v3 requirement)
-// Most setups: sha256(`${APP_ID}:${APP_SECRET}`)
-function makeAppIdHash(appId, secret) {
-  return crypto.createHash("sha256").update(`${appId}:${secret}`).digest("hex");
-}
+// // Utility: appIdHash (FYERS v3 requirement)
+// // Most setups: sha256(`${APP_ID}:${APP_SECRET}`)
+// function makeAppIdHash(appId, secret) {
+//   return crypto.createHash("sha256").update(`${appId}:${secret}`).digest("hex");
+// }
 
 
-export const fyersCallback = async (req, res) => {
-  const BASE = process.env.FYERS_BASE_URL || "https://api-t1.fyers.in";
-  try {
-    const code = req.query.code || req.query.auth_code; 
-    if (!code) {
-      return res.status(400).json({ message: "Missing auth code from FYERS" });
-    }
+// export const fyersCallback = async (req, res) => {
+//   const BASE = process.env.FYERS_BASE_URL || "https://api-t1.fyers.in";
+//   try {
+//     const code = req.query.code || req.query.auth_code; 
+//     if (!code) {
+//       return res.status(400).json({ message: "Missing auth code from FYERS" });
+//     }
 
-    const appId = process.env.FYERS_APP_ID;
-    const secret = process.env.FYERS_APP_SECRET;
-    const appIdHash = makeAppIdHash(appId, secret);
+//     const appId = process.env.FYERS_APP_ID;
+//     const secret = process.env.FYERS_APP_SECRET;
+//     const appIdHash = makeAppIdHash(appId, secret);
 
-    // Exchange code for tokens
-    const tokenRes = await axios.post(
-      `${BASE}/api/v3/validate-authcode`,
-      {
-        grant_type: "authorization_code",
-        appIdHash,
-        code, 
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
+//     // Exchange code for tokens
+//     const tokenRes = await axios.post(
+//       `${BASE}/api/v3/validate-authcode`,
+//       {
+//         grant_type: "authorization_code",
+//         appIdHash,
+//         code, 
+//       },
+//       { headers: { "Content-Type": "application/json" } }
+//     );
 
-    const { access_token, refresh_token } = tokenRes.data || {};
-    if (!access_token) {
-      throw new Error("No access_token in FYERS response");
-    }
+//     const { access_token, refresh_token } = tokenRes.data || {};
+//     if (!access_token) {
+//       throw new Error("No access_token in FYERS response");
+//     }
 
-    const profileRes = await axios.get(`${BASE}/api/v3/profile`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
+//     const profileRes = await axios.get(`${BASE}/api/v3/profile`, {
+//       headers: { Authorization: `Bearer ${access_token}` },
+//     });
 
-    const fyersProfile = profileRes.data || {};
+//     const fyersProfile = profileRes.data || {};
  
-    const fyersId = fyersProfile?.fy_id || fyersProfile?.user_id || fyersProfile?.id || null;
-    const name =
-      fyersProfile?.name ||
-      fyersProfile?.display_name ||
-      "FYERS User";
-    const email =
-      fyersProfile?.email_id ||
-      fyersProfile?.email ||
-      `${fyersId || "fyers"}@fyers.local`;
+//     const fyersId = fyersProfile?.fy_id || fyersProfile?.user_id || fyersProfile?.id || null;
+//     const name =
+//       fyersProfile?.name ||
+//       fyersProfile?.display_name ||
+//       "FYERS User";
+//     const email =
+//       fyersProfile?.email_id ||
+//       fyersProfile?.email ||
+//       `${fyersId || "fyers"}@fyers.local`;
 
    
-    let user = await User.findOne({ where: { fyersId } });
-    if (!user) {
-      user = await User.create({
-        firstName: "FYERS",
-        lastName: "User",
-        name,
-        email,
-        password: "dummyPassword123!", 
-        fyersId,
-        fyersAccessToken: access_token,
-        fyersRefreshToken: refresh_token,
-      });
-    } else {
-      user.name = name;
-      user.email = email || user.email;
-      user.fyersAccessToken = access_token;
-      user.fyersRefreshToken = refresh_token;
-      await user.save();
-    }
+//     let user = await User.findOne({ where: { fyersId } });
+//     if (!user) {
+//       user = await User.create({
+//         firstName: "FYERS",
+//         lastName: "User",
+//         name,
+//         email,
+//         password: "dummyPassword123!", 
+//         fyersId,
+//         fyersAccessToken: access_token,
+//         fyersRefreshToken: refresh_token,
+//       });
+//     } else {
+//       user.name = name;
+//       user.email = email || user.email;
+//       user.fyersAccessToken = access_token;
+//       user.fyersRefreshToken = refresh_token;
+//       await user.save();
+//     }
 
-    // JWT for your app
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+//     // JWT for your app
+//     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
    
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/login-success?token=${encodeURIComponent(
-        token
-      )}&user=${encodeURIComponent(JSON.stringify(user))}`
-    );
-  } catch (err) {
-    console.error("FYERS callback error:", err?.response?.data || err.message);
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/login?error=fyers_login_failed`
-    );
-  }
-};
+//     return res.redirect(
+//       `${process.env.FRONTEND_URL}/login-success?token=${encodeURIComponent(
+//         token
+//       )}&user=${encodeURIComponent(JSON.stringify(user))}`
+//     );
+//   } catch (err) {
+//     console.error("FYERS callback error:", err?.response?.data || err.message);
+//     return res.redirect(
+//       `${process.env.FRONTEND_URL}/login?error=fyers_login_failed`
+//     );
+//   }
+// };
 
 
 

@@ -7,13 +7,6 @@ import AddAppSidebarAdmin from "./AddSidebarAdmin";
 import React from "react";
 
 
-
-
-
-
-
-
-
 const LayoutContent: React.FC = () => {
 
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();

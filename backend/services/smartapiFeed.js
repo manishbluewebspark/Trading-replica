@@ -135,11 +135,6 @@ export const getOrderFunction = async function () {
         const endOfToday = new Date();
         endOfToday.setHours(23, 59, 59, 999);
 
-
-        console.log(startOfToday,endOfToday,'getOrderFunction');
-        
-
-
        const tradesData = await Trade.findAll({
         where: {
           createdAt: {
@@ -150,25 +145,14 @@ export const getOrderFunction = async function () {
       });
 
 
-      console.log(tradesData,'tradesData');
-      
-    
-      
-
-
             const uniqueTrades = [
         ...new Map(
             tradesData.map(item => [`${item.tradingsymbol}-${item.symboltoken}`, item])
           ).values()
         ];
 
-        console.log(uniqueTrades,'uniqueTrades');
-
       const tokenList = buildTokenList(uniqueTrades);
-
-       console.log(tokenList,'tokenList');
-
-
+ 
       return tokenList
            
   } catch (error) {
@@ -278,6 +262,8 @@ export  function connectSmartSocket(userId,authToken,feedToken,clientId,) {
          }else{
           console.log("📈 LTP:", tick,'full object');
          }
+
+        //  console.log("📈 LTP:", tick,'full object');
         
         // 🔥 ship to your socket clients
         emitTick(tick);

@@ -111,6 +111,7 @@ export const bulkInsertPostgre = async () => {
       token:    String(it.token ?? it.Token ?? ""),
       symbol:   String(it.symbol ?? it.Symbol ?? ""),
       name:     String(it.name ?? it.Name ?? ""),
+      instrumenttype: String(it.instrumenttype ?? it.InstrumentType ?? ""),
       expiry:   String(it.expiry ?? it.Expiry ?? ""),
       lotsize:  String(it.lotsize ?? it.LotSize ?? "1"),
       exch_seg: String(it.exch_seg ?? it.Exchange ?? ""),
@@ -128,7 +129,7 @@ export const bulkInsertPostgre = async () => {
 
       await InstrumentModel.bulkCreate(chunk, {
         updateOnDuplicate: [
-          "symbol", "name", "expiry", "lotsize", "exch_seg",
+          "symbol", "name","instrumenttype", "expiry", "lotsize", "exch_seg",
           "SyNum", "syType", "raw", "updatedAt",
         ],
       });
@@ -155,31 +156,31 @@ export const bulkInsertPostgre = async () => {
 
 
 
-// import Fuse from "fuse.js";
+import Fuse from "fuse.js";
 
-// const instruments = [
-//   { name: "NIFTY 50", token: 123,token1:"ac",token2:"tg g" },
-//   { name: "BANKNIFTY", token: 456 ,token1:"ac",token2:"tg g"},
-//   { name: "FINNIFTY", token: 789,token1:"ac",token2:"tg g" },
-//   { name: "NIFTY16DEC2527300PE", token: 48315,token1:"ac",token2:"tg g" },
-//    { name: "NIFTY16DEC2527400CE", token: 48318,token1:"ac",token2:"tg g" },
-//    {name:"BANKNIFTY27JAN2666500PE",token:2345,},
-//    {name:"BANKNIFTY27JAN2666000CE",token:2345,},
-//    {name:"BANKNIFTY27JAN2660600PE",token:2345,},
-//    {name:"BANKNIFTY27JAN2662000CE",token:2345,},
-//    {name:"BANKNIFTY27JAN2660300PE",token:2345,},
-//    {name:"BANKNIFTY30DEC2563600CE",token:1234}
-// ];
+const instruments = [
+  { name: "NIFTY 50", token: 123,token1:"ac",token2:"tg g" },
+  { name: "BANKNIFTY", token: 456 ,token1:"ac",token2:"tg g"},
+  { name: "FINNIFTY", token: 789,token1:"ac",token2:"tg g" },
+  { name: "NIFTY16DEC2527300PE", token: 48315,token1:"ac",token2:"tg g" },
+   { name: "NIFTY16DEC2527400CE", token: 48318,token1:"ac",token2:"tg g" },
+   {name:"BANKNIFTY27JAN2666500PE",token:2345,},
+   {name:"BANKNIFTY27JAN2666000CE",token:2345,},
+   {name:"BANKNIFTY27JAN2660600PE",token:2345,},
+   {name:"BANKNIFTY27JAN2662000CE",token:2345,},
+   {name:"BANKNIFTY27JAN2660300PE",token:2345,},
+   {name:"BANKNIFTY30DEC2563600CE",token:1234}
+];
 
-// const fuse = new Fuse(instruments, {
-//   keys: ["name","token"],
-//   threshold: 0.3,
-//   ignoreLocation: true
-// });
+const fuse = new Fuse(instruments, {
+  keys: ["name","token"],
+  threshold: 0.3,
+  ignoreLocation: true
+});
 
-// const searchTerm = "63600";
-// const result = fuse.search(searchTerm);
+const searchTerm = "63600BANKNIFTY";
+const result = fuse.search(searchTerm);
 
 
 
-// console.log(result,'matchedInstrument');
+console.log(result,'matchedInstrument');

@@ -2,6 +2,8 @@
 import { angelOneApi } from "./angelOneApi";
 import { kiteApi } from "./kiteApi";
 import { cloneUserOneApi } from "./cloneUserApi";
+import { fyersApi } from "./fyersApi";
+
 
 export const useBrokerApi = () => {
 
@@ -32,6 +34,13 @@ if (broker === "angelone"&&userRole==='user') {
  if (broker === "kite"&&userRole==='user') {
     return {
       api: kiteApi,
+      image: brokerImage,
+    };
+  }
+
+  if (broker === "fyers"&&userRole==='user') {
+    return {
+      api: fyersApi,
       image: brokerImage,
     };
   }

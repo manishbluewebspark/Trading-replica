@@ -5,14 +5,15 @@ const UserStrategy = sequelize.define(
     
   'UserStrategy',
   {
-     strategyName: {
-      type: DataTypes.STRING,
+      strategyName: {
+        type: DataTypes.STRING,
         allowNull: true,
         defaultValue: "",
         set(value) {
-        this.setDataValue("strategyName", value ? value.trim() : "");
-      }
-    },
+          const v = value ? value.trim().toLowerCase() : "";
+          this.setDataValue("strategyName", v);
+        }
+      },
      strategyDis: {
       type: DataTypes.TEXT,
         allowNull: true,

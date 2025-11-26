@@ -87,6 +87,8 @@ export const searchOrders = async (req, res) => {
 };
 
 
+
+
 let saveData = [
         {
             "userId": 19,
@@ -323,85 +325,7 @@ function parseDateTime(str) {
 
 
 //   WOKRING 
-export const getOrder = async (req, res,next) => {
-    try {
 
-      const angelToken = req.headers.angelonetoken;
-
-  if (!angelToken) {
-    
-     return res.json({
-            status: false,
-            statusCode:401,
-            message: "Login In AngelOne Account",
-            error: null,
-        });
-  }
-      
-    
-        var config = {
-        method: 'get',
-        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook',
-        headers: { 
-           'Authorization': `Bearer ${req.headers.angelonetoken}`,
-            'Content-Type': 'application/json', 
-            'Accept': 'application/json', 
-            'X-UserType': 'USER', 
-            'X-SourceID': 'WEB', 
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-        },
-      
-        };
-
-        let {data} = await axios(config)
-
-         emitOrderGet(data.data)
-
-        if(data.status==true&&data.data!==null) {
-
-
-           const sorted  =  data.data.sort((a, b) => parseDateTime(b.updatetime) - parseDateTime(a.updatetime));
-
-            return res.json({
-            status: true,
-            statusCode:200,
-           data: sorted ?? [],
-            message:'get data'
-        });
-
-         }else if(data.status==true&&data.data===null){
-
-            return res.json({
-            status: false,
-            statusCode:200,
-            data:  [],
-            message:'Angel Trading Data is Empty'
-        });
-
-         }else{
-            return res.json({
-            status: false,
-            statusCode:data.errorcode,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: data.message,
-        });
-    }
-
-    } catch (error) {
-
-        return res.json({
-            status: false,
-            statusCode:500,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: error.message,
-        });
-    }
-};
 
 // getOrderWithDate *update
 export const getOrderWithDate = async (req, res,next) => {
@@ -434,7 +358,7 @@ export const getOrderWithDate = async (req, res,next) => {
       const data = await Order.findAll({
         where: {
           userId: req.userId,
-          // transactiontype:"SELL",
+          transactiontype:"SELL",
           [Op.and]: Sequelize.where(
             Sequelize.fn("DATE", Sequelize.col("createdAt")),
             { [Op.between]: [fromDate, toDate] }
@@ -450,7 +374,7 @@ export const getOrderWithDate = async (req, res,next) => {
       const buyCount = await Order.count({
           where: {
             userId: req.userId,
-            transactiontype: "BUY",
+            transactiontype:"SELL",
             status:"COMPLETE",
            [Op.and]: Sequelize.where(
             Sequelize.fn("DATE", Sequelize.col("createdAt")),
@@ -799,94 +723,7 @@ export const ModifyOrder = async (req, res, next) => {
 // }
 
 //   WOKRING   give a verity fields in fornted when user is cancel 
-export const cancelOrder = async (req, res,next) => {
-   
-    try {
 
-    var data = JSON.stringify({
-    //   "variety":req.body.variety,
-     "variety":req.body.variety,
-      "orderid":req.body.orderid
-    });
-    
-
-       var config = {
-        method: 'post',
-        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/cancelOrder',
-        headers: { 
-           'Authorization': `Bearer ${req.headers.angelonetoken}`,
-            'Content-Type': 'application/json', 
-            'Accept': 'application/json', 
-            'X-UserType': 'USER', 
-            'X-SourceID': 'WEB', 
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-    },
-    data : data
-    };
-    
-    let resData = await axios(config)
-
-    if(resData.data.status==true){
-
-        // normalize if needed
-    const where = { orderid: req.body.orderid };
-
-    // Postgres can return the updated row(s)
-    const [affected, rows] = await Order.update(
-      {
-        status: 'cancelled',        // or 'canceled' if you prefer US spelling
-        orderstatus: 'cancelled',
-      },
-      {
-        where,
-        returning: true,            // only works on Postgres
-      }
-    );
-
-    if (affected === 0) {
-
-         return res.json({
-            status: false,
-            statusCode:404,
-            message: "Order is Cancell and Not Update in PG DB With Cancell Status",
-            data:null,
-            error: "Order is Cancell and Not Update in PG DB With Cancell Status",
-        });     
-    }
-
-        return res.json({
-        status: true,
-        statusCode:201,
-        data:null,
-        message: 'Order Cancell Successfully'
-    });
-
-    }else{
-
-     return res.json({
-            status: false,
-            statusCode:data.errorcode,
-            message: resData?.data?.message,
-            data:null,
-            error: "Order is not Cancell",
-        });     
-
-    }
-
-    } catch (error) {
-
-        return res.json({
-            status: false,
-            statusCode:500,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: error.message,
-        });
-    }
-};
 
 //   WOKRING 
 export const placeOrder = async (req, res,next) => {
@@ -1124,7 +961,8 @@ export const getOrderInTables = async (req, res,next) => {
   const orderData = await Order.findAll({
       where: {
         userId:req.userId,
-          // transactiontype:"SELL",
+         transactiontype:"SELL",
+          status:"COMPLETE",
          createdAt: {
       [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
     },
@@ -1134,10 +972,14 @@ export const getOrderInTables = async (req, res,next) => {
     });
 
 
+    console.log(orderData,'order data');
+    
+
+
     const buyCount = await Order.count({
-  where: {
+     where: {
     userId: req.userId,
-    transactiontype: "BUY",
+    transactiontype: "SELL",
     status:"COMPLETE",
     createdAt: {
       [Op.between]: [startOfDay, endOfDay],
@@ -1173,66 +1015,7 @@ export const getOrderInTables = async (req, res,next) => {
 };
 
 
-//   WOKRING 
-export const getLTP = async (req, res,next) => {
-    try {
 
-       var data = JSON.stringify({
-            "exchange":req.body.exchange,
-            "tradingsymbol":req.body.tradingsymbol,
-            "symboltoken":req.body.symboltoken
-        });
-
-      var config = {
-        method: 'post',
-        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getLtpData',
-
-        headers: { 
-             'Authorization': `Bearer ${req.headers.angelonetoken}`,
-            'Content-Type': 'application/json', 
-            'Accept': 'application/json', 
-            'X-UserType': 'USER', 
-            'X-SourceID': 'WEB', 
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-        },
-        data : data
-    };
-
-    let resData = await axios(config)
-
-     if(resData?.data?.status==true) {
-
-         return res.json({
-            status: true,
-            statusCode:200,
-            data: resData.data,
-            message:''
-        });
-     }else{
-       
-        return res.json({
-            status: false,
-            statusCode:401,
-            message: resData?.data?.message,
-            error: resData?.data?.message,
-        });
-
-     }
-
-    } catch (error) {
-
-       return res.json({
-            status: false,
-            statusCode:500,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: error.message,
-        });
-    }
-};
 
 
 export const adminGetOrderInTables = async (req, res,next) => {
@@ -1382,11 +1165,18 @@ export const userGetTradeInTables = async (req, res,next) => {
       order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
       raw: true,
     });
+
+     const formatted = orderData.map(o => ({
+  ...o,
+  createdAt: dayjs(o.createdAt).format("DD MMMM YYYY [at] hh:mm a"),
+  updatedAt: dayjs(o.updatedAt).format("DD MMMM YYYY [at] hh:mm a"),
+}));
+
     
      return res.json({
           status: true,
           statusCode:200,
-          data:orderData,
+          data:formatted,
           message:'get data'
       });
     
@@ -1553,6 +1343,7 @@ export const adminSearchOrders = async (req, res) => {
       raw:true
     });
 
+    console.log(orders);
     
     
 

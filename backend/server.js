@@ -5,6 +5,10 @@ import authRoutes from './routes/authRoute.js';
 import userRoutes from './routes/userRoute.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import orderRoute from './routes/orderRoute.js';
+import fyersRoute from './routes/fyersRoute.js';
+import kiteRoute from './routes/kiteRoute.js';
+import shoonyaRoute from './routes/shoonyaRoute.js';
+import angeloneRoute from './routes/angelOneRoute.js';
 import adminRoute from './routes/admin/adminOrderRoute.js';
 import cors from 'cors';
 import path from 'path';
@@ -53,7 +57,7 @@ app.use(
 
 app.use(express.json());
 
-// connectSmartSocket(19,process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN)
+// connectSmartSocket(2,process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN,'ARJMA1921')
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -82,6 +86,13 @@ app.use('/api/users', userRoutes);
 app.use("/api/licenses", licenseRoutes);
 app.use('/api/order', orderRoute);
 app.use('/api/admin', adminRoute);
+
+app.use('/api', fyersRoute);
+app.use('/api', kiteRoute);
+app.use('/api', angeloneRoute);
+app.use('/api', shoonyaRoute);
+
+
 
 
 const server = http.createServer(app);

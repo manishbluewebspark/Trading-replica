@@ -43,7 +43,7 @@ export default function HoldingOrderAdmin () {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axios.get(`${apiUrl}/order/get/holdingdata`, {
+      const { data } = await axios.get(`${apiUrl}/admin/get/holdingdata`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           AngelOneToken: localStorage.getItem("angel_token") || "",

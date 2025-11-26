@@ -5,9 +5,12 @@ export const angelOneApi = {
 
   generateToken: async () => {
     try {
-      const { data } = await http.get("/users/login/totp/angelone", {
+      const { data } = await http.get("/angelone/login/totp", {
         headers: authHeaders(),
       });
+
+      console.log(data,'angelone');
+      
 
       if (data.status && data.data) {
         // Save tokens
@@ -28,7 +31,7 @@ export const angelOneApi = {
    */
   getFund: async () => {
     try {
-      return await http.get("/users/get/user/fund", {
+      return await http.get("/angelone/user/fund", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -45,7 +48,7 @@ export const angelOneApi = {
    */
   getTodayTrade: async () => {
     try {
-      return await http.get("/order/dummydatatrade", {
+      return await http.get("/angelone/dummydatatrade", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",

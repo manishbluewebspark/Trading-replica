@@ -7,7 +7,8 @@ export const kiteApi = {
    */
   generateToken: async () => {
     try {
-      const { data } = await http.get("/auth/kite", {
+      
+      const { data } = await http.get("/kite", {
         headers: authHeaders(),
       });
 
@@ -29,9 +30,7 @@ export const kiteApi = {
   getFund: async () => {
     try {
 
-     
-      
-      return await http.get("/order/kite/fund", {
+      return await http.get("/kite/fund", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -48,12 +47,14 @@ export const kiteApi = {
    */
   getTodayTrade: async () => {
     try {
-      return await http.get("/order/kite/deshbaord/todaytrade", {
+
+      return await http.get("/kite/deshbaord/todaytrade", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",
         },
       });
+
     } catch (error: any) {
       console.error("Kite TodayTrade Error:", error?.response?.data);
       throw error?.response?.data || error;

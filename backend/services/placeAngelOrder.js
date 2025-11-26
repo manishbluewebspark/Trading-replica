@@ -44,6 +44,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
     const orderData = {
       variety: reqInput.variety,
       tradingsymbol: reqInput.symbol,
+      instrumenttype:reqInput.instrumenttype,
       symboltoken: reqInput.token,
       transactiontype: reqInput.transactiontype,
       exchange: reqInput.exch_seg,
@@ -69,6 +70,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
     });
 
     if (placeRes.data?.status !== true) {
+
       await newOrder.update({ orderstatuslocaldb: "FAILED",status:'FAILED',text:'Order rejected by AngelOne' });
       return {
         userId: user.id,
@@ -78,9 +80,14 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       };
     }
 
+
+
     // Extract IDs
     const orderid = placeRes?.data?.data?.orderid;
     const uniqueOrderId = placeRes?.data?.data?.uniqueorderid;
+
+   
+    
 
     await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
 
@@ -90,14 +97,17 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
     let detailsData = null;
 
     try {
+      
       const det = await axios.get(ANGEL_ONE_DETAILS_URL(uniqueOrderId), {
         headers: angelHeaders(user.authToken),
       });
 
+     
       if (det.data?.status === true) {
         detailsData = det.data.data;
       }
     } catch (e) {
+      console.log(e, ' e catch ');
       return {
         userId: user.id,
         broker: "AngelOne",
@@ -143,7 +153,30 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
     }
 
     // Update newOrder with broker order details
-    await newOrder.update({ ...detailsData, orderstatuslocaldb: finalStatus });
+    await newOrder.update({ 
+      status:detailsData.status,
+      orderstatus:detailsData.orderstatus,
+      unfilledshares:detailsData.unfilledshares,
+      filledshares:detailsData.filledshares,
+      cancelsize:detailsData.cancelsize,
+      lotsize:detailsData.lotsize,
+      optiontype:detailsData.optiontype,
+      strikeprice:detailsData.strikeprice,
+      instrumenttype:detailsData.instrumenttype,
+      exchange:detailsData.exchange,
+      symboltoken:detailsData.symboltoken,
+      trailingstoploss:detailsData.trailingstoploss,
+      stoploss:detailsData.stoploss,
+      squareoff:detailsData.squareoff,
+      disclosedquantity:detailsData.disclosedquantity,
+      triggerprice:detailsData.triggerprice,
+      duration:detailsData.duration,
+      variety:detailsData.variety,
+      ordertype:detailsData.ordertype,
+      duration:detailsData.duration,
+      squareoff:detailsData.squareoff,
+      orderstatuslocaldb: finalStatus
+     });
 
     // ---------------------------
     // 5) Fetch TRADE BOOK
@@ -158,18 +191,20 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
 
         const matched = tradeRes.data.data.find((t) => t.orderid === orderid);
 
-         const buyPrice  = buyOrder?.fillprice     || 0;
+        if (matched) {
+
+        const buyPrice  = buyOrder?.fillprice     || 0;
         const buySize   = buyOrder?.fillsize      || 0;
         const buyValue  = buyOrder?.tradedValue   || 0;
 
 
-        let pnl = (matched.fillsize*matched.fillprice)-(buyPrice*buySize)
+        let pnl = (matched?.fillsize*matched?.fillprice)-(buyPrice*buySize)
 
-          if(t.transaction_type==='BUY') {
+          if(matched.transaction_type==='BUY') {
              pnl = 0
          }
 
-        if (matched) {
+
           await newOrder.update({
             tradedValue: matched.tradevalue,
             fillprice: matched.fillprice,
@@ -184,6 +219,8 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
         }
       }
     } catch (e) {
+      console.log(e ,'angel errr 1');
+      
       // Trade book is optional — continue
     }
 
@@ -196,6 +233,8 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       uniqueOrderId,
     };
   } catch (err) {
+    console.log(err, 'catch ');
+    
     return {
       userId: user.id,
       broker: "AngelOne",

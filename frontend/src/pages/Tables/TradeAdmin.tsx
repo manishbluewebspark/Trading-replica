@@ -766,6 +766,7 @@ export default function TradeAdmin() {
 
   // 🔍 Backend search on key up
   const handleKeyUp = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+
     const raw = e.currentTarget.value;
     const query = raw.trim();
 
@@ -783,13 +784,20 @@ export default function TradeAdmin() {
     setError(null);
 
     try {
-      const res = await axios.get(`${apiUrl}/admin/search/order`, {
-        params: { search: query },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          AngelOneToken: localStorage.getItem("angel_token") || "",
-        },
-      });
+
+      console.log(query,'query search');
+      
+      const res = await axios.post(
+          `${apiUrl}/admin/search/order`,
+          { search: query },
+          {
+             params: { search: query },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+              AngelOneToken: localStorage.getItem("angel_token") || "",
+            },
+          }
+        );
 
       console.log("search result", res.data.data);
 

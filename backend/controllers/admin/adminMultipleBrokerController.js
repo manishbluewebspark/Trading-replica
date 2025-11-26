@@ -3,6 +3,7 @@ import User from "../../models/userModel.js";
 import Order from "../../models/orderModel.js";
 import { placeAngelOrder } from "../../services/placeAngelOrder.js";
 import { placeKiteOrder } from "../../services/placeKiteOrder.js";
+import { placeFyersOrder } from "../../services/placeFyersOrder.js";
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 
@@ -36,12 +37,10 @@ export const getTokenStatusSummary = async (req, res) => {
 
 
 export const adminPlaceMultiBrokerOrder = async (req, res) => {
+  
   try {
 
     const input = req.body;
-
-    console.log(input,'input');
-    
     
     const users = await User.findAll({
       where: { strategyName: input.groupName },
@@ -55,6 +54,8 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       });
     }
 
+
+    
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -71,9 +72,11 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
         if (user.brokerName === "angelone") {
           return await placeAngelOrder(user, input, startOfDay, endOfDay);
         }
-
         if (user.brokerName === "kite") {
           return await placeKiteOrder(user, input,startOfDay, endOfDay);
+        }
+        if (user.brokerName === "fyers") {
+          return await placeFyersOrder(user, input,startOfDay, endOfDay);
         }
 
         return {
@@ -124,6 +127,7 @@ const safeErr = (e) => e?.message || e?.response?.data || String(e);
 
 export const adminMultipleSquareOff = async (req, res) => {
   try {
+
     // 1) Time window for today
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -189,6 +193,7 @@ export const adminMultipleSquareOff = async (req, res) => {
           const reqInput = {
             variety: o.variety,
             symbol: o.tradingsymbol,
+            instrumenttype: o.instrumenttype,
             token: o.symboltoken,
             exch_seg: o.exchange,
             orderType: o.ordertype,
@@ -219,7 +224,14 @@ export const adminMultipleSquareOff = async (req, res) => {
               startOfDay,
               endOfDay
             );
-          } else {
+          }else if (user.broker.toLowerCase() === "fyers") {
+            brokerRes =  await placeFyersOrder(
+              user,
+              reqInput,
+              startOfDay,
+               endOfDay
+              );
+          }else {
             return {
               orderId: o.id,
               result: "INVALID_BROKER",

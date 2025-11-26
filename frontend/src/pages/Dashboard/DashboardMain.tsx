@@ -1,9 +1,33 @@
-
-import { useEffect, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useBrokerApi } from "../../api/brokers/brokerSelector";
 import TradeReportChart from "../Charts/TradeReportChart";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
+import {
+  FiTrendingUp,
+  FiTrendingDown,
+  FiShoppingCart,
+  FiRefreshCw,
+  FiArrowUp,
+  FiArrowDown,
+  FiXCircle,
+  FiAlertTriangle,
+  FiPieChart,
+  FiBarChart2,
+  FiDollarSign as FiDollar,
+  FiList
+} from "react-icons/fi";
+import {
+  RiExchangeDollarLine,
+  RiWallet3Line,
+  RiArrowUpDownLine
+} from "react-icons/ri";
+
+import { Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const rupee = (n: number) =>
   (Number(n) || 0).toLocaleString("en-IN", {
@@ -14,7 +38,7 @@ const rupee = (n: number) =>
 
 type Summary = { totalOrder: number; orderData: any[] };
 
-type Row = { label: string; value: number; dot: string };
+type Row = { label: string; value: number; dot: string; icon: JSX.Element };
 
 function buildRows(orderList: any[] = []): Row[] {
   let buy = 0,
@@ -33,73 +57,56 @@ function buildRows(orderList: any[] = []): Row[] {
   }
 
   return [
-    { label: "Buy", value: buy, dot: "bg-green-500" },
-    { label: "Sell", value: sell, dot: "bg-rose-500" },
-    { label: "Cancelled", value: cancelled, dot: "bg-sky-500" },
-    { label: "Rejected", value: rejected, dot: "bg-yellow-500" },
+    { label: "Buy", value: buy, dot: "bg-linear-to-r from-green-400 to-emerald-500", icon: <FiArrowUp className="text-white" /> },
+    { label: "Sell", value: sell, dot: "bg-linear-to-r from-red-400 to-red-500", icon: <FiArrowDown className="text-white" /> },
+    { label: "Cancelled", value: cancelled, dot: "bg-linear-to-r from-blue-400 to-cyan-500", icon: <FiXCircle className="text-white" /> },
+    { label: "Rejected", value: rejected, dot: "bg-linear-to-r from-amber-400 to-orange-500", icon: <FiAlertTriangle className="text-white" /> },
   ];
 }
 
 export default function DashboardPretty() {
 
-   const { api, image } = useBrokerApi();  // Auto-select AngelOne or Kite
+    const apiUrl = import.meta.env.VITE_API_URL;
 
-    const location = useLocation();
+  const { api, image } = useBrokerApi();
+  const location = useLocation();
   const navigate = useNavigate();
 
-   const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [fundData, setFundData] = useState(0);
   const [totalTradedData, setTotalTradedData] = useState(0);
   const [totalOpenOrderData, setTotalOpenOrderData] = useState(0);
   const [profitAndLossData, setProfitAndLossData] = useState(0);
   const [chartData, setChartData] = useState([]);
 
-  console.log(loading);
-  
-
-
   const [summary, setSummary] = useState<Summary>({
     totalOrder: 0,
     orderData: [],
   });
 
-
-
   const [rows, setRows] = useState<Row[]>([
-    { label: "Buy", value: 0, dot: "bg-green-500" },
-    { label: "Sell", value: 0, dot: "bg-rose-500" },
-    { label: "Cancelled", value: 0, dot: "bg-sky-500" },
-    { label: "Rejected", value: 0, dot: "bg-violet-500" },
-  ]);    
+    { label: "Buy", value: 0, dot: "bg-linear-to-r from-green-400 to-emerald-500", icon: <FiArrowUp className="text-white" /> },
+    { label: "Sell", value: 0, dot: "bg-linear-to-r from-red-400 to-red-500", icon: <FiArrowDown className="text-white" /> },
+    { label: "Cancelled", value: 0, dot: "bg-linear-to-r from-blue-400 to-cyan-500", icon: <FiXCircle className="text-white" /> },
+    { label: "Rejected", value: 0, dot: "bg-linear-to-r from-amber-400 to-orange-500", icon: <FiAlertTriangle className="text-white" /> },
+  ]);
 
-
-   const loadDashboard = async () => {
+  const loadDashboard = async () => {
     try {
       setLoading(true);
-
-      // ⭐ 1. Get Funds
       const fundRes = await api.getFund();
 
-      console.log(fundRes,'fundRes');
-      
+      let orderStatusData = await buildRows(fundRes?.data?.totalOrders || []);
+      setRows(orderStatusData);
 
-      let orderStatusData = await buildRows(fundRes?.data?.totalOrders||[])
-
-       setRows(orderStatusData) 
-      
-       setSummary({
-         totalOrder:fundRes?.data?.totalOrders?.length||0,
-         orderData:fundRes?.data?.totalOrders||[] })
+      setSummary({
+        totalOrder: fundRes?.data?.totalOrders?.length || 0,
+        orderData: fundRes?.data?.totalOrders || []
+      });
 
       setFundData(fundRes.data.data?.availablecash || 0);
 
-
-      // ⭐ 2. Trade Data
       const tradeRes = await api.getTodayTrade();
-
-      console.log(tradeRes.data.data,'orderStatusData');
-
-     
       setTotalTradedData(tradeRes.data.totalTraded || 0);
       setTotalOpenOrderData(tradeRes.data.totalOpen || 0);
       setProfitAndLossData(tradeRes.data.pnl || 0);
@@ -112,11 +119,9 @@ export default function DashboardPretty() {
     }
   };
 
-  
-   const handleGenerateToken = async () => {
+  const handleGenerateToken = async () => {
     try {
       const res = await api.generateToken();
-
       if (res?.status) {
         toast.success("Token generated successfully!");
         loadDashboard();
@@ -128,697 +133,273 @@ export default function DashboardPretty() {
     }
   };
 
- useEffect(() => {
+  const sendLoginTokenToBackend = async (token:any, userId:any) => {
+  try {
+    console.log('dfvdfvdf fyers');
+    
+    const res = await axios.post(
+      `${apiUrl}/fyers/updatefyerstoken`,  // <--- your endpoint
+      {
+        angelToken: token,
+        userId: userId,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+      }
+    );
 
-  const params = new URLSearchParams(location.search);
+    console.log("Token saved response:", res.data);
+  } catch (err) {
+    console.error("Error sending token:", err);
+  }
+};
+
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
     const token = params.get("access_token");
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user?.id;
+
 
     if (token) {
-      
-      // Save token
       localStorage.setItem("angel_token", token);
-    
-      // Remove token from URL after saving
+
+      // post token + userId to backend
+     if(user.brokerName=='fyers') {
+
+           sendLoginTokenToBackend(token, userId);
+     }
+
       navigate("/dashboard", { replace: true });
     }
-
     loadDashboard();
   }, []);
-  
 
-  const pnlColor =
-    profitAndLossData >= 0 ? "text-emerald-600" : "text-rose-600";
+
+
+  const pnlIcon = profitAndLossData >= 0 ?
+    <FiTrendingUp className="text-emerald-600" /> :
+    <FiTrendingDown className="text-red-600" />;
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6">
-      {/* TOP ROW */}
-      <section className="grid grid-cols-12 gap-4">
-        {/* GENERATE TOKEN */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-center">
-            <button
-              className="text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1.5 rounded-md text-xs font-semibold"
-              onClick={handleGenerateToken}
-            >
-              Generate Token
-            </button>
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 md:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Trading Dashboard</h1>
+          <p className="text-gray-600 mt-2">Real-time market insights and portfolio overview</p>
+        </div>
+        <div className="flex items-center gap-3">
+<button
+  className="flex items-center gap-2 bg-linear-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl text-white transition-all duration-200 transform hover:-translate-y-0.5"
+  onClick={handleGenerateToken}
+>
+  <FiRefreshCw className={`${loading ? 'animate-spin' : ''} text-white`} />
+  <span className="text-white">Generate Token</span>
+</button>
+
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+            <img src={image} className="w-28 h-10 object-contain" alt="Broker Logo" />
           </div>
         </div>
+      </div>
 
-        {/* LOGO */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-center">
-            <img src={image} className="h-10" />
-          </div>
-        </div>
-
+      {/* Stats Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Traded */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-            <div className="text-sm font-semibold">Total Traded</div>
-            <div className="text-lg font-bold">{totalTradedData}</div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium mb-2">Total Traded</p>
+              <p className="text-3xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">{totalTradedData}</p>
+            </div>
+            <div className="p-4 bg-linear-to-br from-blue-50 to-blue-100 rounded-2xl ">
+              <RiExchangeDollarLine className="text-blue-500 text-2xl" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+            <FiShoppingCart className="text-blue-500" />
+            <span>Trading volume</span>
           </div>
         </div>
 
         {/* Total Open */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-            <div className="text-sm font-semibold">Total Open</div>
-            <div className="text-lg font-bold">{totalOpenOrderData}</div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium mb-2">Total Open</p>
+              <p className="text-3xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">{totalOpenOrderData}</p>
+            </div>
+            <div className="p-4 bg-linear-to-br from-amber-50 to-amber-100 rounded-2xl ">
+              <RiArrowUpDownLine className="text-amber-500 text-2xl" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+            <FiList className="text-amber-500" />
+            <span>Active orders</span>
           </div>
         </div>
 
-        {/* PNL */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-            <div className="text-sm font-semibold">Profit & Loss</div>
-            <div className={`${pnlColor} text-xl font-bold`}>
-              {rupee(profitAndLossData)}
+        {/* Total Fund */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium mb-2">Available Funds</p>
+              <p className="text-2xl font-bold bg-linear-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mr-2">
+                {rupee(fundData)}
+              </p>
             </div>
+            <div className="p-4 bg-linear-to-br from-emerald-50 to-green-100 rounded-2xl">
+              <RiWallet3Line className="text-emerald-500 text-2xl" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+            <FiDollar className="text-emerald-500" />
+            <span>Liquid balance</span>
           </div>
         </div>
 
-        {/* FUND */}
-        <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-            <div className="text-sm font-semibold">Total Fund</div>
-            <div className="text-emerald-600 text-xl font-bold">
-              {rupee(fundData)}
+        {/* PnL */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium mb-2">Profit & Loss</p>
+              <p className={`text-2xl font-bold ${profitAndLossData >= 0 ? 'bg-linear-to-r from-emerald-600 to-green-600' : 'bg-linear-to-r from-red-600 to-red-600'} bg-clip-text text-transparent`}>
+                {rupee(profitAndLossData)}
+              </p>
             </div>
+            <div className={`p-4 rounded-2xl  ${profitAndLossData >= 0 ? 'bg-linear-to-br from-emerald-50 to-green-100' : 'bg-linear-to-br from-red-50 to-red-100'}`}>
+              {pnlIcon}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+            {profitAndLossData >= 0 ? <FiTrendingUp className="text-emerald-500" /> : <FiTrendingDown className="text-red-500" />}
+            <span>Today's P&L</span>
           </div>
         </div>
       </section>
 
-      {/* ORDERS + CHART */}
-      <section className="grid grid-cols-12 gap-4">
-
-
+      {/* Charts and Orders Summary */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+       
         {/* Orders Summary */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-full">
-            <h3 className="text-xl font-semibold text-gray-700">Orders Summary</h3>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="text-sm font-semibold text-gray-600">Orders Today</div>
-                <div className="text-5xl font-extrabold text-gray-800 mt-2">
-                  {Number(summary.totalOrder)}
+        <div className="lg:col-span-1">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 h-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-linear-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-lg">
+                <FiPieChart className="text-white text-lg" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800">Orders Summary</h3>
+            </div>
+
+            {/* Donut Chart */}
+            <div className="flex justify-center mb-6">
+              <div className="w-48 h-48 relative">
+                <Doughnut
+                  data={{
+                    labels: rows.map((r) => r.label),
+                    datasets: [
+                      {
+                        data: rows.map((r) => r.value),
+                        backgroundColor: [
+                          "#10b981",
+                          "#ef4444",
+                          "#3b82f6",
+                          "#f59e0b"
+                        ],
+                        borderWidth: 3,
+                        borderColor: "white",
+                        hoverOffset: 15,
+                      },
+                    ],
+                  }}
+                  options={{
+                    cutout: "70%",
+                    plugins: {
+                      legend: { display: false },
+                    },
+                  }}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-bold text-gray-800">{Number(summary.totalOrder)}</span>
+                  <span className="text-sm text-gray-500">Total</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {rows.map((r) => (
-                <div key={r.label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block w-3 h-3 rounded-full ${r.dot}`} />
-                    <span className="text-gray-500">{r.label}</span>
-                  </div>
-                  <span className="text-gray-900 font-semibold">{r.value}</span>
-                </div>
-              ))}
+            <div className="text-center py-3">
+              <div className="inline-flex flex-col items-center">
+                <div className="text-lg font-medium text-gray-500 mt-2">Total Orders Today</div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Chart */}
-        <div className="col-span-12 lg:col-span-8">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="lg:col-span-2">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 h-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-linear-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg">
+                <FiBarChart2 className="text-white text-lg" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800">Trading Performance</h3>
+            </div>
             <TradeReportChart data={chartData} />
           </div>
         </div>
       </section>
 
-      {/* Recent Orders */}
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-lg font-semibold text-gray-700">Recent Orders</div>
+      {/* Recent Orders Table */}
+      <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-linear-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg">
+            <FiList className="text-white text-lg" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800">Recent Orders</h3>
         </div>
 
-        <div className="overflow-x-auto">
-         
-          <table className="w-full text-sm">
-        <thead>
-          <tr className="text-gray-500 border-b">
-            <th className="text-left py-2 pr-4">Symbol</th>
-            <th className="text-left py-2 pr-4">Order Id</th>
-            <th className="text-left py-2 pr-4">Type</th>
-            <th className="text-left py-2 pr-4">Qty</th>
-            <th className="text-left py-2 pr-4">Price</th>
-            <th className="text-left py-2 pr-4">Option Type</th>
-          </tr>
-        </thead>
+        <div className="flex flex-col gap-4">
+          {summary?.orderData?.slice(0, 5).map((item, index) => (
+            <div
+              key={index}
+              className="flex items-start gap-4 p-5 bg-white/50 rounded-2xl border border-white/20 hover:bg-white/80 hover:shadow-lg transition-all duration-200 group"
+            >
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
+                item.transactiontype === "BUY" 
+                  ? "bg-linear-to-br from-green-500 to-emerald-600" 
+                  : "bg-linear-to-br from-red-500 to-red-600"
+              }`}>
+                <span className="text-white font-bold text-lg">
+                  {item.transactiontype === "BUY" ? "B" : "S"}
+                </span>
+              </div>
 
-        <tbody className="divide-y divide-gray-100">
-          {summary?.orderData?.slice(0, 5).map((item:any, index:any) => (
-            <tr key={index}>
-              <td className="py-2 pr-4">{item.tradingsymbol}</td>
-                <td className="py-2 pr-4">{item.orderid}</td>
-
-              <td
-                className={`py-2 pr-4 font-medium ${
-                  item.transactiontype === "BUY" ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {item.transactiontype}
-              </td>
-
-              <td className="py-2 pr-4">{item.lotsize}</td>
-              <td className="py-2 pr-4">{rupee(item.averageprice)}</td>
-
-                  <td className="py-2 pr-4">{item.orderstatus}</td>
-            </tr>
+              <div className="flex-1">
+                <p className="text-lg font-semibold text-gray-900">
+                  {item.tradingsymbol}
+                </p>
+                <p className="text-sm text-gray-500 leading-6">
+                  Order sent to Finvasia. OrderID : {item.orderid} : S-1 : (
+                  {item.formulaText})
+                </p>
+                <p className="text-xs text-gray-400 mt-1">1 Hours Ago</p>
+              </div>
+            </div>
           ))}
 
           {summary?.orderData?.length === 0 && (
-            <tr>
-              <td colSpan={5} className="py-6 text-center text-gray-400">
-                No recent orders
-              </td>
-            </tr>
+            <div className="py-8 text-center text-gray-500">
+              <div className="flex flex-col items-center justify-center">
+                <FiList className="text-3xl text-gray-300 mb-2" />
+                <p>No recent orders found</p>
+              </div>
+            </div>
           )}
-        </tbody>
-      </table>
         </div>
       </section>
     </div>
   );
 }
-
-
-
-
-
-
-
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import { toast } from "react-toastify";
-// import { useLocation, useNavigate } from "react-router-dom";
-// import TradeReportChart from "../Charts/TradeReportChart";
-
-
-
-// import { useBrokerApi } from "../../api/brokers/brokerSelector";
-
-// const api = useBrokerApi();   // auto-selected API file
-
-
-// type Summary = { totalOrder: number; orderData: any[] };
-
-
-// const rupee = (n: number) =>
-//   (Number(n) || 0).toLocaleString("en-IN", {
-//     style: "currency",
-//     currency: "INR",
-//     minimumFractionDigits: 2,
-//   });
-
-
-
-// type Row = { label: string; value: number; dot: string };
-
-// function buildRows(orderList: any[] = []): Row[] {
-
-//   let buy = 0, sell = 0, cancelled = 0, open = 0;
-
-//   for (const o of orderList) {
-//     const tt = String(o?.transactiontype ?? "").toUpperCase();  // BUY | SELL
-//     const st = String(o?.orderstatus ?? o?.status ?? "").toLowerCase(); // complete | cancelled | open | rejected
-
-//     if (tt === "BUY" && st === "complete") {
-//       buy++;
-//     } 
-//     else if (tt === "SELL" && st === "complete") {
-//       sell++;
-//     } 
-//     else if (st === "cancelled") {
-//       cancelled++;
-//     } 
-//     else if (st === "rejected") {
-//       open++;
-//     }
-//   }
-
-//   return [
-//     { label: "Buy", value: buy, dot: "bg-green-500" },
-//     { label: "Sell", value: sell, dot: "bg-rose-500" },
-//     { label: "Cancelled", value: cancelled, dot: "bg-sky-500" },
-//     { label: "Rejected", value: open, dot: "bg-yellow-500" },
-//   ];
-// }
-
-
-
-// export default function DashboardPretty() {
-
-//     const apiUrl = import.meta.env.VITE_API_URL;
-
-//   const location = useLocation();
-//   const navigate = useNavigate();
-   
-//   // === React states (you can wire these to your APIs) ===
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState("");
-//   const [profitAndLossData, setProfitAndLossData] = useState<number>(0);
-//   const [totalTradedData, setTotalTradedData] = useState<number>(0);
-//   const [totalOpenOrderData, setTotalOpenOrderData] = useState<number>(0);
-//   const [fundData, setFundData] = useState<number>(0);
-//   const [summary, setSummary] = useState<Summary>({
-//       totalOrder: 0,
-//       orderData: [],
-//     });
-
-//   const [imageUrl, setImageUrl] = useState("");
-
-//   const [rows, setRows] = useState<Row[]>([
-//     { label: "Buy", value: 0, dot: "bg-green-500" },
-//     { label: "Sell", value: 0, dot: "bg-rose-500" },
-//     { label: "Cancelled", value: 0, dot: "bg-sky-500" },
-//     { label: "Rejected", value: 0, dot: "bg-violet-500" },
-//   ]);
-
-//   const [chartData, setChartData] = useState<Array<{ label: string; win: number; loss: number }>>([
-//     { label: "1", win: 0, loss: 0 },
-//     { label: "2", win: 0, loss: 0 },
-//     { label: "3", win: 0, loss: 0 },
-//     { label: "4", win: 0, loss: 0 },
-//     { label: "5", win: 0, loss: 0 },
-//      { label: "6", win: 0, loss: 0 },
-//     { label: "7", win: 0, loss: 0 },
-//     { label: "8", win: 0, loss: 0 },
-//      { label: "9", win: 0, loss: 0 },
-//     { label: "10", win: 0, loss: 0 },
-//      { label: "11", win: 0, loss: 0 },
-//      { label: "12", win: 0, loss: 0 },
-//     { label: "13", win: 0, loss: 0 },
-//     { label: "14", win: 0, loss: 0 },
-//      { label: "15", win: 0, loss: 0 },
-//     { label: "16", win: 0, loss: 0 },
-//   ]);
-
-
-
-   
-
-
-//   // Example: replace with your real fetch
-//   useEffect(() => {
-
-//     const params = new URLSearchParams(location.search);
-//     const accessToken = params.get("access_token");
-
-//     if (accessToken) {
-//       // Store in localStorage
-//        localStorage.setItem("angel_token", accessToken);
-
-//       // Remove token from URL for cleanliness
-//       navigate("/dashboard", { replace: true });
-//     }
-
-//     (async () => {
-//       try {
-
-//       const storedUser:any = localStorage.getItem("user");
-
-//       const parsedUser = JSON.parse(storedUser);
-
-//       setImageUrl(parsedUser.brokerImageLink)
-       
-//    const fetchData = async () => {
-//       try {
-//         setLoading(true);
-//         setError("");
-
-//          // 1️⃣ First API: user fund
-//         const res = await axios.get(
-//           `${apiUrl}/users/get/user/fund`,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//               "AngelOneToken": localStorage.getItem("angel_token") || "",
-//             },
-//           }
-//         );
-        
-//        let data = res?.data?.data
-//        setFundData(data?.availablecash||0);
-
-//       setSummary({
-//         totalOrder:res?.data?.totalOrders?.length||0,
-//         orderData:res?.data?.totalOrders||[]
-
-//       })
-
-//       let orderStatusData = buildRows(res?.data?.totalOrders||[])
-
-//       setRows(orderStatusData) 
-      
-      
-//        // 2️⃣ Third API: (example)
-//          const getAllTodayTrade = await axios.get(`${apiUrl}/order/dummydatatrade`, {
-//         headers: {
-//           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//           AngelOneToken: localStorage.getItem("angel_token") || "",
-//         },
-//       });
-      
-//       setTotalTradedData(getAllTodayTrade?.data?.totalTraded||0)
-//       setTotalOpenOrderData(getAllTodayTrade?.data?.totalOpen||0)
-//       setProfitAndLossData(getAllTodayTrade?.data?.pnl)
-//       setChartData(getAllTodayTrade?.data?.data)
-
-
-//       } catch (err: any) {
-//         console.error("fetch error:", err);
-//         setError(err?.response?.data?.message || "Failed to load data");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchData();
-      
-//       } catch (e: any) {
-//         setError(e?.message || "Failed to load");
-//       } finally {
-//         setLoading(false);
-//       }
-//     })();
-//   }, []);
-
-//   const pnl = Number(profitAndLossData || 0);
-//   const pnlColor = pnl >= 0 ? "text-emerald-600" : "text-rose-600";
-
-//   const handleGenerateToken = async() => {
-
-//     try{
-
-//         let  stored = localStorage.getItem("user");
-
-//         const users = stored ? JSON.parse(stored) : "";
-
-//         const brokerName  = users.brokerName
- 
-
-//       if (brokerName === "Angelone") {
-
-//           const {data} = await axios.get(
-//           `${apiUrl}/users/login/totp/angelone`,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//             },
-//           }
-//         );
-
-  
-//        if(data.status==true) {
-       
-//        let angel_auth_token = data.data.jwtToken
-//        let angel_refresh_token = data.data.refreshToken
-//        let angel_feed_token = data.data.feedToken
-
-//        localStorage.setItem("angel_token", angel_auth_token);
-//        localStorage.setItem("angel_feed_token", angel_refresh_token);
-//         localStorage.setItem("angel_refresh_token", angel_feed_token);
-
-    
-//         toast.success("Login Successful in AngelOne!");
-        
-//         const res = await axios.get(
-//           `${apiUrl}/users/get/user/fund`,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//               "AngelOneToken": localStorage.getItem("angel_token") || "",
-//             },
-//           }
-//         );
-
-       
-//        let fundData = res?.data?.data
-
-       
-
-//        setFundData(fundData?.availablecash||0);
-
-
-//         setSummary({
-//         totalOrder:res?.data?.totalOrders?.length||0,
-//         orderData:res?.data?.totalOrders||[]
-
-//       })
-
-//       let orderStatusData = buildRows(res?.data?.totalOrders||[])
-
-//       setRows(orderStatusData) 
-
-//        // 2️⃣ Third API: (example)
-//          const getAllTodayTrade = await axios.get(`${apiUrl}/order/dummydatatrade`, {
-//         headers: {
-//           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//           AngelOneToken: localStorage.getItem("angel_token") || "",
-//         },
-//       });
-
-//       console.log(getAllTodayTrade,'getAllTodayTrade');
-//        setTotalTradedData(getAllTodayTrade?.data?.totalTraded||0)
-//        setTotalOpenOrderData(getAllTodayTrade?.data?.totalOpen||0)
-//       setProfitAndLossData(getAllTodayTrade?.data?.pnl)
-//       setChartData(getAllTodayTrade?.data?.data)
-//        setChartData(getAllTodayTrade?.data?.data)
-
-      
-
-
-//   }else{
-//         toast.error(data.message);
-//   }
-     
-//     } else if (brokerName === "kite") {
- 
-      
-//       try {
-//     const response = await axios.get(
-//       `${apiUrl}/auth/kite`,
-//       {
-//         headers: {
-//           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//         },
-//       }
-//     );
-
-//     if (response.data.status) {
-//       // Get the login URL from response
-//       const loginUrl = response.data.data.loginUrl;
-
-//       console.log(loginUrl,'loginUrl');
-      
-      
-//       // Redirect user to Kite login page
-//       window.location.href = loginUrl;
-//     } else {
-//       console.error('Failed to get login URL:', response.data.message);
-//     }
-//   } catch (error : any) {
-//     console.error('Kite login initiation error:', error);
-    
-//     // Check if it's a redirect error
-//     if (error.response && error.response.status === 302) {
-//       console.log('Server is redirecting directly. Check backend controller.');
-//     }
-//   }
-       
-              
-//     } else {
-//       toast.error("Unsupported broker selected");
-//     }
-
-
-//   }catch(err:any) {
-
-//         toast.error(err.message);
-//   }
-        
-//   };
-
-//   return (
-//     <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6">
-
-
-//       {/* Row 1 — Stat cards */}
-//  <section className="grid grid-cols-12 gap-4">
-//   {/* Generate Token */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4 flex items-center justify-center">
-//       <div className="flex flex-col items-center text-center">
-//         <button
-//           className="text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1.5 rounded-md text-xs font-semibold transition hover:bg-rose-100 hover:text-rose-700 active:scale-95"
-//           onClick={handleGenerateToken}
-//         >
-//           Generate Token
-//         </button>
-//         <div className="text-xs text-gray-500 mt-1">Please generate token</div>
-//       </div>
-//     </div>
-//   </div>
-
- 
-
-//   {/* AngelOne Logo */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4 flex items-center justify-center">
-//       <img
-//         src={imageUrl || "https://upload.wikimedia.org/wikipedia/commons/2/28/AngelOne_logo.png"}
-//         alt="AngelOne Logo"
-//         className="h-10 object-contain"
-//       />
-//     </div>
-//   </div>
-
-//    {/* Total Traded */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4 flex flex-col items-center justify-center">
-//       <div className="text-sm font-semibold text-gray-700">Total Traded</div>
-//       <div className="text-lg font-bold text-gray-800 mt-1">
-//          {Number(totalTradedData)}
-//       </div>
-//     </div>
-//   </div>
-
-//   {/* Total Open */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4 flex flex-col items-center justify-center">
-//       <div className="text-sm font-semibold text-gray-700">Total Open</div>
-//       <div className="text-lg font-bold text-gray-800 mt-1">
-//         {totalOpenOrderData}
-//       </div>
-//     </div>
-//   </div>
-
-//   {/* Profit & Loss */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4">
-//       <div className="text-sm font-semibold text-gray-700 text-center">Profit &amp; Loss</div>
-//       <div className={`${pnlColor} text-xl font-bold mt-1 text-center`}>
-//         {loading ? "Loading..." : error ? "—" : rupee(pnl)}
-//       </div>
-//       <div className="text-xs text-gray-400 mt-1 text-center">
-//         {error ? <span className="text-rose-500">{error}</span> : "Today"}
-//       </div>
-//     </div>
-//   </div>
-
-//   {/* Total Fund */}
-//   <div className="col-span-6 sm:col-span-4 lg:col-span-2">
-//     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full p-4">
-//       <div className="text-sm font-semibold text-gray-700 text-center">Total Fund</div>
-//       <div className="text-emerald-600 text-xl font-bold mt-1 text-center">
-//         {loading ? "Loading..." : error ? "—" : rupee(Number(fundData || 0))}
-//       </div>
-//       <div className="text-xs text-gray-400 mt-1 text-center">
-//         {error ? <span className="text-rose-500">{error}</span> : "Today"}
-//       </div>
-//     </div>
-//   </div>
-// </section>
-
-
-//       {/* Row 2 — Orders Summary + Trade Report */}
-//       <section className="grid grid-cols-12 gap-4">
-//         {/* Orders Summary */}
-//         <div className="col-span-12 lg:col-span-4">
-//           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-full">
-//             <h3 className="text-xl font-semibold text-gray-700">Orders Summary</h3>
-//             <div className="flex items-center justify-center py-8">
-//               <div className="text-center">
-//                 <div className="text-sm font-semibold text-gray-600">Orders Today</div>
-//                 <div className="text-5xl font-extrabold text-gray-800 mt-2">
-//                   {Number(summary.totalOrder)}
-//                 </div>
-//               </div>
-//             </div>
-
-//             <div className="grid grid-cols-2 gap-3">
-//               {rows.map((r) => (
-//                 <div key={r.label} className="flex items-center justify-between">
-//                   <div className="flex items-center gap-2">
-//                     <span className={`inline-block w-3 h-3 rounded-full ${r.dot}`} />
-//                     <span className="text-gray-500">{r.label}</span>
-//                   </div>
-//                   <span className="text-gray-900 font-semibold">{r.value}</span>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Trade Report Chart */}
-//         <div className="col-span-12 lg:col-span-8">
-//           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-full">
-//             <TradeReportChart data={chartData} />
-//           </div>
-//         </div>
-//       </section>
-
-//       {/* Row 3 — Recent Orders Table (sample rows) */}
-//       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-//         <div className="flex items-center justify-between mb-4">
-//           <div className="text-lg font-semibold text-gray-700">Recent Orders</div>
-//         </div>
-
-//         <div className="overflow-x-auto">
-         
-//           <table className="w-full text-sm">
-//         <thead>
-//           <tr className="text-gray-500 border-b">
-//             <th className="text-left py-2 pr-4">Symbol</th>
-//             <th className="text-left py-2 pr-4">Order Id</th>
-//             <th className="text-left py-2 pr-4">Type</th>
-//             <th className="text-left py-2 pr-4">Qty</th>
-//             <th className="text-left py-2 pr-4">Price</th>
-//             <th className="text-left py-2 pr-4">Option Type</th>
-//           </tr>
-//         </thead>
-
-//         <tbody className="divide-y divide-gray-100">
-//           {summary?.orderData?.slice(0, 5).map((item:any, index:any) => (
-//             <tr key={index}>
-//               <td className="py-2 pr-4">{item.tradingsymbol}</td>
-//                 <td className="py-2 pr-4">{item.orderid}</td>
-
-//               <td
-//                 className={`py-2 pr-4 font-medium ${
-//                   item.transactiontype === "BUY" ? "text-emerald-600" : "text-rose-600"
-//                 }`}
-//               >
-//                 {item.transactiontype}
-//               </td>
-
-//               <td className="py-2 pr-4">{item.lotsize}</td>
-//               <td className="py-2 pr-4">{rupee(item.averageprice)}</td>
-
-//                   <td className="py-2 pr-4">{item.orderstatus}</td>
-//             </tr>
-//           ))}
-
-//           {summary?.orderData?.length === 0 && (
-//             <tr>
-//               <td colSpan={5} className="py-6 text-center text-gray-400">
-//                 No recent orders
-//               </td>
-//             </tr>
-//           )}
-//         </tbody>
-//       </table>
-//         </div>
-//       </section>
-//     </div>
-//   );
-// }
-
-
-
-
-
-

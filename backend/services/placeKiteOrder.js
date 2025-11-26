@@ -48,6 +48,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       symboltoken:reqInput.token,
       variety:kiteVerity || "regular",    // mistage in fields 
       tradingsymbol: reqInput.symbol,
+      instrumenttype:reqInput.instrumenttype,
       transactiontype: reqInput.transactiontype,
       exchange: reqInput.exch_seg,
       ordertype: reqInput.orderType,
@@ -74,6 +75,9 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       order_type: reqInput.orderType,
       price: reqInput.price,
     };
+
+
+    
 
     // ----------------------------------------
     // 4) PLACE ORDER IN KITE
@@ -139,6 +143,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
               },
               raw: true
             });
+            
 
         if (buyOrder) {
 
@@ -195,6 +200,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
          if(t.transaction_type==='BUY') {
              pnl = 0
          }
+         
 
           // Update order
           await newOrder.update({
@@ -203,6 +209,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
             fillsize: t.quantity,
             fillid: t.trade_id,
             // filltime: t.fill_timestamp,
+            status: "COMPLETE",
             pnl: pnl,
             buyprice: buyPrice,
             buysize: buySize,

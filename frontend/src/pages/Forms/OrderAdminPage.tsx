@@ -563,7 +563,7 @@ export default function OrderAdminPage() {
 
     try {
       const res = await axios.get(
-        `${apiUrl}/order/mongodb/instrument/search/${value}`,
+        `${apiUrl}/agnelone/instrument/search/${value}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -593,7 +593,7 @@ export default function OrderAdminPage() {
         symboltoken: item.token,
       };
 
-      const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
+      const res = await axios.post(`${apiUrl}/agnelone/instrument/ltp`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -627,7 +627,7 @@ export default function OrderAdminPage() {
       instrumentname: item.name,
       exchange: item.exch_seg,
       symboltoken: item.token,
-      instrumenttype: item.SyNumSyType,
+      instrumenttype: item.instrumenttype,
       // expiry: item.expiry,
       lotSize: item.lotsize,
       price: Number(price),

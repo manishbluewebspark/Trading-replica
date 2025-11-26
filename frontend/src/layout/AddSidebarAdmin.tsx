@@ -699,19 +699,21 @@ const AddAppSidebarAdmin: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
+       <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img
-                className="dark:hidden items-center justify-center ml-15"
-                src="/images/logo/logo.png"
+                className="dark:hidden items-center justify-center"
+                // src="/images/logo/logo.png"
+                   src="/logo.svg"
                 alt="Logo"
-                width={100}
+                width={200}
                 height={20}
               />
               <img
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                // src="/images/logo/logo-dark.svg"
+                   src="/logo.svg"
                 alt="Logo"
                 width={150}
                 height={40}
@@ -719,10 +721,11 @@ const AddAppSidebarAdmin: React.FC = () => {
             </>
           ) : (
             <img
-              src="/images/logo/logo-icon.svg"
+              // src="/images/logo/logo-icon.svg"
+               src="/logo.svg"
               alt="Logo"
-              width={32}
-              height={32}
+              width={30}
+              height={30}
             />
           )}
         </Link>

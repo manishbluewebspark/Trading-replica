@@ -19,6 +19,10 @@ import sequelize from "../config/db.js";
         type: DataTypes.STRING,
         allowNull: false,
       },
+       instrumenttype: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       expiry: {
         type: DataTypes.STRING,
         allowNull: true,

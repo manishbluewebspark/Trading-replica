@@ -3,7 +3,7 @@ import axios from "axios";
 // import dayjs from "dayjs";
 import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { getSocket } from "../../socket/Socket";
 
 
@@ -86,10 +86,6 @@ export default function OrderTableAdmin() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-   const navigate = useNavigate();
-
-  // const [profitAndLossData, setProfitAndLossData] = useState<number>(0);
-
   const [orders, setOrders] = useState<Order[]>([]);
    
   const [loading, setLoading] = useState(true);
@@ -120,6 +116,8 @@ export default function OrderTableAdmin() {
         const socket = getSocket();
       
           const onTick = (tick: Tick) => {
+
+              console.log(tick,'socket');
             
             setLtpByToken((prev) => {
               const curr = prev[tick.token];
@@ -300,7 +298,7 @@ const handleSellClick = async(item: any) => {
           })
 
 
-          console.log(res.data);
+         
           
 
       if(res.data.status==true) {
@@ -503,7 +501,8 @@ const handleSellClick = async(item: any) => {
      
 
   // 5) also reset to page 1 when the dataset itself changes
-useEffect(() => {
+
+  useEffect(() => {
   setPage(1);
 }, [orders]); // 🔑 ensures current page is valid after any new data
 
@@ -712,6 +711,7 @@ useEffect(() => {
                      <td style={td}>{o.ordertype}</td>
                       <td style={td}>{o.producttype}</td>
                        <td style={td}>{o.fillprice}</td>
+                      
                        <td style={td}> {live !== undefined? ((  live-Number(o.fillprice)) * Number(o.fillsize)).toFixed(2) : "—"} </td>
                    {/* <td style={{ ...td, fontWeight: 600 }}> {Number(live)*Number(o.quantity)} </td> */}
                     <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}> {o.fillsize} </td>

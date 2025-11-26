@@ -4,6 +4,8 @@ import Order from "../../models/orderModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 
+import {emitOrderGet} from "../../services/smartapiFeed.js"
+
 // 15 digit order ID
 function generateOrderId() {
   return Date.now().toString() + Math.floor(1000 + Math.random() * 9000);
@@ -135,6 +137,8 @@ export const createManualOrder = async (req, res) => {
 
     // -------- Save Final Order --------
     const order = await Order.create(data);
+
+    emitOrderGet()
 
     return res.status(201).json({
       status: true,

@@ -200,7 +200,7 @@ const AngelOneCredential: FC = () => {
                 password:password,
             }
 
-            let res = await axios.post(`${apiUrl}/order/create/angelone`, reqData, {
+            let res = await axios.post(`${apiUrl}/angelone/credential/create`, reqData, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                         "AngelOneToken": localStorage.getItem("angel_token") || "",
