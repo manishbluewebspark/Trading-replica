@@ -134,12 +134,12 @@ export default function SignInUser() {
                     Keep me logged in
                   </span> */}
                 </div>
-                <Link
+                {/* <Link
                   to="/forgot-password"
                   className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
                 >
                   Forgot password?
-                </Link>
+                </Link> */}
               </div>
 
               <button className="w-full bg-black text-white! py-3 rounded-lg" type="submit" disabled={loading}>

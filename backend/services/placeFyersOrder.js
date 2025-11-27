@@ -94,12 +94,13 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
       userId: user.id,
+      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
       broker: "Fyers",
     };
 
-    console.log(orderData,'orderData');
+
     
 
     const newOrder = await Order.create(orderData);

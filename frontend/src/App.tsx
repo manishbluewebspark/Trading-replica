@@ -61,6 +61,7 @@ import UserClone from "./pages/Forms/UserClone";
 import GooglChart from "./pages/Tables/GooglChart";
 import OrdersAdminPage from "./pages/Forms/OrderAdminPage";
 import UserManual from "./pages/Tables/UserManual";
+import KiteCrendential from "./pages/Forms/KiteCredential";
 
 export default function App() {
 
@@ -103,7 +104,7 @@ export default function App() {
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
             <Route
-              path="/order-admin/:userId"
+              path="/order-admin/:userId/:username"
               element={
                 <ProtectedRoute>
                   <OrdersAdminPage />
@@ -132,6 +133,9 @@ export default function App() {
             <Route path="/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} />
             <Route path="/currentposition" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
             <Route path="/angelonecredential" element={<ProtectedRoute><AngelOneCredential /></ProtectedRoute>} />
+            <Route path="/kitecredential" element={<ProtectedRoute><KiteCrendential /></ProtectedRoute>} />
+
+
 
 
              <Route path="/angel/order" element={<ProtectedRoute><AngelOrderTable /></ProtectedRoute>} />

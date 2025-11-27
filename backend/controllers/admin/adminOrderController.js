@@ -9,7 +9,7 @@ import FundPNL from "../../models/angelFundAndPNL.js"
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { handleAngelOneUser } from "../../services/handleAngelOneUser.js";
-import { handleKiteUser } from "../../services/handleKiteUser.js";
+
 
 const ANGEL_ONE_PLACE_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder";
 
@@ -727,10 +727,6 @@ export const adminPlaceMultipleOrder = async (req, res) => {
 
 
 
-
-
-
-
 export const adminSequareOff = async (req, res) => {
   try {
     // (optional) const { groupName } = req.body; // if you want per-strategy square off
@@ -1079,8 +1075,6 @@ export const adminSequareOff = async (req, res) => {
     });
   }
 };
-
-
 
 
 // export const adminSequareOff = async (req, res) => {

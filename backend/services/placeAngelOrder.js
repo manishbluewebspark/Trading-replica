@@ -57,6 +57,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       stoploss: "0",
       orderstatuslocaldb: "PENDING",
       userId: user.id,
+      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
     };

@@ -1,5 +1,75 @@
 import axios from 'axios';
 import { networkInterfaces } from 'os';
+import User from "../models/userModel.js"
+import Order from "../models/orderModel.js"
+
+
+export async function UpdateUserIdInOrderTable() {
+  try {
+    console.log("🔁 Start updating username in Order table...");
+
+    // 1) Get all users (only id + username needed)
+    const users = await User.findAll({
+      attributes: ["id", "username"],
+    });
+
+    // 2) Create a map: userId -> username
+    const userMap = new Map();
+    for (const user of users) {
+      userMap.set(user.id, user.username);
+    }
+
+    // 3) Get all orders
+    const orders = await Order.findAll();
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    // 4) Loop through orders and update username (or any other fields)
+    for (const order of orders) {
+      const userId = order.userId; // field already stored in Order
+
+      if (!userId) {
+        skippedCount++;
+        continue;
+      }
+
+      const username = userMap.get(userId);
+
+      if (!username) {
+        // No user found for this userId
+        skippedCount++;
+        continue;
+      }
+
+      console.log(username,'username');
+      
+
+      // Update fields in order table
+      await order.update({
+        userNameId: username, // 👈 make sure 'username' column exists in Order model
+        // you can add more fields here if needed, e.g.
+        // userEmail: user.email,
+      });
+
+      updatedCount++;
+    }
+
+    console.log(
+      `✅ Done. Updated ${updatedCount} orders, skipped ${skippedCount} (no user or no userId).`
+    );
+
+    return { updatedCount, skippedCount };
+  } catch (error) {
+    console.error("❌ Error while updating orders:", error);
+    throw error;
+  }
+}
+
+
+
+// UpdateUserIdInOrderTable()
+
 
 export async function getPublicIP() {
   try {
@@ -39,4 +109,3 @@ export async function getMACAddress() {
 
 
 
-// https://pleadingly-misshapen-wilber.ngrok-free.dev/?auth_token=eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lKaE56TTNPVFUzTmkxbFltVTBMVE0yTWpndE9HSmtZUzFsT1RFNE9EWm1OelV5TXpZaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTVRJNU1qYzFNaXdpYm1KbUlqb3hOell4TWpBMk1UY3lMQ0pwWVhRaU9qRTNOakV5TURZeE56SXNJbXAwYVNJNkltWTVNV1ppTUdZMUxUa3hPR0V0TkRFNVlpMDRNVGhsTFRKbE56TTBOakkwWVdRM05TSXNJbFJ2YTJWdUlqb2lJbjAuVlVuYzZkMDZqbHhLaHZPcVdKMHBscHNTMGFYbTdWU3hzLWdzbHpPcllDc3FJV3dabEVEQkoySGx0Yl9wNnBoUGxpN3l5MXdCWXdWODRXdXpPWkVIcHQwQ1RURHFGdlFnVF9kekowYXFRU0Z2bjlSazE0TUJRTlVQc0VRUG5peHpqWTBuNXNVWmVYQ25tWDBYWjlaSGJZc2c5aHJHLVg0ODdfTU1OU0wtNnBzIiwiQVBJLUtFWSI6IkRub1F2U2lqIiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzYxMjA2MzUyLCJleHAiOjE3NjEyNDQyMDB9.6ri4mpgntlWZVrDeGd98Pg5JcYONBpH9xGxkXUPBEjLnHZXFGjw_qdVN_c377Mmzqi9SqP7QtkzIiUGTtYVziA&feed_token=eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJpYXQiOjE3NjEyMDYzNTIsImV4cCI6MTc2MTI5Mjc1Mn0.YuKarJZ2zKYrxQX14dIIkT1dDveDM6dhulYTQ3rSJZIROWIe701azT5ZMyze1wOAL0i4rEWR9KuJjAHDvZChQA&refresh_token=eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJSRUZSRVNILVRPS0VOIjoiZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SjFjMlZ5WDNSNWNHVWlPaUpqYkdsbGJuUWlMQ0owYjJ0bGJsOTBlWEJsSWpvaWRISmhaR1ZmY21WbWNtVnphRjkwYjJ0bGJpSXNJbWR0WDJsa0lqb3dMQ0p6YjNWeVkyVWlPaUl6SWl3aVpHVjJhV05sWDJsa0lqb2lZVGN6TnprMU56WXRaV0psTkMwek5qSTRMVGhpWkdFdFpUa3hPRGcyWmpjMU1qTTJJaXdpYTJsa0lqb2lkSEpoWkdWZmEyVjVYM1l5SWl3aWIyMXVaVzFoYm1GblpYSnBaQ0k2TUN3aWFYTnpJam9pYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrMHhOakkwTWpNaUxDSmxlSEFpT2pFM05qRXlPVEkzTlRJc0ltNWlaaUk2TVRjMk1USXdOakUzTWl3aWFXRjBJam94TnpZeE1qQTJNVGN5TENKcWRHa2lPaUpsTlRVMVlXWXdPQzAyT1RVNUxUUmtOV1V0WVRjd015MHhZekkzTVdGallXVm1NbVFpTENKVWIydGxiaUk2SWlKOS5DNEp3M2FPaGJXWFN0b25LZGprdUhWRHgydmgzLTlwMWhueHAwVERSdU96ZEZ2OVN0QWJBcUU0RG8yNjRXQlNzSjBKUFhyRDBXX2RMS2hRcmNNSHRmVWM0M2hyRUdDa05rQncyeGcwOFVTZFZpRHVDQi1ScGdoM2xRcWFtcm1WR3p3X3Z6bjQ1azVUZG10cW1OR3pRanQ5Uk13SHBfNjVDclNUbWZsbGo5Z0EiLCJpYXQiOjE3NjEyMDYzNTJ9.WlchFDfEchUjsBQ2u0gOdxFAfB6rW1yFtc-NM-_xeIxYaCrGC9mneojlmNv5WtjUF8PlKg-LhSkvVGDcSyKKXA

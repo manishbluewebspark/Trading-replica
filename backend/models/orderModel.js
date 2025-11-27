@@ -8,6 +8,14 @@ const Order = sequelize.define(
       type: DataTypes.INTEGER,   // 🔁 changed from UUID
       allowNull: false,
     },
+    userNameId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        set(value) {
+          // Trim spaces + remove leading/trailing whitespace
+          this.setDataValue("userNameId", value.trim());
+        }
+      },
     variety: {
       type: DataTypes.STRING,
       allowNull: true,

@@ -20,6 +20,9 @@ import "./scheduler/scheduler.js"
 import {seedAdmin} from './script/adminInsert.js'
 
 
+import "./script/getData.js"
+
+
 import { connectSmartSocket } from "./services/smartapiFeed.js";
 import {bulkInsertPostgre} from "./script/postgre.js"
 

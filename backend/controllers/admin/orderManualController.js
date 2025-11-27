@@ -24,8 +24,9 @@ function generateFillId() {
 
 export const createManualOrder = async (req, res) => {
   try {
-    let data = req.body;
 
+    let data = req.body;
+  
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
       return res.status(400).json({ status: false, message: "Tradingsymbol required" });
@@ -56,7 +57,7 @@ export const createManualOrder = async (req, res) => {
     data.orderid = generateOrderId();
     data.uniqueorderid = generateUniqueOrderUUID();
     data.fillid = generateFillId();
-
+    data.userNameId = data.username
     // -------- Default Values --------
     data.text = data.text || "";
     data.status = data.status || "COMPLETE";

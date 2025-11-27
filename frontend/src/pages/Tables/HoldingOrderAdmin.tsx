@@ -113,24 +113,7 @@ export default function HoldingOrderAdmin () {
     <div style={{ padding: 16 }}>
       <h2 style={{ marginBottom: 12 }}>Holdings</h2>
 
-      {/* Search + Excel */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
-        <input
-          type="text"
-          placeholder="Search (min 3 chars)"
-          className="border p-2 rounded"
-          style={{ minWidth: 300 }} // wider input
-          value={searchTerm}
-          onChange={handleSearch}
-        />
-
-        <button
-          onClick={handleExcelDownload}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Download Excel
-        </button>
-      </div>
+     
 
       {/* Table */}
       <div
@@ -146,19 +129,22 @@ export default function HoldingOrderAdmin () {
             <thead style={{ background: "#f8fafc" }}>
               <tr>
                 {[
+                 "UserId",
                   "Symbol",
-                  "Exchange",
-                  "ISIN",
-                  "T1 Qty",
-                  "Realised Qty",
-                  "Qty",
-                  "Authorised Qty",
-                  "Product",
-                  "Avg Price",
-                  "LTP",
-                  "Close Price",
-                  "P&L",
-                  "P&L%",
+                  "instrument",
+                 " Type",
+                  "ordertype",
+                  "ProductType",
+                  "Price",
+                    "PnL",
+                      "OrderQty",
+                  "TradedQty",
+                  "OrderID",
+                    "TradeID",
+                    "Status",
+                       "Message",
+                       "updatedAt",
+                  "createdAt",
                 ].map((h) => (
                   <th
                     key={h}

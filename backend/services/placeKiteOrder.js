@@ -1,6 +1,6 @@
 // services/kite/placeKiteOrder.js
 
-import { setKiteAccessToken, kite } from "../utils/kiteClient.js";
+import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 import Order from "../models/orderModel.js";
 import { Op } from "sequelize";
 
@@ -35,7 +35,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
   try {
 
     // 1) Set access token
-    await setKiteAccessToken(user.authToken);
+   let kite = await getKiteClientForUserId(user.id)
 
     const kiteProductType = await getKiteProductCode( reqInput.productType);
 
@@ -57,6 +57,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
       userId: user.id,
+      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
     };

@@ -1096,7 +1096,7 @@ export const adminGetTradeInTables = async (req, res,next) => {
   const orderData = await Order.findAll({
       where: {
         // userId:req.headers.userid,
-        // transactiontype:"SELL",
+         transactiontype:"SELL",
          createdAt: {
       [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
     },
@@ -1108,7 +1108,7 @@ export const adminGetTradeInTables = async (req, res,next) => {
     const buyCount = await Order.count({
         where: {
           // userId: req.userId,
-          transactiontype: "BUY",
+          transactiontype: "SELL",
           status:"COMPLETE",
           createdAt: {
             [Op.between]: [startOfDay, endOfDay],
@@ -1222,7 +1222,7 @@ export const adminGetOrderWithDate = async (req, res,next) => {
       // fromDate/toDate should be "YYYY-MM-DD" strings
       const data = await Order.findAll({
         where: {
-          // transactiontype:'SELL',
+          transactiontype:'SELL',
           status:'COMPLETE',
           [Op.and]: Sequelize.where(
             Sequelize.fn("DATE", Sequelize.col("createdAt")),
@@ -1237,7 +1237,7 @@ export const adminGetOrderWithDate = async (req, res,next) => {
       const buyCount = await Order.count({
         where: {
           // userId: req.userId,
-          transactiontype: "BUY",
+          transactiontype: "SELL",
          [Op.and]: Sequelize.where(
             Sequelize.fn("DATE", Sequelize.col("createdAt")),
             { [Op.between]: [fromDate, toDate] }

@@ -1,10 +1,18 @@
+
 import { KiteConnect } from "kiteconnect";
 
-export const kite = new KiteConnect({
-  api_key: process.env.KITE_API_KEY,
-});
+// Create a fresh KiteConnect instance per user
+export const KiteAccess = (KITE_API_KEY, accessToken = null) => {
 
-// Call this after login or per request
-export const setKiteAccessToken = (accessToken) => {
-  kite.setAccessToken(accessToken);
+  const kite = new KiteConnect({
+    api_key: KITE_API_KEY,
+  });
+
+  if (accessToken) {
+    kite.setAccessToken(accessToken);
+  }
+
+  return kite; // MUST RETURN
 };
+
+

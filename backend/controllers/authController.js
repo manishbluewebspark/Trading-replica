@@ -256,6 +256,7 @@ const password = (req.body.password || "").trim();
         });
     }
 
+    
      // Count logins for the user today
       const loginCount = await UserSession.count({
         where: {
@@ -268,7 +269,7 @@ const password = (req.body.password || "").trim();
         },
       });
 
-      if(loginCount>=2&&user.role!=='admin') {
+      if(loginCount>=3&&user.role!=='admin') {
         
           return res.json({
             status: false,
@@ -297,13 +298,25 @@ const password = (req.body.password || "").trim();
 
     } 
 
-     // create a new login session
+
+    // ✅ 3) Only create a UserSession if user has NOT logged in today
+    if (loginCount === 0) {
+    
+      // create a new login session
        await UserSession.create({
       userId:  user.id,
       login_at: new Date(),
       is_active: true,
     });
 
+    } else {
+      console.log(
+        `User ${user.id} already has a session today, not creating new UserSession`
+      );
+    }
+
+
+     
     // 2️⃣ Find any user where angelLoginUser = true AND updated today
       const activeAngelUser = await User.findOne({
         where: {

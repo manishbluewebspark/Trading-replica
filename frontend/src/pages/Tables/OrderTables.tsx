@@ -218,7 +218,7 @@ export default function OrderTables() {
 
   const handleExcelDownload = () => {
     const headerMapping = {
-      userId: "Username",
+      userNameId: "UserId",
       transactiontype: "SignalType",
       exchange: "Exchange",
       instrumenttype: "Instrument",

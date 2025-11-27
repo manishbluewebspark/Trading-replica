@@ -636,7 +636,8 @@ type Order = {
   buyvalue: any;
   buyprice: any;
   buysize: any;
- updatedAt:any 
+  updatedAt:any 
+  userNameId:any
 };
 
 const { RangePicker } = DatePicker;
@@ -1064,6 +1065,7 @@ export default function TradeAdmin() {
             <thead style={{ background: "#f8fafc" }}>
               <tr>
                 {[
+                  "UserId",
                   "Symbol",
                   "instrument",
                   "Type",
@@ -1094,7 +1096,7 @@ export default function TradeAdmin() {
                       top: 0,
                       background: "#f8fafc",
                       zIndex: 1,
-                      textTransform: "uppercase",
+                      // textTransform: "uppercase",
                       letterSpacing: "0.04em",
                     }}
                   >
@@ -1165,6 +1167,11 @@ export default function TradeAdmin() {
                       style={{ borderBottom: "1px solid #f1f5f9" }}
                       className="hover:bg-slate-50 transition-colors"
                     >
+
+                        <td style={td} title={o.userNameId}>
+                        <strong>{o.userNameId}</strong>
+                      </td>
+
                       {/* Symbol */}
                       <td style={td} title={o.tradingsymbol}>
                         <strong>{o.tradingsymbol}</strong>
@@ -1189,7 +1196,8 @@ export default function TradeAdmin() {
                             textTransform: "uppercase",
                           }}
                         >
-                          {o.transactiontype || "-"}
+                          {/* {o.transactiontype || "-"} */}
+                          BUY
                         </span>
                       </td>
 

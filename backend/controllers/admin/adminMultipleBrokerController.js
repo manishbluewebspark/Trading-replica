@@ -1,4 +1,3 @@
-import axios from "axios";
 import User from "../../models/userModel.js";
 import Order from "../../models/orderModel.js";
 import { placeAngelOrder } from "../../services/placeAngelOrder.js";
@@ -210,21 +209,21 @@ export const adminMultipleSquareOff = async (req, res) => {
 
           let brokerRes;
 
-          if (user.broker.toLowerCase() === "angelone") {
+          if (user.broker.toLowerCase() === "angelone"&&user.role==='user') {
             brokerRes = await placeAngelOrder(
               user,
               reqInput,
               startOfDay,
               endOfDay
             );
-          } else if (user.broker.toLowerCase() === "kite") {
+          } else if (user.broker.toLowerCase() === "kite"&&user.role==='user') {
             brokerRes = await placeKiteOrder(
               user,
               reqInput,
               startOfDay,
               endOfDay
             );
-          }else if (user.broker.toLowerCase() === "fyers") {
+          }else if (user.broker.toLowerCase() === "fyers"&&user.role==='user') {
             brokerRes =  await placeFyersOrder(
               user,
               reqInput,

@@ -16,10 +16,14 @@ const User = sequelize.define('User', {
     unique: true
   },
   username: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
-  },
+  type: DataTypes.STRING,
+  allowNull: false,
+  unique: true,
+  set(value) {
+    // Trim spaces + remove leading/trailing whitespace
+    this.setDataValue("username", value.trim());
+  }
+},
   phoneNumber: {
     type: DataTypes.STRING,
     allowNull: true,
@@ -111,7 +115,15 @@ packageDate:{
 packageFromDate:{
    type: DataTypes.DATE,
       allowNull: true,
-}
+},
+kite_key:{
+   type: DataTypes.STRING,
+    allowNull: true
+},
+kite_secret:{
+   type: DataTypes.STRING,
+    allowNull: true
+},
 
 }, {
   tableName: 'users',

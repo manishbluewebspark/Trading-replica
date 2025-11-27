@@ -60,6 +60,7 @@ type Order = {
    createdAt:string;
    orderstatuslocaldb:string;
    updatedAt:any;
+   userNameId:any
 };
 
 // util: tiny debounce hook so search feels snappy
@@ -177,7 +178,7 @@ export default function OrderTableAdmin() {
   }
 
     fetchOrders();
- 
+ setError(null)
   }, []);
 
   // reset to page 1 whenever the search or page size changes
@@ -222,35 +223,80 @@ export default function OrderTableAdmin() {
   }, [filtered, page, pageSize]);
 
 
-    const handleUpdateClick = async(item: any) => {
+  // const handleUpdateClick = async(item: any) => {
 
-      const payload = {
-      exchange: item.exchange,
-      tradingsymbol: item.tradingsymbol,
-      symboltoken:item.symboltoken,
-    };
+  //     const payload = {
+  //     exchange: item.exchange,
+  //     tradingsymbol: item.tradingsymbol,
+  //     symboltoken:item.symboltoken,
+  //   };
 
-     const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-                "AngelOneToken": localStorage.getItem("angel_token") || "",
-            },
-          });
+  //    const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
+  //           headers: {
+  //             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  //               "AngelOneToken": localStorage.getItem("angel_token") || "",
+  //           },
+  //         });
 
-           if(res?.data?.status==true) {
+  //          if(res?.data?.status==true) {
 
-             item.totalPrice = res?.data?.data.data.ltp*item.quantity
+  //            item.totalPrice = res?.data?.data.data.ltp*item.quantity
 
-            setOnlyPrice(res?.data?.data.data.ltp)
-            setSlotSIze(item.quantity)  
-            setSelectedItem({...item});
-            setShowForm(true);
+  //           setOnlyPrice(res?.data?.data.data.ltp)
+  //           setSlotSIze(item.quantity)  
+  //           setSelectedItem({...item});
+  //           setShowForm(true);
 
-           }else{
+  //          }else{
 
-            toast.error(res?.data?.message || "Something went wrong");
-           }
-    }
+  //           toast.error(res?.data?.message || "Something went wrong");
+  //          }
+  //   }
+
+  // const handleCancelClick = async (item: any) => {
+
+  //   try {
+  //        let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
+  //           headers: {
+  //             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  //             "AngelOneToken": localStorage.getItem("angel_token") || "",
+  //              "userid":localStorage.getItem("userID")
+  //           },
+  //         })
+
+
+         
+          
+
+  //     if(res.data.status==true) {
+
+  //        toast.success(res.data.message);
+
+        
+
+  //     }else if(res.data.status==false&&res.data.status=='Unauthorized'){
+  //           localStorage.removeItem("token");
+  //           localStorage.removeItem("user");
+  //           localStorage.removeItem("termsAccepted");
+  //           localStorage.removeItem("feed_token");
+  //           localStorage.removeItem("refresh_token");
+           
+  //      }
+  //      else{
+
+  //       toast.error(res.data.message || "Something went wrong");
+         
+  //     }   
+  //   } catch (error:any) {
+
+  //     setError(error.message)
+
+  //       toast.error(error.messagee || "Something went wrong");
+
+  //   }
+
+  //     }
+
 
 const handleSellClick = async(item: any) => {
 
@@ -286,49 +332,7 @@ const handleSellClick = async(item: any) => {
     }
 
 
-    const handleCancelClick = async (item: any) => {
 
-    try {
-         let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-              "AngelOneToken": localStorage.getItem("angel_token") || "",
-               "userid":localStorage.getItem("userID")
-            },
-          })
-
-
-         
-          
-
-      if(res.data.status==true) {
-
-         toast.success(res.data.message);
-
-        
-
-      }else if(res.data.status==false&&res.data.status=='Unauthorized'){
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("termsAccepted");
-            localStorage.removeItem("feed_token");
-            localStorage.removeItem("refresh_token");
-           
-       }
-       else{
-
-        toast.error(res.data.message || "Something went wrong");
-         
-      }   
-    } catch (error:any) {
-
-      setError(error.message)
-
-        toast.error(error.messagee || "Something went wrong");
-
-    }
-
-      }
 
       // ✅ Handle Update Form Submit
     const handleSubmit = async(e: React.FormEvent) => {
@@ -553,54 +557,7 @@ useEffect(() => {
       
   
 </div>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-  <input
-    type="text"
-    placeholder="Search by Order ID, Symbol, Type, Status, Exchange, Message..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    style={{
-      flex: "1 1 320px",
-      minWidth: 240,
-      padding: "10px 12px",
-      borderRadius: 8,
-      border: "1px solid #e5e7eb",
-      outline: "none",
-    }}
-  />
-  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#475569" }}>
-    Rows per page
-    <select
-      value={pageSize}
-      onChange={(e) => setPageSize(Number(e.target.value))}
-      style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e7eb" }}
-    >
-      {[10, 20, 50, 100].map((n) => (
-        <option key={n} value={n}>
-          {n}
-        </option>
-      ))}
-    </select>
-  </label>
-  {/* Excel Download Button */}
-  <button
-    onClick={handleSquareButton}
-    style={{
-      padding: "10px 16px",
-      backgroundColor: "#3b82f6", // Blue-500
-      color: "white",
-      border: "none",
-      borderRadius: 8,
-      cursor: "pointer",
-      fontSize: 14,
-      transition: "background-color 0.2s",
-    }}
-    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")} // Blue-600 on hover
-    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#3b82f6")}
-  >
-    Excel Download
-  </button>
-</div>
+    
 
 
       {/* Table */}
@@ -611,7 +568,7 @@ useEffect(() => {
               <tr>
                 {[
                   "Action",
-                 
+                  "UserId",
                   "SYMBOL",
                   "instrument",
                  " Type",
@@ -628,8 +585,8 @@ useEffect(() => {
                        "Message",
                        "updatedAt",
                   "createdAt",
-                   "Update",
-                   "Cancel"
+                  //  "Update",
+                  //  "Cancel"
                 ].map((h) => (
 
                   <th
@@ -647,7 +604,7 @@ useEffect(() => {
                       zIndex: 1,
                     }}
                   >
-                   {h.toUpperCase()}
+                   {h}
                   </th>
                 ))}
               </tr>
@@ -704,7 +661,7 @@ useEffect(() => {
                     </td>
                     
                      
-                      
+                      <td style={td} title={o.userNameId}><strong>{o.userNameId}</strong></td>  
                     <td style={td} title={o.tradingsymbol}><strong>{o.tradingsymbol}</strong></td>
                     <td style={td} title={o.instrumenttype}>  {o.instrumenttype}</td>
                      <td style={td}>{o.transactiontype}</td>
@@ -746,7 +703,7 @@ useEffect(() => {
                     <td style={td}>{o.updatedAt}</td>
                     <td style={td}>{o.createdAt}</td>
 
-                    <td style={td}>
+                    {/* <td style={td}>
                       <button
                         onClick={() => handleUpdateClick(o)}
                         style={{
@@ -779,7 +736,8 @@ useEffect(() => {
                       >
                         Cancel
                       </button>
-                    </td>
+                    </td> */}
+
                   </tr>
               )})}
             </tbody>

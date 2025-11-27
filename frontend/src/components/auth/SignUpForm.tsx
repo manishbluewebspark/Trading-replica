@@ -178,6 +178,9 @@ export default function SignUpForm() {
                   <option value="Binance">Binance</option>
                   <option value="BitBns">BitBns</option>
                   <option value="kite">Kite</option>
+                   <option value="finvasia">Finvasia</option>
+                  <option value="fyers">Fyers</option>
+                  <option value="grow">Grow</option>
                 </select>
               </div>
 

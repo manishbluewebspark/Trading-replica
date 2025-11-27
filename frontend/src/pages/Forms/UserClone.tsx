@@ -2982,11 +2982,11 @@ const UserClone: React.FC = () => {
     }
   };
 
-  const handleCreateOrder = async (userId: number) => {
+  const handleCreateOrder = async (userId: number,username:any) => {
     // Add your custom logic here for creating an order
     try {
 
-       navigate(`/order-admin/${userId}`);
+       navigate(`/order-admin/${userId}/${username}`);
     
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
@@ -3176,7 +3176,7 @@ const UserClone: React.FC = () => {
                             File
                           </button>
                           <button
-                            onClick={() => handleCreateOrder(u.id)}
+                            onClick={() => handleCreateOrder(u.id,u.username)}
                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           >
                             Create Order

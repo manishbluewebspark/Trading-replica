@@ -517,10 +517,11 @@ export default function OrderAdminPage() {
 
   const navigate = useNavigate();
 
- const { userId } = useParams();
+ const { userId,username } = useParams();
 
   const defaultValues = {
     userId: userId,
+    username:username,
     variety: "NORMAL",
     ordertype: "MARKET",
     producttype: "INTRADAY",
@@ -528,7 +529,6 @@ export default function OrderAdminPage() {
     transactiontype: "",
     exchange: "",
     symboltoken: "",
-    instrumentname: "",
     instrumenttype: "",
     duration: "DAY",
     price: 0,
@@ -624,7 +624,6 @@ export default function OrderAdminPage() {
     setFormData({
       ...formData,
       tradingsymbol: item.symbol,
-      instrumentname: item.name,
       exchange: item.exch_seg,
       symboltoken: item.token,
       instrumenttype: item.instrumenttype,
