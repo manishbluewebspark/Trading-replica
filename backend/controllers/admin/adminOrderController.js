@@ -9,6 +9,7 @@ import FundPNL from "../../models/angelFundAndPNL.js"
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { handleAngelOneUser } from "../../services/handleAngelOneUser.js";
+import { handleKiteUser } from "../../services/handleKiteUser.js";
 
 
 const ANGEL_ONE_PLACE_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder";

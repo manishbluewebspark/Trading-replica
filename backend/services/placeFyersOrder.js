@@ -9,19 +9,45 @@ import { Op } from "sequelize";
  * Map your generic productType to Fyers productType
  * Fyers examples: "INTRADAY", "CNC", "MTF", etc.
  */
+
+// function getFyersProductCode(type) {
+//   if (!type) return "INTRADAY";
+
+//   switch (type.toUpperCase()) {
+//     case "INTRADAY":
+//       return "INTRADAY"; // as per your sample
+//     case "DELIVERY":
+//       return "CNC";      // delivery / cash-n-carry
+//     case "CNC":
+//     case "MTF":
+//       return type.toUpperCase();
+//     default:
+//       return type;
+//   }
+// }
+
+
 function getFyersProductCode(type) {
-  if (!type) return "INTRADAY";
+  if (!type) return "INTRADAY"; // default Fyers product
 
   switch (type.toUpperCase()) {
-    case "INTRADAY":
-      return "INTRADAY"; // as per your sample
     case "DELIVERY":
-      return "CNC";      // delivery / cash-n-carry
-    case "CNC":
-    case "MTF":
-      return type.toUpperCase();
+      return "CNC";        // Delivery (Cash & Carry)
+
+    case "CARRYFORWARD":
+      return "MARGIN";     // Carryforward F&O
+
+    case "MARGIN":
+      return "MTF";        // Margin Trading Facility
+
+    case "INTRADAY":
+      return "INTRADAY";   // Intraday
+
+    case "BO":
+      return "BO";         // Bracket Order
+
     default:
-      return type;
+      return type.toUpperCase(); // fallback
   }
 }
 
@@ -30,23 +56,47 @@ function getFyersProductCode(type) {
  * From Fyers docs:
  * 1 = LIMIT, 2 = MARKET, 3 = SL, 4 = SL-M
  */
+
+
+// function mapFyersOrderType(orderType) {
+//   if (!orderType) return 1;
+
+//   switch (orderType.toUpperCase()) {
+//     case "LIMIT":
+//       return 1;
+//     case "MARKET":
+//       return 2;
+//     case "SL":
+//       return 3;
+//     case "SL-M":
+//       return 4;
+//     default:
+//       return 1;
+//   }
+// }
+
 function mapFyersOrderType(orderType) {
-  if (!orderType) return 1;
+  if (!orderType) return 1; // default LIMIT
 
   switch (orderType.toUpperCase()) {
     case "LIMIT":
-      return 1;
+      return 1;      // LIMIT
+
     case "MARKET":
-      return 2;
+      return 2;      // MARKET
+
+    case "STOPLOSS_LIMIT":
     case "SL":
-      return 3;
+      return 3;      // Stoploss LIMIT
+
+    case "STOPLOSS_MARKET":
     case "SL-M":
-      return 4;
+      return 4;      // Stoploss MARKET
+
     default:
-      return 1;
+      return 1;      // fallback LIMIT
   }
 }
-
 /**
  * Main Fyers place-order flow (parallel to placeKiteOrder)
  */
@@ -85,6 +135,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       symboltoken: reqInput.token,
       variety: reqInput.variety || "NORMAL",
       tradingsymbol: reqInput.symbol,
+      duration:reqInput?.duration,
       instrumenttype: reqInput.instrumenttype,
       transactiontype: reqInput.transactiontype, // BUY / SELL
       exchange: reqInput.exch_seg,              // NSE / NFO etc.
@@ -93,11 +144,13 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       product: fyersProductType,                // INTRADAY / CNC / MTF
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
-      userId: user.id,
-      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
-      broker: "Fyers",
+      userId: user.id,
+      userNameId: user.username,
+      angelOneSymbol:reqInput.angelOneSymbol||reqInput.symbol,
+      angelOneToken:reqInput.angelOneToken||reqInput.token,
+      broker: "fyers",
     };
 
 
@@ -117,7 +170,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       limitPrice,                              // ✅ now correct per order type
       stopPrice,                               // ✅ only non-zero for SL / SL-M
       disclosedQty: 0,
-      validity: "DAY",                           // or IOC, GTC etc.
+      validity: reqInput?.duration,                           // or IOC, GTC etc.
       offlineOrder: false,
       stopLoss: 0,
       takeProfit: 0,
@@ -252,12 +305,14 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
     let buyPrice = 0;
     let buySize = 0;
     let buyValue = 0;
+     let buyTime  = 'NA'
     let pnl = 0;
 
     if (buyOrder) {
-      buyPrice = buyOrder.fillprice || 0;
-      buySize = buyOrder.fillsize || 0;
-      buyValue = buyOrder.tradedValue || 0;
+      buyPrice = buyOrder?.fillprice || 0;
+      buySize = buyOrder?.fillsize || 0;
+      buyValue = buyOrder?.tradedValue || 0;
+      buyTime = buyOrder?.filltime
     }
 
     if (tradeForThisOrder) {
@@ -266,6 +321,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       // For BUY leg, keep PNL 0 until SELL happens
       if (reqInput.transactiontype === "BUY") {
         pnl = 0;
+        buyTime  = 'NA';
       }
     }
 
@@ -295,6 +351,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       fillsize: tradedQty,
       fillid: tradeForThisOrder?.tradeNumber || null,
       pnl,
+      buyTime:buyTime,
       buyprice: buyPrice,
       buysize: buySize,
       buyvalue: buyValue,

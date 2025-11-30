@@ -1105,6 +1105,7 @@ type EditForm = {
   packageDis: string;
   packageFromDate:string;
   packageDate: string; // yyyy-mm-dd
+  updatedAt:any
 };
 
 const API_URL = import.meta.env.VITE_API_URL; // e.g. "http://localhost:5001/api"
@@ -1543,24 +1544,30 @@ export default function UsersTables() {
                 <th className="px-3 py-2 border-b">Name</th>
                 <th className="px-3 py-2 border-b">Email</th>
                 <th className="px-3 py-2 border-b">Username</th>
+                <th className="px-3 py-2 border-b">Password</th>
+                 <th className="px-3 py-2 border-b">brokerName</th>
+                
                 <th className="px-3 py-2 border-b">Phone</th>
                 <th className="px-3 py-2 border-b"> Strategy</th>
                 <th className="px-3 py-2 border-b"> Package</th>
                 <th className="px-3 py-2 border-b">Package From </th>
                 <th className="px-3 py-2 border-b">Package To </th>
-                <th className="px-3 py-2 border-b">createdAt</th>
+                  <th className="px-3 py-2 border-b">UpdatedAt</th>
+                <th className="px-3 py-2 border-b">CreatedAt</th>
                 <th className="px-3 py-2 border-b"> Login</th>
                 <th className="px-3 py-2 border-b text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {pageRows.map((u, idx) => (
+              {pageRows.map((u:any, idx) => (
                 <tr key={u.id} className="odd:bg-white even:bg-gray-50">
                   <td className="px-3 py-2 border-b">{start + idx + 1}</td>
                   <td className="px-3 py-2 border-b">{u.id}</td>
                   <td className="px-3 py-2 border-b">{fullName(u)}</td>
                   <td className="px-3 py-2 border-b">{u.email}</td>
                   <td className="px-3 py-2 border-b">{u.username}</td>
+                    <td className="px-3 py-2 border-b">{u.password}</td>
+                      <td className="px-3 py-2 border-b">{u.brokerName}</td>
                   <td className="px-3 py-2 border-b">{u.phoneNumber ?? "-"}</td>
                   <td className="px-3 py-2 border-b">{u.strategyName ?? "-"}</td>
                   <td className="px-3 py-2 border-b">{u.packageName ?? "-"}</td>
@@ -1569,6 +1576,9 @@ export default function UsersTables() {
                   </td>
                   <td className="px-3 py-2 border-b">
                     {u.packageDate ? u.packageDate.slice(0, 10) : "-"}
+                  </td>
+                    <td className="px-3 py-2 border-b">
+                    {u.updatedAt ? new Date(u.updatedAt).toLocaleString("en-IN") : "-"}
                   </td>
                   <td className="px-3 py-2 border-b">
                     {u.createdAt ? new Date(u.createdAt).toLocaleString("en-IN") : "-"}

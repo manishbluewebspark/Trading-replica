@@ -38,7 +38,7 @@ router.get('/angelone/get/holdingdata',
 
 router.post('/agnelone/instrument/ltp',authMiddleware,getAngelOneLTP)
 
-router.get('/agnelone/instrument',authMiddleware,getInstrumentPostgre)
+router.get('/agnelone/instrument',getInstrumentPostgre)
 router.get('/agnelone/instrument/search/:id',authMiddleware,searchInstrumentPostgre)
 
 

@@ -418,6 +418,7 @@ const pnlCellRenderer = (params: any) => {
       minWidth: 120,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+    
     {
       headerName: "Traded Qty",
       field: "quantity",
@@ -465,6 +466,24 @@ const pnlCellRenderer = (params: any) => {
       minWidth: 120,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+     {
+      headerName: "Buy Time",
+      field: "buyTime",
+      filter: true,
+      sortable: true,
+            width: 120,
+      minWidth: 120,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
+    {
+      headerName: "Sell Time",
+      field: "filltime",
+      filter: true,
+      sortable: true,
+        width: 120,
+      minWidth: 120,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
     {
       headerName: "Message",
       field: "text",
@@ -475,24 +494,24 @@ const pnlCellRenderer = (params: any) => {
       minWidth: 180,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
-    {
-      headerName: "Updated At",
-      field: "updatedAt",
-      filter: true,
-      sortable: true,
-      width: 170,
-      minWidth: 180,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Created At",
-      field: "createdAt",
-      filter: true,
-      sortable: true,
-      width: 170,
-      minWidth: 180,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+    // {
+    //   headerName: "Updated At",
+    //   field: "updatedAt",
+    //   filter: true,
+    //   sortable: true,
+    //   width: 170,
+    //   minWidth: 180,
+    //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+    // },
+    // {
+    //   headerName: "Created At",
+    //   field: "createdAt",
+    //   filter: true,
+    //   sortable: true,
+    //   width: 170,
+    //   minWidth: 180,
+    //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+    // },
   ], []);
 
   const getRowStyle = () => {

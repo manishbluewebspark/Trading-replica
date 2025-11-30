@@ -2,6 +2,7 @@ import User from '../models/userModel.js';
 import AngelOneCredential from "../models/angelOneCredential.js"
 import {connectSmartSocket, disconnectUserSocket, isSocketReady} from "../services/smartapiFeed.js"
 import UserSession from '../models/userSession.js';
+import { decrypt } from "../utils/passwordUtils.js";
 
 // export const getAllUsers = async (req, res) => {
 //     try {
@@ -55,42 +56,124 @@ import UserSession from '../models/userSession.js';
 
 
 export const getAllUsers = async (req, res) => {
-    try {
-        const users = await User.findAll({
-            where: { role: "user" },
-        });
+  try {
+    // 1) सारे users (role = 'user') plain objects के रूप में लाओ
+    const users = await User.findAll({
+      where: { role: "user" },
+      raw: true,
+    });
 
-        const creds = await AngelOneCredential.findAll({ raw: true });
+    // 2) हर user का password decrypt करो
+    const decryptedUsers = await Promise.all(
+      users.map(async (user) => {
+        console.log(user.firstName);
 
-        // Map users and ensure every user has an angelCredential object
-        const merged = users.map(u => {
-            const cred = creds.find(c => c.userId === u.id);
-            return {
-                ...u.toJSON(), // Use toJSON() to get plain object from Sequelize instance
-                angelCredential: {
-                    clientId: cred?.clientId || "",
-                    totpSecret: cred?.totpSecret || "",
-                    password: cred?.password || ""
-                }
-            };
-        });
+        const encrypted = user.password;
+        console.log("Encrypted:", encrypted, "Secret:", process.env.CRYPTO_SECRET);
 
-        return res.status(200).json({
-            status: true,
-            count: users.length,
-            data: merged,
-        });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            status: false,
-            statusCode: 500,
-            message: "Unexpected error occurred. Please try again.",
-            data: null,
-            error: error.message,
-        });
-    }
+        const plainPassword = await decrypt(encrypted, process.env.CRYPTO_SECRET);
+
+        console.log("Decrypted:", plainPassword);
+
+        return {
+          ...user,                // plain user object
+          password: plainPassword // decrypted password
+        };
+      })
+    );
+
+    // 3) AngelOne credentials plain objects में
+    const creds = await AngelOneCredential.findAll({ raw: true });
+
+    // 4) users + angel credentials merge
+    const merged = decryptedUsers.map((u) => {
+      const cred = creds.find((c) => c.userId === u.id);
+
+      return {
+        ...u, // u already plain object
+        angelCredential: {
+          clientId: cred?.clientId || "",
+          totpSecret: cred?.totpSecret || "",
+          password: cred?.password || "",
+        },
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      count: merged.length,
+      data: merged,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
 };
+
+// export const getAllUsers = async (req, res) => {
+//     try {
+//         const users = await User.findAll({
+//             where: { role: "user" },
+//         });
+
+//           // 🔹 IMPORTANT: async map + Promise.all
+//             const results = await Promise.all(
+//               users.map(async (user) => {
+//                 console.log(user.firstName);
+        
+//                 const encrypted = user.password;
+//                 console.log("Encrypted:", encrypted, "Secret:", process.env.CRYPTO_SECRET);
+        
+//                 // अगर decrypt sync है तो 'await' ज़रूरी नहीं है, लेकिन रहने दो तो भी चलेगा
+//                 const plainPassword = await decrypt(encrypted, process.env.CRYPTO_SECRET);
+        
+//                 console.log("Decrypted:", plainPassword);
+        
+//                 return {
+//                   ...user,          // पूरा user object
+//                   password: plainPassword, // decrypted password से replace
+//                 };
+//               })
+//             );
+
+
+//         const creds = await AngelOneCredential.findAll({ raw: true });
+
+//         // Map users and ensure every user has an angelCredential object
+//         const merged = results.map(u => {
+//             const cred = creds.find(c => c.userId === u.id);
+//             return {
+//                 ...u.toJSON(), // Use toJSON() to get plain object from Sequelize instance
+//                 angelCredential: {
+//                     clientId: cred?.clientId || "",
+//                     totpSecret: cred?.totpSecret || "",
+//                     password: cred?.password || ""
+//                 }
+//             };
+//         });
+
+//         return res.status(200).json({
+//             status: true,
+//             count: users.length,
+//             data: merged,
+//         });
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({
+//             status: false,
+//             statusCode: 500,
+//             message: "Unexpected error occurred. Please try again.",
+//             data: null,
+//             error: error.message,
+//         });
+//     }
+// };
 
 
 export const updateUserProfile = async function (req,res,next) {

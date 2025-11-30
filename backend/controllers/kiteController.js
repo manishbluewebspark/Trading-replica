@@ -4,7 +4,101 @@ import { KiteAccess } from "../utils/kiteClient.js";
 import axios from "axios";
 import crypto from "crypto";
 import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
+import redis from "../utils/redis.js";  // your redis client
 
+
+export const getKiteAllInstruments = async (req, res) => {
+  const REDIS_KEY = "kite_all_instruments";
+  const TEN_HOURS_IN_SECONDS = 10 * 60 * 60; // 36000
+
+  try {
+    const startTime = Date.now();
+
+    // ===========================================
+    // 1️⃣ Try Redis Cache First
+    // ===========================================
+    const cachedData = await redis.get(REDIS_KEY);
+
+    if (cachedData) {
+      console.log("📦 KITE instruments served from Redis cache");
+
+      return res.json({
+        status: true,
+        statusCode: 200,
+        data: JSON.parse(cachedData),
+        cache: true,
+        message: "Kite instruments fetched from Redis cache",
+      });
+    }
+
+    // ===========================================
+    // 2️⃣ If not in cache → Call Kite API
+    // ===========================================
+    const apiKey = process.env.KITE_API_KEY;
+    const kite = KiteAccess(apiKey);
+
+    const instruments = await kite.getInstruments(); // heavy call
+
+    // ===========================================
+    // 3️⃣ Store in Redis (Expire in 10 hours)
+    // ===========================================
+    await redis.set(
+      REDIS_KEY,
+      JSON.stringify(instruments),
+      "EX",
+      TEN_HOURS_IN_SECONDS
+    );
+
+    const endTime = Date.now();
+    console.log(
+      `✅ KITE instruments fetched LIVE & cached. Time: ${(endTime - startTime) / 1000}s`
+    );
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: instruments,
+      cache: false,
+      message: "Kite instruments fetched from API and cached in Redis",
+    });
+  } catch (error) {
+    console.error("❌ getKiteAllInstruments error:", error);
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+
+// export const getKiteAllInstruments = async (req, res) => {
+//   try {
+
+//     const apiKey = process.env.KITE_API_KEY;
+//     const kite = KiteAccess(apiKey);
+
+//     const instruments = await kite.getInstruments();
+
+//     return res.json({
+//       status: true,
+//       statusCode: 200,
+//       data: instruments,
+//       message: "successfully fetch data",
+//     });
+//   } catch (error) {
+//     return res.json({
+//       status: false,
+//       statusCode: 500,
+//       message: "Unexpected error occurred. Please try again.",
+//       data: null,
+//       error: error.message,
+//     });
+//   }
+// };
 
 
 // ===================== KITE App Credential =====================
@@ -261,30 +355,7 @@ export const kiteCallback = async (req, res) => {
 };
 
 
-export const getKiteAllInstruments = async (req, res) => {
-  try {
 
-    const apiKey = process.env.KITE_API_KEY;
-    const kite = KiteAccess(apiKey);
-
-    const instruments = await kite.getInstruments();
-
-    return res.json({
-      status: true,
-      statusCode: 200,
-      data: instruments,
-      message: "successfully fetch data",
-    });
-  } catch (error) {
-    return res.json({
-      status: false,
-      statusCode: 500,
-      message: "Unexpected error occurred. Please try again.",
-      data: null,
-      error: error.message,
-    });
-  }
-};
 
 // ===================== FUNDS + ORDERS =====================
 export const getKiteFunds = async (req, res) => {
@@ -300,6 +371,9 @@ export const getKiteFunds = async (req, res) => {
         error: null,
       });
     }
+
+    console.log(req.userId,'fund');
+    
 
     const  kite  = await getKiteClientForUserId(req.userId)
 
@@ -478,7 +552,9 @@ export const getTradeDataForKiteDeshboard = async function (req, res, next) {
 // ===================== ALL ORDERS (RAW) =====================
 export const getKiteAllOrders = async (req, res) => {
   try {
-    const token = req.headers.angelonetoken;
+    // 
+
+      const token = req.headers.angelonetoken;
 
     if (!token) {
       return res.json({
@@ -513,7 +589,8 @@ export const getKiteAllOrders = async (req, res) => {
 // ===================== PROFILE (SDK) =====================
 export const getKiteProfile = async (req, res) => {
   try {
-    const token = req.headers.angelonetoken;
+
+  const token = req.headers.angelonetoken;
 
     if (!token) {
       return res.json({
@@ -590,7 +667,9 @@ export const getKiteProfile2 = async function (req, res, next) {
 // ===================== ORDERS + TRADES MAPPED =====================
 export const getKiteTradesData = async (req, res) => {
   try {
+
     const token = req.headers.angelonetoken;
+      // const token = 'dWy5IAlNGHxPTq5mwcGWBNbCQfX6t3YZ';
 
     if (!token) {
       return res.json({
@@ -602,6 +681,7 @@ export const getKiteTradesData = async (req, res) => {
     }
 
     const  kite  = await getKiteClientForUserId(req.userId)
+    //  const  kite  = await getKiteClientForUserId(13)
 
     const orders = await kite.getOrders();
 

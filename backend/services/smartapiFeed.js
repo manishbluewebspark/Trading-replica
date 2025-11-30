@@ -147,7 +147,7 @@ export const getOrderFunction = async function () {
 
             const uniqueTrades = [
         ...new Map(
-            tradesData.map(item => [`${item.tradingsymbol}-${item.symboltoken}`, item])
+            tradesData.map(item => [`${item.angelOneSymbol}-${item.angelOneToken}`, item])
           ).values()
         ];
 

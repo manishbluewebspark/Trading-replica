@@ -3,7 +3,7 @@
  
  import React, { useEffect, useState } from "react";
 import axios from "axios";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 
 type Holding = {
@@ -35,7 +35,7 @@ export default function HoldingOrderAdmin () {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  console.log(error);
+  console.log(error,searchTerm,allOrders);
   
 
   // Fetch all holdings
@@ -67,39 +67,40 @@ export default function HoldingOrderAdmin () {
 
   useEffect(() => {
     fetchOrders();
+    setSearchTerm("")
   }, []);
 
   // Search function
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
+  // const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const value = e.target.value;
+  //   setSearchTerm(value);
 
-    if (!value) {
-      // Reset to all orders if empty
-      setOrders(allOrders);
-      return;
-    }
+  //   if (!value) {
+  //     // Reset to all orders if empty
+  //     setOrders(allOrders);
+  //     return;
+  //   }
 
-    if (value.length < 3) return; // optional: min 3 chars
+  //   if (value.length < 3) return; // optional: min 3 chars
 
-    const query = value.toLowerCase();
+  //   const query = value.toLowerCase();
 
-    const filtered = allOrders.filter((item) =>
-      Object.values(item).some((v) =>
-        String(v).toLowerCase().includes(query)
-      )
-    );
+  //   const filtered = allOrders.filter((item) =>
+  //     Object.values(item).some((v) =>
+  //       String(v).toLowerCase().includes(query)
+  //     )
+  //   );
 
-    setOrders(filtered);
-  };
+  //   setOrders(filtered);
+  // };
 
   // Excel Download
-  const handleExcelDownload = () => {
-    const ws = XLSX.utils.json_to_sheet(orders);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Holdings");
-    XLSX.writeFile(wb, "holdings.xlsx");
-  };
+  // const handleExcelDownload = () => {
+  //   const ws = XLSX.utils.json_to_sheet(orders);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, "Holdings");
+  //   XLSX.writeFile(wb, "holdings.xlsx");
+  // };
 
   const td: React.CSSProperties = {
     padding: "8px 12px",

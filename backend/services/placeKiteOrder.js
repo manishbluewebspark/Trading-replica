@@ -4,17 +4,43 @@ import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 import Order from "../models/orderModel.js";
 import { Op } from "sequelize";
 
+// function getKiteProductCode(type) {
+//   if (!type) return ""; // handle empty or undefined
+//   switch (type.toUpperCase()) {
+//     case "INTRADAY":
+//       return "MIS"; // Kite code for intraday
+//     case "DELIVERY":
+//       return "CNC"; // Kite code for delivery
+//     default:
+//       return type; // fallback
+//   }
+// }
+
 function getKiteProductCode(type) {
-  if (!type) return ""; // handle empty or undefined
+  
+  if (!type) return "";
+
   switch (type.toUpperCase()) {
-    case "INTRADAY":
-      return "MIS"; // Kite code for intraday
     case "DELIVERY":
-      return "CNC"; // Kite code for delivery
+      return "CNC";     // Cash & Carry for equity
+
+    case "CARRYFORWARD":
+      return "NRML";    // F&O Carryforward (Normal)
+
+    case "MARGIN":
+      return "MTF";     // Margin Trading Facility (MTF)
+
+    case "INTRADAY":
+      return "MIS";     // MIS Intraday
+
+    case "BO":
+      return "MIS";     // Bracket orders use MIS internally
+
     default:
-      return type; // fallback
+      return type.toUpperCase(); // fallback, safe
   }
 }
+
 
 function mapVarietyToKite(variety) {
   if (!variety) return "regular"; // default
@@ -35,7 +61,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
   try {
 
     // 1) Set access token
-   let kite = await getKiteClientForUserId(user.id)
+    let kite = await getKiteClientForUserId(user.id)
 
     const kiteProductType = await getKiteProductCode( reqInput.productType);
 
@@ -45,9 +71,9 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
     // 2) CREATE LOCAL PENDING ORDER
     // ----------------------------------------
     const orderData = {
-      symboltoken:reqInput.token,
+      symboltoken:reqInput.kiteToken||reqInput.token,
       variety:kiteVerity || "regular",    // mistage in fields 
-      tradingsymbol: reqInput.symbol,
+      tradingsymbol:reqInput.kiteSymbol|| reqInput.symbol,
       instrumenttype:reqInput.instrumenttype,
       transactiontype: reqInput.transactiontype,
       exchange: reqInput.exch_seg,
@@ -56,20 +82,31 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       product: kiteProductType,
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
-      userId: user.id,
-      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
+      userId: user.id,
+      broker:'kite',
+      angelOneSymbol:reqInput.angelOneSymbol||reqInput.symbol,
+      angelOneToken:reqInput.angelOneToken||reqInput.token,
+      userNameId: user.username,
     };
 
+
+    console.log(orderData);
+    
+
     const newOrder = await Order.create(orderData);
+
+
+    console.log(' db local done');
+    
 
     // ----------------------------------------
     // 3) KITE PAYLOAD
     // ----------------------------------------
     const orderParams = {
       exchange: reqInput.exch_seg,
-      tradingsymbol: reqInput.symbol,
+      tradingsymbol: reqInput.kiteSymbol|| reqInput.symbol,
       transaction_type: reqInput.transactiontype,
       quantity: Number(reqInput.quantity),
       product:kiteProductType,  // DELIVERY.                // mistake in fields 
@@ -87,6 +124,9 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
     try {
 
     placeRes = await kite.placeOrder(orderData.variety, orderParams);
+
+    console.log(placeRes,'kite place order');
+    
 
     } catch (err) {
 
@@ -136,7 +176,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
        buyOrder = await Order.findOne({
           where: {
              userId: user.id,
-            tradingsymbol: reqInput.symbol,
+            tradingsymbol: reqInput.kiteSymbol|| reqInput.symbol,
             exchange: reqInput.exch_seg,
             transactiontype: "BUY",
             orderstatuslocaldb: "OPEN",
@@ -166,13 +206,13 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       ...detailsData,
       uniqueorderid:detailsData.exchange_order_id,
       exchorderupdatetime:detailsData.exchange_update_timestamp,
-       exchtime:detailsData.exchange_timestamp,
+      exchtime:detailsData.exchange_timestamp,
       updatetime:detailsData.order_timestamp,
-       text:detailsData.status_message,
-       averageprice:detailsData.average_price,
-       lotsize:detailsData.quantity,
-       symboltoken:reqInput.token,
-       disclosedquantity:detailsData.disclosed_quantity,
+      text:detailsData.status_message,
+      averageprice:detailsData.average_price,
+      lotsize:detailsData.quantity,
+      symboltoken:reqInput.kiteToken||reqInput.token,
+      disclosedquantity:detailsData.disclosed_quantity,
       triggerprice:detailsData.trigger_price,
       price:detailsData.average_price,
       duration:detailsData.validity,
@@ -192,26 +232,28 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
         const buyPrice  = buyOrder?.fillprice     || 0;
         const buySize   = buyOrder?.fillsize      || 0;
         const buyValue  = buyOrder?.tradedValue   || 0;
-        
+         let buyTime  =   buyOrder?.filltime
 
         // Calculate PNL safely
-        let  pnl = (t.quantity * t.average_price) - (buyPrice * buySize);
+        let  pnl = ( Number(reqInput.quantity) * t.average_price) - (buyPrice * buySize);
 
            
          if(t.transaction_type==='BUY') {
-             pnl = 0
+             pnl = 0 ;
+             buyTime = "NA";
          }
          
 
           // Update order
           await newOrder.update({
-            tradedValue: t.average_price * t.quantity,
+            tradedValue: t.average_price * Number(reqInput.quantity),
             fillprice: t.average_price,
-            fillsize: t.quantity,
+            fillsize: Number(reqInput.quantity),
             fillid: t.trade_id,
-            // filltime: t.fill_timestamp,
+            filltime: t?.fill_timestamp,
             status: "COMPLETE",
             pnl: pnl,
+            buyTime:buyTime,
             buyprice: buyPrice,
             buysize: buySize,
             buyvalue: buyValue,

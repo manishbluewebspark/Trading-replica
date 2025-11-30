@@ -52,14 +52,17 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       quantity: reqInput.quantity,
       producttype: reqInput.productType,
       duration: reqInput.duration,
-      price: reqInput.price,
+      price: reqInput.price||"0",
       squareoff: "0",
       stoploss: "0",
       orderstatuslocaldb: "PENDING",
-      userId: user.id,
-      userNameId: user.username,
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
+      userId: user.id,
+      userNameId: user.username,
+      broker:'angelone',
+      angelOneSymbol:reqInput?.angelOneSymbol||reqInput.symbol,
+      angelOneToken:reqInput.angelOneToken||reqInput.token,
     };
 
     // 2) Save pending order locally
@@ -197,12 +200,14 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
         const buyPrice  = buyOrder?.fillprice     || 0;
         const buySize   = buyOrder?.fillsize      || 0;
         const buyValue  = buyOrder?.tradedValue   || 0;
-
+        let buyTime  = buyOrder?.filltime
 
         let pnl = (matched?.fillsize*matched?.fillprice)-(buyPrice*buySize)
+       
 
           if(matched.transaction_type==='BUY') {
              pnl = 0
+             buyTime = "NA";
          }
 
 
@@ -213,6 +218,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
             filltime: matched.filltime,
             fillid: matched.fillid,
             pnl:pnl,
+            buyTime:buyTime,
             buyprice:buyPrice,
             buysize:buySize,
             buyvalue:buyValue,

@@ -183,6 +183,8 @@ export default function OrderTableAdmin() {
 
   // reset to page 1 whenever the search or page size changes
   useEffect(() => {
+    setPageSize(10),
+    setSearch(""),
     setPage(1);
   }, [debouncedSearch, pageSize]);
 

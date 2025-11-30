@@ -5,6 +5,9 @@ const authMiddleware = (req, res, next) => {
 
 const token = req.headers.authorization?.split(' ')[1];
 
+// let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsInJvbGUiOiJ1c2VyIiwiYm9ya2VyIjoia2l0ZSIsImlhdCI6MTc2NDMxMTAyNiwiZXhwIjoxNzY0Mzk3NDI2fQ.vWLs1sB2A5vPriYVYolCjD_B1m9NK2RZfw1Ib8kY3cQ'
+
+
   if (!token) {
     
      return res.json({

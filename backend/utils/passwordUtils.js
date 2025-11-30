@@ -69,3 +69,6 @@ export function decrypt(encryptedText, password) {
 }
 
 
+// console.log(decrypt('c2afc06e73249c7ea4a9d53f2be9c0df:662d9f9695a605a520933c37ff5fc5e9',process.env.CRYPTO_SECRET));
+
+

@@ -4,6 +4,11 @@ import sequelize from "../config/db.js";
 const Order = sequelize.define(
   "Order",
   {
+      id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
     userId: {
       type: DataTypes.INTEGER,   // 🔁 changed from UUID
       allowNull: false,
@@ -196,6 +201,22 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    broker: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    angelOneToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+     angelOneSymbol: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+  buyTime: {
+    type: DataTypes.STRING,
+    allowNull: true,
+   },
   },
   {
     tableName: "orders",

@@ -36,7 +36,7 @@ export const getTokenStatusSummary = async (req, res) => {
 
 
 export const adminPlaceMultiBrokerOrder = async (req, res) => {
-  
+
   try {
 
     const input = req.body;
@@ -125,6 +125,7 @@ const safeErr = (e) => e?.message || e?.response?.data || String(e);
 
 
 export const adminMultipleSquareOff = async (req, res) => {
+
   try {
 
     // 1) Time window for today
@@ -203,6 +204,11 @@ export const adminMultipleSquareOff = async (req, res) => {
             transactiontype,
             totalPrice: o.totalPrice,
             actualQuantity: o.actualQuantity,
+            userId: user.id,
+            userNameId: user.username,
+            angelOneToken:o?.angelOneToken||o.token,
+            angelOneSymbol:o?.angelOneSymbol||o?.symbol,
+            broker: o?.broker,
           };
 
           //=============== CALL BROKER SPECIFIC SERVICE ===============//
@@ -271,4 +277,5 @@ export const adminMultipleSquareOff = async (req, res) => {
       error: safeErr(error),
     });
   }
+
 };

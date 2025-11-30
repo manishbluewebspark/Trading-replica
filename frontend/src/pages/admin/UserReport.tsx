@@ -386,7 +386,7 @@ export default function UserReport() {
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(25);
 
 
   // const [strategyList, setStrategyList] = useState([]); // all strategies from backend

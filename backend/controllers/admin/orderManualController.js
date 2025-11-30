@@ -3,7 +3,7 @@
 import Order from "../../models/orderModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
-
+import dayjs from "dayjs";
 import {emitOrderGet} from "../../services/smartapiFeed.js"
 
 // 15 digit order ID
@@ -22,10 +22,14 @@ function generateFillId() {
 }
 
 
-export const createManualOrder = async (req, res) => {
+export const createManualOrder1 = async (req, res) => {
   try {
 
     let data = req.body;
+
+
+    console.log(data);
+    
   
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -157,83 +161,99 @@ export const createManualOrder = async (req, res) => {
 };
 
 
-// export const createManualOrder = async (req, res) => {
-//   try {
-
-//     let data = req.body;
-
-//     // Basic validations
-//     if (!data.tradingsymbol)
-//       return res.status(400).json({ status: false, message: "Tradingsymbol required" });
-
-//     if (!data.transactiontype)
-//       return res.status(400).json({ status: false, message: "Transaction Type required" });
-
-//     if (!data.exchange)
-//       return res.status(400).json({ status: false, message: "Exchange required" });
-
-//     // Auto Calculate total price = price * lotSize
-//     if (data.lotSize && data.price) {
-//       data.totalPrice = Number(data.lotSize) * Number(data.price);
-//     }
-
-//     // Generate IDs
-//     let orderId = generateOrderId();
-//     let uniqueorderid = generateUniqueOrderUUID();
-//     let fillid = generateFillId();
-
-//     // Set auto IDs
-//     data.orderid = orderId;
-//     data.uniqueorderid = uniqueorderid;
-//     data.fillid = fillid;
-
-//     // Default values for missing fields
-//     const now = new Date().toISOString();
-
-//     data.text = data.text || "";
-//     data.status = data.status || "COMPLETE";
-//     data.orderstatus = data.orderstatus || "COMPLETE";
-//     data.orderstatuslocaldb = data.orderstatuslocaldb || "COMPLETE";
-//     data.updatetime = data.updatetime || now;
-//     data.exchtime = data.exchtime || now;
-//     data.exchorderupdatetime = data.exchorderupdatetime || now;
-//     data.parentorderid = data.parentorderid || "";
-//     data.ordertag = data.ordertag || "MANUAL_ORDER";
-//     data.tradedValue = data.totalPrice || 0;
-//     data.fillprice = data.price || 0;
-//     data.fillsize = data.lotSize || 0;
-//     data.filltime = data.filltime || now;
-//     data.strikeprice = data.strikeprice || 0;
-//     data.optiontype = data.optiontype || "";
-//     data.expirydate = data.expirydate || "";
-//     data.cancelsize = data.cancelsize || "0";
-//     data.averageprice = data.averageprice || 0;
-//     data.filledshares = data.filledshares || "0";
-//     data.unfilledshares = data.unfilledshares || "0";
-//     data.quantity = data.lotSize;
 
 
-//     console.log(data,'create order !');
+export const createManualOrder = async (req, res) => {
+  try {
+
+    let data = req.body;
+  
+    // -------- Basic Validations --------
+    if (!data.tradingsymbol)
+      return res.status(400).json({ status: false, message: "Tradingsymbol required" });
+
+    if (!data.transactiontype)
+      return res.status(400).json({ status: false, message: "Transaction Type required" });
+
+    if (!data.exchange)
+      return res.status(400).json({ status: false, message: "Exchange required" });
+
+    // -------- Auto Calculate Total Price --------
+    if (data.lotSize && data.price) {
+      data.totalPrice = Number(data.lotSize) * Number(data.price);
+    }
+
     
 
-//     // Save order
-//     const order = await Order.create(data);
+    // -------- Generate IDs --------
+    let now = new Date().toISOString();
+    data.orderid = generateOrderId();
+    data.uniqueorderid = generateUniqueOrderUUID();
+    data.fillid = generateFillId();
+    data.userNameId = data.username
+    // -------- Default Values --------
+    data.text = data.text || "";
+    data.status = data.status || "COMPLETE";
+    data.orderstatus = data.orderstatus || "COMPLETE";
+    data.orderstatuslocaldb = 'COMPLETE'
+    data.updatetime = data.updatetime || now;
+    data.exchtime = data.exchtime || now;
+    data.exchorderupdatetime = data.exchorderupdatetime || now;
+    data.parentorderid = data.parentorderid || "";
+    data.ordertag = data.ordertag || "MANUAL_ORDER";
+    data.transactiontype = 'SELL',
+    data.tradedValue = data.lotSize*data.sellPrice
 
-//     return res.status(201).json({
-//       status: true,
-//       message: "Manual Order Created Successfully",
-//       data: order,
-//     });
+    data.fillsize = data.lotSize || 0;
 
-//   } catch (err) {
-//     console.log("Create Order Error:", err);
-//     return res.status(500).json({
-//       status: false,
-//       message: err.message || "Internal Server Error",
-//     });
-//   }
-// };
+    const formattedBuyTime = dayjs(data.buyTime).format("DD MMMM YYYY [at] hh:mm a");
+    const formattedSellTime = dayjs(data.filltime).format("DD MMMM YYYY [at] hh:mm a");
 
+    data.buyTime = formattedBuyTime;
+    data.filltime = formattedSellTime;
+
+
+    data.strikeprice = data.strikeprice || 0;
+    data.optiontype = data.optiontype || "";
+    data.expirydate = data.expirydate || "";
+
+    data.cancelsize = data.cancelsize || "0";
+    data.averageprice = data.averageprice || 0;
+    data.filledshares = data.filledshares || "0";
+    data.unfilledshares = data.unfilledshares || "0";
+
+
+    data.quantity = data.lotSize;
+    data.fillprice = Number(data.sellPrice)
+    data.buyprice = Number(data.buyPrice)
+    data.buysize =  data.fillsize;
+    data.pnl = (data.fillsize*data.buyPrice)-(data.fillsize*data.sellPrice)
+   
+    data.buyvalue = data.fillsize*data.buyPrice;
+
+
+    // -------- Save Final Order --------
+    const order = await Order.create(data);
+
+    console.log('order done');
+    
+
+
+
+    // return res.status(201).json({
+    //   status: true,
+    //   message: "Manual Order Created Successfully",
+    //   data: order,
+    // });
+
+  } catch (err) {
+    console.log("Create Order Error:", err);
+    return res.status(500).json({
+      status: false,
+      message: err.message || "Internal Server Error",
+    });
+  }
+};
 
 
 export const getAllManualOrders = async (req, res) => {
