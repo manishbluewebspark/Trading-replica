@@ -62,6 +62,7 @@ import GooglChart from "./pages/Tables/GooglChart";
 import OrdersAdminPage from "./pages/Forms/OrderAdminPage";
 import UserManual from "./pages/Tables/UserManual";
 import KiteCrendential from "./pages/Forms/KiteCredential";
+import Userposition from "./pages/Tables/UserPosition";
 
 export default function App() {
 
@@ -134,6 +135,8 @@ export default function App() {
             <Route path="/currentposition" element={<ProtectedRoute><TradeTables /></ProtectedRoute>} />
             <Route path="/angelonecredential" element={<ProtectedRoute><AngelOneCredential /></ProtectedRoute>} />
             <Route path="/kitecredential" element={<ProtectedRoute><KiteCrendential /></ProtectedRoute>} />
+
+            <Route path="/userposition" element={<ProtectedRoute><Userposition /></ProtectedRoute>} />
 
 
 

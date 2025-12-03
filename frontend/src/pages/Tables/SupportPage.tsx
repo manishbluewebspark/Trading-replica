@@ -3,10 +3,10 @@
 
 const SupportPage = () => {
   const support = {
-    phone: "7974607011",
-    whatsapp: "7974607011",
-    email: "info@arthaai.in",
-    facebook: "facebook.com/yourpage",
+    phone: "9770435842",
+    whatsapp: "9770435842",
+    email: "info@softwaresetu.com",
+    website: "www.softwaresetu.com",
     youtube: "youtube.com/@yourchannel",
     instagram: "instagram.com/yourprofile",
     twitter: "twitter.com/yourprofile",
@@ -47,25 +47,12 @@ const SupportPage = () => {
             <li className="flex items-center justify-between  bg-slate-50 rounded-xl text-slate-700">
               <div className="flex items-center gap-5">
                 <span className="text-4xl">📘</span>
-                <span>Facebook:</span>
+                <span>Website:</span>
               </div>
-              <span className="font-semibold text-lg">{support.facebook}</span>
+              <span className="font-semibold text-lg">{support.website}</span>
             </li>
            
-            <li className="flex items-center justify-between  bg-slate-50 rounded-xl text-slate-700">
-              <div className="flex items-center gap-5">
-                <span className="text-4xl">📷</span>
-                <span>Instagram:</span>
-              </div>
-              <span className="font-semibold text-lg">{support.instagram}</span>
-            </li>
-            <li className="flex items-center justify-between  bg-slate-50 rounded-xl text-slate-700">
-              <div className="flex items-center gap-5">
-                <span className="text-4xl">🐦</span>
-                <span>Twitter:</span>
-              </div>
-              <span className="font-semibold text-lg">{support.twitter}</span>
-            </li>
+      
             
           </ul>
         </main>

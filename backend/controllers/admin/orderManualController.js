@@ -6,6 +6,20 @@ import { Op } from "sequelize";
 import dayjs from "dayjs";
 import {emitOrderGet} from "../../services/smartapiFeed.js"
 
+
+
+const input = "2025-12-03 04:12:29.272+00";
+
+const converted = dayjs(input)
+  .utc()
+  .millisecond(0)
+  .format("YYYY-MM-DDTHH:mm:ss.000[Z]");
+
+console.log(converted,'update data');
+
+
+
+
 // 15 digit order ID
 function generateOrderId() {
   return Date.now().toString() + Math.floor(1000 + Math.random() * 9000);
@@ -22,7 +36,7 @@ function generateFillId() {
 }
 
 
-export const createManualOrder1 = async (req, res) => {
+export const createManualOrderWithBrokerPrice = async (req, res) => {
   try {
 
     let data = req.body;
@@ -133,6 +147,7 @@ export const createManualOrder1 = async (req, res) => {
 
         data.pnl = pnl;
         data.buyprice = buyOrder.fillprice;
+        data.buyTime = buyOrder.filltime;
         data.buysize = buyOrder.fillsize;
         data.buyvalue = buyOrder.tradedValue;
       }
@@ -167,7 +182,10 @@ export const createManualOrder = async (req, res) => {
   try {
 
     let data = req.body;
-  
+
+    console.log(data,'data');
+    
+    
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
       return res.status(400).json({ status: false, message: "Tradingsymbol required" });
@@ -206,12 +224,25 @@ export const createManualOrder = async (req, res) => {
 
     data.fillsize = data.lotSize || 0;
 
-    const formattedBuyTime = dayjs(data.buyTime).format("DD MMMM YYYY [at] hh:mm a");
-    const formattedSellTime = dayjs(data.filltime).format("DD MMMM YYYY [at] hh:mm a");
+        const buyTime = new Date(data.buyTime);
 
-    data.buyTime = formattedBuyTime;
-    data.filltime = formattedSellTime;
+    // Convert to ISO string and replace the 'Z' if needed
+    const isoStringBuy = buyTime.toISOString();
 
+    // If you want to ensure milliseconds are included (even if zero):
+    const formattedTimeBuy = isoStringBuy.replace(/\.\d+Z$/, '.000Z');
+
+    data.buyTime = formattedTimeBuy;
+
+    const sellTime = new Date(data.sellTime);
+
+    // Convert to ISO string and replace the 'Z' if needed
+    const isoString = sellTime.toISOString();
+
+    // If you want to ensure milliseconds are included (even if zero):
+    const formattedTime = isoString.replace(/\.\d+Z$/, '.000Z');
+
+    data.filltime = formattedTime;
 
     data.strikeprice = data.strikeprice || 0;
     data.optiontype = data.optiontype || "";
@@ -227,18 +258,12 @@ export const createManualOrder = async (req, res) => {
     data.fillprice = Number(data.sellPrice)
     data.buyprice = Number(data.buyPrice)
     data.buysize =  data.fillsize;
-    data.pnl = (data.fillsize*data.buyPrice)-(data.fillsize*data.sellPrice)
+    data.pnl = (data.fillsize*data.sellPrice)-(data.fillsize*data.buyPrice)
    
     data.buyvalue = data.fillsize*data.buyPrice;
 
-
-    // -------- Save Final Order --------
-    const order = await Order.create(data);
-
-    console.log('order done');
-    
-
-
+    // // -------- Save Final Order --------
+    // const order = await Order.create(data);
 
     // return res.status(201).json({
     //   status: true,

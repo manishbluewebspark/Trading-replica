@@ -10,9 +10,35 @@ import sequelize from "../../config/db.js";
 import BrokerModel from "../../models/borkerModel.js"
 import { Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
+
 import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat.js";
-dayjs.extend(customParseFormat);
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+
+
+
+
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper to convert "01 December 2025 at 12:23 pm" (IST) → JS Date (UTC)
+const parseISTToDate = (val) => {
+  if (!val) return null;
+
+  // If Excel already gave a Date object, just use it
+  if (val instanceof Date) {
+    return val;
+  }
+
+  const str = String(val).trim();
+  if (!str) return null;
+
+  const d = dayjs.tz(str, "DD MMMM YYYY [at] hh:mm a", "Asia/Kolkata");
+  return d.isValid() ? d.toDate() : null;
+};
+
+
 export const getCloneAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
@@ -103,6 +129,9 @@ export const createCloneUser = async (req, res) => {
       password,
       brokerName
     } = req.body;
+
+    console.log(req.body);
+    
 
     if (!email || !phoneNumber) {
       return res.status(400).json({
@@ -530,7 +559,7 @@ function generateFillId() {
 // };
 
 
-export const uploadOrderExcel = async (req, res) => {
+export const uploadOrderExcel1 = async (req, res) => {
 
   const t = await sequelize.transaction();
 
@@ -559,8 +588,8 @@ export const uploadOrderExcel = async (req, res) => {
       "TradedQty": "fillsize",
       "Status": "status",
       "Message": "text",
-      "DateCreated": "createdAt",
-      "DateUpdated": "updatedAt",
+      "Buy Time": "buyTime",
+      "Sell Time": "filltime",
     };
 
     const workbook = new ExcelJS.Workbook();
@@ -590,15 +619,24 @@ export const uploadOrderExcel = async (req, res) => {
       });
 
 
-              // 🌟 FIX: convert dates INSIDE rowObj
-              if (rowObj.createdAt) {
-                const d = dayjs(rowObj.createdAt, "DD MMMM YYYY [at] hh:mm a");
-                rowObj.createdAt = d.isValid() ? d.toDate() : null;
+              // // 🌟 FIX: convert dates INSIDE rowObj
+              // if (rowObj.createdAt) {
+              //   const d = dayjs(rowObj.createdAt, "DD MMMM YYYY [at] hh:mm a");
+              //   rowObj.createdAt = d.isValid() ? d.toDate() : null;
+              // }
+
+              // if (rowObj.updatedAt) {
+              //   const d = dayjs(rowObj.updatedAt, "DD MMMM YYYY [at] hh:mm a");
+              //   rowObj.updatedAt = d.isValid() ? d.toDate() : null;
+              // }
+
+              // ✅ NEW: Buy Time / Sell Time from Excel
+              if (rowObj.buyTime) {
+                rowObj.buyTime = parseISTToDate(rowObj.buyTime);
               }
 
-              if (rowObj.updatedAt) {
-                const d = dayjs(rowObj.updatedAt, "DD MMMM YYYY [at] hh:mm a");
-                rowObj.updatedAt = d.isValid() ? d.toDate() : null;
+              if (rowObj.filltime) {
+                rowObj.filltime = parseISTToDate(rowObj.filltime);
               }
 
            jsonData.push(rowObj);
@@ -634,6 +672,185 @@ export const uploadOrderExcel = async (req, res) => {
 
   } catch (err) {
     console.error("uploadOrderExcel error:", err.message);
+    await t.rollback();
+
+    return res.status(500).json({
+      status: false,
+      message: "Error processing Excel",
+      error: err.message,
+    });
+  }
+};
+
+export const uploadOrderExcel= async (req, res) => {
+ 
+  const t = await sequelize.transaction();
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: false,
+        message: "No file uploaded",
+      });
+    }
+
+    // Map Excel headers → temporary row fields
+    const headerMap = {
+      "UserId": "username",           // ⬅️ IMPORTANT: store username, we'll resolve to userId later
+      "SignalType": "transactiontype",
+      "Exchange": "exchange",
+      "Instrument": "instrumenttype",
+      "OrderID": "orderid",             // can be ignored / overwritten later
+      "Symbol": "tradingsymbol",
+      "OrderType": "ordertype",
+      "ProductType": "producttype",
+      "Buy Price": "buyprice",
+      "Sell Price": "price",          // NOTE: you had "Sell Price" twice; only last will win
+      // "Sell Price": "fillprice",   // <- if you need separate, Excel header must be different
+      "PnL": "pnl",
+      "OrderQty": "quantity",
+      "TradedQty": "fillsize",
+      "Status": "status",
+      "Message": "text",
+      "Buy Time": "buyTime",
+      "Sell Time": "filltime",
+    };
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(req.file.path);
+
+    const worksheet = workbook.worksheets[0];
+    const jsonData = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      // Skip header row
+      if (rowNumber === 1) return;
+
+      const rowObj = {};
+
+      row.eachCell((cell, colNumber) => {
+        const excelHeader = worksheet.getRow(1).getCell(colNumber).value;
+
+        const headerText =
+          typeof excelHeader === "object" && excelHeader?.richText
+            ? excelHeader.richText.map((r) => r.text).join("")
+            : excelHeader;
+
+        const dbField = headerMap[headerText];
+
+        if (dbField) {
+          rowObj[dbField] = cell.value;
+        }
+      });
+
+      if (rowObj.buyTime) {
+        rowObj.buyTime = String(parseISTToDate(rowObj.buyTime));
+      }
+      if (rowObj.filltime) {
+        rowObj.filltime = String(parseISTToDate(rowObj.filltime));
+      }
+
+      jsonData.push(rowObj);
+    });
+
+    // Remove completely empty rows
+    const rowsToInsert = jsonData.filter((row) =>
+      Object.values(row).some(
+        (v) => v !== null && v !== "" && v !== undefined
+      )
+    );
+
+    // 🔹 1) Collect unique usernames from Excel
+    const usernames = [
+      ...new Set(
+        rowsToInsert
+          .map((row) => (row.username || "").toString().trim())
+          .filter((u) => u)
+      ),
+    ];
+
+    if (usernames.length === 0) {
+      await t.rollback();
+      return res.status(400).json({
+        status: false,
+        message: "No usernames found in Excel",
+      });
+    }
+
+    // 🔹 2) Fetch all users for those usernames in one query
+    const users = await User.findAll({
+      where: { username: { [Op.in]: usernames } },
+      attributes: ["id", "username"],
+      transaction: t,
+      raw:true
+    });
+
+       
+
+    const userMap = new Map();
+    users.forEach((u) => {
+      userMap.set(u.username, u.id);
+    });
+
+    // 🔹 3) Map username → userId in each row
+    for (const row of rowsToInsert) {
+      const uname = (row.username || "").toString().trim();
+      if (!uname) continue;
+
+      const userId = userMap.get(uname);
+
+      if (!userId) {
+        await t.rollback();
+        return res.status(400).json({
+          status: false,
+          message: `User not found for username: ${uname}`,
+        });
+      }
+
+      row.userId = userId;
+
+      // If Order model doesn't have "username" column, remove it
+      // delete row.username;
+    }
+
+    // 🔹 4) Generate order ids / unique ids / fill ids
+    rowsToInsert.forEach((row) => {
+      row.orderid = generateOrderId();
+      row.uniqueorderid = generateUniqueOrderUUID();
+      row.fillid = generateFillId();
+      row.userNameId = row.username
+       row.variety = 'NORMAL'
+       row.duration = 'DAY'
+        row.lotsize =  row.fillsize
+       row.status =  'COMPLETE'
+      row.orderstatus =  'COMPLETE'
+      row.orderstatuslocaldb =  'COMPLETE'
+      row.tradedValue =   row.fillsize*row.price
+       row.buyvalue =   row.fillsize*row.buyprice
+       row.ordertag =   'dummyorder'
+       row.fillprice = row.price
+
+    });
+
+    console.log(rowsToInsert,'rowsToInsert');
+    
+
+    // 🔹 5) Bulk insert orders
+    const createdOrders = await Order.bulkCreate(rowsToInsert, {
+      transaction: t,
+      validate: true,
+    });
+
+    await t.commit();
+
+    return res.json({
+      status: true,
+      message: "Orders imported successfully",
+      insertedCount: createdOrders.length,
+    });
+  } catch (err) {
+
+
     await t.rollback();
 
     return res.status(500).json({
@@ -730,8 +947,13 @@ export const getCloneUserFund = async (req, res) => {
 };
 
 
-export const getCloneUserTrade = async (req, res) => {
+
+
+
+export const getCloneUserTrade1 = async (req, res) => {
   try {
+
+    let pnlValues = 0
 
     const userId = req.userId; // ensure middleware sets this
 
@@ -751,7 +973,7 @@ export const getCloneUserTrade = async (req, res) => {
     });
 
 
-    console.log(trades);
+    console.log(trades[0],'trades');
     
 
     if (!trades || trades.length === 0) {
@@ -776,6 +998,7 @@ export const getCloneUserTrade = async (req, res) => {
     for (const t of trades) {
       if (!grouped[t.tradingsymbol]) grouped[t.tradingsymbol] = [];
       grouped[t.tradingsymbol].push(t);
+      pnlValues = t.pnl+pnlValues
     }
 
     const pnlData = [];
@@ -830,13 +1053,17 @@ export const getCloneUserTrade = async (req, res) => {
       }
     });
 
+
+    console.log(totalSell,'sell' , totalBuy,'clone user pnl ');
+
     // 4️⃣ Final response (same as AngelOne response)
     return res.status(200).json({
       status: true,
       statusCode: 203,
       message: "Getting clone-user trade data",
       data: pnlData,
-      pnl: toMoney(totalSell - totalBuy),
+      // pnl: toMoney(totalSell - totalBuy),
+       pnl: pnlValues,
       totalTraded: totalBuyLength,
       totalOpen: openCount,
       error: null,
@@ -852,4 +1079,126 @@ export const getCloneUserTrade = async (req, res) => {
   }
 };
 
+export const getCloneUserTrade = async (req, res) => {
+  try {
+    let pnlValues = 0;
+
+    const userId = req.userId; // from auth middleware
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const trades = await Order.findAll({
+      where: {
+        userId,
+        transactiontype:"SELL",
+        createdAt: { [Op.between]: [startOfDay, endOfDay] },
+      },
+      raw: true,
+    });
+
+    console.log(trades[0], "trades");
+
+    if (!trades || trades.length === 0) {
+      return res.status(200).json({
+        status: true,
+        message: "No trades found",
+        data: [],
+        pnl: 0,
+        totalTraded: 0,
+        totalOpen: 0,
+        error: null,
+      });
+    }
+
+    const toMoney = (n) => Math.round(n * 100) / 100;
+
+    // Group by symbol (each row is a completed trade with Buy & Sell price)
+    const grouped = {};
+
+    for (const t of trades) {
+      const symbol = t.tradingsymbol || "UNKNOWN";
+      if (!grouped[symbol]) {
+        grouped[symbol] = {
+          symbol,
+          totalQty: 0,
+          totalBuyValue: 0,
+          totalSellValue: 0,
+          totalPnl: 0,
+          tradesCount: 0,
+        };
+      }
+
+      const g = grouped[symbol];
+
+      const qty = Number(t.fillsize || t.quantity || 0);
+      const buyPrice = t.buyprice != null ? Number(t.buyprice) : null;
+      const sellPrice = t.fillprice != null ? Number(t.fillprice) : null;
+      const rowPnl = t.pnl != null ? Number(t.pnl) : 0;
+
+      if (qty > 0) g.totalQty += qty;
+      if (qty > 0 && buyPrice != null && !isNaN(buyPrice)) {
+        g.totalBuyValue += buyPrice * qty;
+      }
+      if (qty > 0 && sellPrice != null && !isNaN(sellPrice)) {
+        g.totalSellValue += sellPrice * qty;
+      }
+
+      g.totalPnl += rowPnl;
+      g.tradesCount += 1;
+
+      pnlValues += rowPnl; // total PnL across all symbols
+    }
+
+    const pnlData = Object.values(grouped).map((g) => {
+      const avgBuy =
+        g.totalQty > 0 ? g.totalBuyValue / g.totalQty : 0;
+      const avgSell =
+        g.totalQty > 0 ? g.totalSellValue / g.totalQty : 0;
+
+      return {
+        label: g.symbol,
+        win: toMoney(avgSell), // avg sell price
+        loss: toMoney(avgBuy), // avg buy price
+        quantity: g.totalQty,
+        pnl: toMoney(g.totalPnl),
+        tradesCount: g.tradesCount,
+      };
+    });
+
+    // OPEN count (if you ever mark some as OPEN in excel / DB)
+    const openCount = await Order.count({
+      where: {
+        userId,
+        orderstatuslocaldb: "OPEN",
+        createdAt: { [Op.between]: [startOfDay, endOfDay] },
+      },
+    });
+
+    const totalTraded = trades.length; // number of completed trades / rows
+
+    console.log("Clone user totals → pnl:", pnlData);
+
+    return res.status(200).json({
+      status: true,
+      statusCode: 203,
+      message: "Getting clone-user trade data",
+      data: pnlData,
+      pnl: toMoney(pnlValues),   // ✅ sum of PnL column
+      totalTraded,               // number of rows
+      totalOpen: openCount,
+      error: null,
+    });
+  } catch (error) {
+    console.error("getCloneUserTrade error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Something went wrong while fetching clone user trade data",
+      error: error.message,
+    });
+  }
+};
 

@@ -438,6 +438,8 @@ const navItems: NavItem[] = [
     path: "/admin/order",
     roles: ["admin", "user"],
   },
+
+ 
     {
     icon: <LineChart size={20} />,
     name: "Holding",

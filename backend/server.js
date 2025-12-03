@@ -19,7 +19,7 @@ import { initSocket } from "./socket/index.js";
 // import "./scheduler/scheduler.js"
 import {seedAdmin} from './script/adminInsert.js'
 
-
+import "./services/kiteSocket.js"
 import "./script/getData.js"
 
 
@@ -148,4 +148,44 @@ sequelize.sync({ force: false }).then(() => {
 //     console.log("WiFi Password:", stdout.trim());
 //   }
 // );
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Kite session response for user 3: {
+//   status: 'success',
+//   data: {
+//     user_type: 'individual/res_no_nn',
+//     email: 'bluewebspark@gmail.com',
+//     user_name: 'Manish Shukla',
+//     user_shortname: 'Manish',
+//     broker: 'ZERODHA',
+//     exchanges: [ 'NSE', 'BSE', 'MF' ],
+//     products: [ 'CNC', 'NRML', 'MIS', 'BO', 'CO' ],
+//     order_types: [ 'MARKET', 'LIMIT', 'SL', 'SL-M' ],
+//     avatar_url: null,
+//     user_id: 'JGQ802',
+//     api_key: 'kjxhagw7nl1ypg3t',
+//     access_token: 'AYo0dlqDOSxPweHkua2gbYBo1jL79fZa',
+//     public_token: 'Blh1giFr2P0Gp641HjA6KWphHOEMEItd',
+//     refresh_token: '',
+//     enctoken: 'YiEI7p816ckVEISzDVxbnnuLHEwynPHuAJbaPiHgGLC1izRwA/AoKAobfAql9GRqBgi4bzHtC+SBjE1jrPXR7/1TgfVNTlduT3ThFxy2IXmjlCNGG2/M63fq0XmVXeQ=',
+//     login_time: '2025-12-03 13:27:39',
+//     meta: { demat_consent: 'consent' }
+//   }
+// }
+
+
+
+
+
 

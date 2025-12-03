@@ -143,6 +143,10 @@ export default function MonthlyTarget() {
 
       const {data} = await axios.get(`${apiUrl}/admin/tokenstatussummary`);
 
+      console.log(data);
+      
+
+      setActiveUsersList(data.generatedUsers)
       setSeries([data.generatedCount, data.notGeneratedCount]);
       setGeneratedUsers(data.generatedUsers);
       setNotGeneratedUsers(data.notGeneratedUsers);
@@ -165,7 +169,8 @@ export default function MonthlyTarget() {
             setActiveUsersList(generatedUsers);
             setActiveLabel("Token Generated Users");
           } else {
-            setActiveUsersList(notGeneratedUsers);
+            // setActiveUsersList(notGeneratedUsers);
+              setActiveUsersList(generatedUsers);
             setActiveLabel("Token Not Generated Users");
           }
 

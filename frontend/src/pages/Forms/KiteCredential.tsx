@@ -15,6 +15,9 @@ const KiteCrendential: FC = () => {
   const [clientId, setClientId] = useState("");
   const [totpSecret, setTotpSecret] = useState("");
 
+  const [pin, setPin] = useState("");
+  const [apiKey, setApiKey] = useState("");
+
 
   // 👁️ Toggles
   const [showTotp, setShowTotp] = useState(false);
@@ -25,10 +28,15 @@ const KiteCrendential: FC = () => {
 
     try {
             let reqData = {
-                clientId:clientId,
+                clientId:apiKey,
                 totpSecret:totpSecret,
+                apiKey:clientId,
+                pin:pin
                 
             }
+
+           
+            
 
             let res = await axios.post(`${apiUrl}/kite/appcredential/create`, reqData, {
                     headers: {
@@ -61,7 +69,61 @@ const KiteCrendential: FC = () => {
         </h2>
 
         <form className="mt-4 space-y-4 lg:mt-5 md:space-y-5" onSubmit={handleSubmit}>
+
+         
+
+
           {/* Client Id */}
+               <div>
+            <Label
+              htmlFor="client-id"
+              className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+            >
+              Kite Client Id  <span className="text-error-500">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                type="text"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                name="client-id"
+                id="client-id"
+                placeholder="e.g. ABC123"
+                required
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
+                  focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 
+                  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white 
+                  dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+            {/* Pin */}
+               <div>
+            <Label
+              htmlFor="pin"
+              className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+            >
+              Kite Password  <span className="text-error-500">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                type="text"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                name="pin"
+                id="pin"
+                placeholder="e.g. *****"
+                required
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
+                  focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 
+                  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white 
+                  dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+
           <div>
             <Label
               htmlFor="client-id"
@@ -120,6 +182,9 @@ const KiteCrendential: FC = () => {
               </span>
             </div>
           </div>
+
+
+        
 
          
           <Button

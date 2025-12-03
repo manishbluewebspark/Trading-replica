@@ -194,6 +194,8 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
           orderstatuslocaldb: "FAILED",
           status: "FAILED",
           text: msg,
+          //  filltime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+            buyTime:new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
         });
 
         return {
@@ -312,7 +314,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       buyPrice = buyOrder?.fillprice || 0;
       buySize = buyOrder?.fillsize || 0;
       buyValue = buyOrder?.tradedValue || 0;
-      buyTime = buyOrder?.filltime
+      buyTime = buyOrder?.filltime ||0
     }
 
     if (tradeForThisOrder) {

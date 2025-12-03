@@ -75,7 +75,10 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
 
     if (placeRes.data?.status !== true) {
 
-      await newOrder.update({ orderstatuslocaldb: "FAILED",status:'FAILED',text:'Order rejected by AngelOne' });
+      await newOrder.update({ orderstatuslocaldb: "FAILED",status:'FAILED',text:'Order rejected by AngelOne',
+        //  filltime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+         buyTime:new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+       });
       return {
         userId: user.id,
         broker: "AngelOne",
@@ -200,7 +203,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
         const buyPrice  = buyOrder?.fillprice     || 0;
         const buySize   = buyOrder?.fillsize      || 0;
         const buyValue  = buyOrder?.tradedValue   || 0;
-        let buyTime  = buyOrder?.filltime
+        let buyTime  = buyOrder?.filltime ||0
 
         let pnl = (matched?.fillsize*matched?.fillprice)-(buyPrice*buySize)
        

@@ -19,7 +19,7 @@ const GROWW_CLIENT_ID = process.env.GROWW_CLIENT_ID;
 const GROWW_CLIENT_SECRET = process.env.GROWW_CLIENT_SECRET;
 const GROWW_REDIRECT_URI = process.env.GROWW_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL;
-
+import logger from "../common/logger.js";
 
 
 // ===================== auth controller start ================================
@@ -84,6 +84,7 @@ export const register = async (req, res) => {
 const { firstName, lastName,mob, isChecked,broker } = req.body;
 const email = (req.body.email || "").trim();
 const password = (req.body.password || "").trim();
+
 
   try {
     

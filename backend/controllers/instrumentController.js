@@ -3,10 +3,13 @@ import axios from 'axios';
 import sequelize from "../config/db.js"; // ✅ your Sequelize instance
 import { QueryTypes } from "sequelize";
 import redis from "../utils/redis.js";  // your redis client
+import { KiteAccess } from '../utils/kiteClient.js';
 
 
 
 export const getInstrumentPostgre = async (req, res) => {
+
+
   try {
     const startTime = Date.now();
     const REDIS_KEY = "angelone_scrip_master";
@@ -16,13 +19,13 @@ export const getInstrumentPostgre = async (req, res) => {
     // ===========================================
     const cachedData = await redis.get(REDIS_KEY);
 
+
+
+
     if (cachedData) {
       console.log("📦 Data served from Redis");
 
-       const endTime = Date.now();
-    console.log(
-      `Fetched AngelOne ScripMaster LIVE API in ${(endTime - startTime) / 1000}s`
-    );
+      
 
       return res.json({
         status: true,
@@ -44,6 +47,9 @@ export const getInstrumentPostgre = async (req, res) => {
     });
 
     const data = response.data || [];
+
+    console.log(data,1000)
+    
 
     // ===========================================
     // 💾 3. Store in Redis (Expires in 10 hours)
@@ -74,6 +80,123 @@ export const getInstrumentPostgre = async (req, res) => {
     });
   }
 };
+
+export const getMergedInstruments = async (req, res) => {
+
+  const MERGED_REDIS_KEY = "merged_instruments";
+
+  const TEN_HOURS_IN_SECONDS = 36000;
+
+    // await redis.del(MERGED_REDIS_KEY)
+
+    // console.log('delete redis cache data');
+    
+
+  try {
+    const startTime = Date.now();
+
+    // ===========================================
+    // 1️⃣ Check Redis Cache First
+    // ===========================================
+    const cachedData = await redis.get(MERGED_REDIS_KEY);
+
+    // console.log(cachedData,'cachedData');
+    
+
+    if (cachedData) {
+      console.log("📦 Merged instruments served from Redis cache");
+      const endTime = Date.now();
+      console.log(`✅ Cache hit. Data served in ${(endTime - startTime) / 1000}s`);
+
+      return res.json({
+        status: true,
+        statusCode: 200,
+        data: JSON.parse(cachedData),
+        cache: true,
+        message: "Merged instruments fetched from Redis cache",
+      });
+    }
+
+
+      const apiKey = process.env.KITE_API_KEY;
+        const kite = KiteAccess(apiKey);
+
+    // ===========================================
+    // 1️⃣ Fetch fresh data from both APIs
+    // ===========================================
+    const [angeloneResponse, kiteResponse] = await Promise.all([
+      axios.get(
+        "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
+        { timeout: 120000 }
+      ),
+      kite.getInstruments(), // Assuming `kite` is initialized
+    ]);
+
+    const angeloneData = angeloneResponse.data || [];
+    const kiteData = kiteResponse || [];
+
+    console.log(angeloneData[0],'angelone');
+    console.log(kiteData[0],'kite');
+    
+
+    // ===========================================
+    // 2️⃣ Merge Data: Add Kite's tradingsymbol to AngelOne
+    // ===========================================
+    const mergedData = angeloneData.map((angelRecord) => {
+      // Find matching Kite record using `exchange_token` (Kite) and `token` (AngelOne)
+      const matchingKiteRecord = kiteData.find(
+        (kiteRecord) => String(kiteRecord.exchange_token) === String(angelRecord.token)
+      );
+      
+
+      // If match found, add `kite_tradingsymbol` to AngelOne record
+      if (matchingKiteRecord) {
+        return {
+          ...angelRecord,
+          kite_tradingsymbol: matchingKiteRecord.tradingsymbol,
+        };
+      }
+      return angelRecord; // Return original if no match
+    });
+
+    // ===========================================
+    // 3️⃣ Cache merged data in Redis
+    // ===========================================
+    await redis.set(
+      MERGED_REDIS_KEY,
+      JSON.stringify(mergedData),
+      "EX",
+      TEN_HOURS_IN_SECONDS
+    );
+
+    const endTime = Date.now();
+    console.log(`✅ Merged data fetched and cached in ${(endTime - startTime) / 1000}s`);
+
+    // ===========================================
+    // 4️⃣ Send response
+    // ===========================================
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: mergedData,
+      cache: false, // Since we fetched fresh data
+      message: "Merged instruments fetched, merged, and cached in Redis",
+    });
+
+  } catch (error) {
+    console.error("❌ Error in getMergedInstruments:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+
+};
+
+
 
 // export const getInstrumentPostgre = async (req, res) => {
 //   try {

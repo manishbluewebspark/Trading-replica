@@ -1,0 +1,27 @@
+# pip install kiteconnect
+
+from kiteconnect import KiteConnect
+
+api_key = "xx"
+api_secret = "xx"
+access_token = "xx"
+
+kite = KiteConnect(api_key=api_key)
+kite.set_access_token(access_token)
+
+# Place AMO order for SBIN
+try:
+    order_id = kite.place_order(
+        variety="amo",                # AMO Order (lowercase)
+        exchange="NFO",               # National Stock Exchange
+        tradingsymbol="BANKNIFTY26JAN59200PE",         # Stock symbol
+        transaction_type="BUY",       # BUY or SELL
+        quantity=30,                 # Number of shares
+        product="NRML",                # Cash and Carry (delivery)
+        order_type="LIMIT",
+        price="692",          # Market order
+        validity="DAY"                # Required for AMO orders
+    )
+    print(f"AMO order placed for SBIN. Order ID: {order_id}")
+except Exception as e:
+    print(f"Error placing order: {e}")

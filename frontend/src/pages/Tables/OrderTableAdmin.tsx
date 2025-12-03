@@ -300,38 +300,40 @@ export default function OrderTableAdmin() {
   //     }
 
 
-const handleSellClick = async(item: any) => {
+const handleSellClick = async (item: any) => {
+  if (!item || !item.orderid) {
+    alert("Order ID not found");
+    return;
+  }
 
-  const confirmSell = window.confirm("Do you want to SELL this order?");
+  const confirmSell = window.confirm(
+    `Do you want to SELL this order?\nOrder ID: ${item.orderid}`
+  );
 
-  if (!confirmSell) return; // ❌ User clicked No   
+  if (!confirmSell) return;
 
-      const payload = {
-      exchange: item.exchange,
-      tradingsymbol: item.tradingsymbol,
-      symboltoken:item.symboltoken,
-    };
+  try {
+    // 🔥 Your backend API call
+    const res = await axios.post(
+      `${apiUrl}/admin/single/squareoff`,
+      { orderId: item.orderid },   // 👈 sending this to backend
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
 
-     const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-                "AngelOneToken": localStorage.getItem("angel_token") || "",
-            },
-          });
-
-           if(res?.data?.status==true) {
-
-            item.totalPrice = res?.data?.data.data.ltp*item.quantity
-            setOnlyPrice(res?.data?.data.data.ltp)
-            setSlotSIze(item.quantity)  
-            setSelectedItem({...item});
-           setShowFormUpdate(true)
-
-           }else{
-
-            toast.error(res?.data?.message || "Something went wrong");
-           }
+    if (res.data.status) {
+      toast.success(`Order ${item.orderid} squared off successfully`);
+    } else {
+      toast.error(res.data.message || "Failed to square off");
     }
+  } catch (err: any) {
+    console.error(err);
+    toast.error(err?.message || "Something went wrong");
+  }
+};
 
 
 
@@ -577,6 +579,7 @@ useEffect(() => {
                   "ordertype",
                   "ProductType",
                   "Price",
+                    "LTP",
                     "PnL",
                       "OrderQty",
                   //  "Time",
@@ -669,12 +672,15 @@ useEffect(() => {
                      <td style={td}>{o.transactiontype}</td>
                      <td style={td}>{o.ordertype}</td>
                       <td style={td}>{o.producttype}</td>
-                       <td style={td}>{o.fillprice}</td>
+                       <td style={td}>{o.price}</td>
+                         <td style={td}>{live}</td>
+
+                       
                       
-                       <td style={td}> {live !== undefined? ((  live-Number(o.fillprice)) * Number(o.fillsize)).toFixed(2) : "—"} </td>
+                       <td style={td}> {live !== undefined? ((  live-Number(o.price)) * Number(o.quantity)).toFixed(2) : "—"} </td>
                    {/* <td style={{ ...td, fontWeight: 600 }}> {Number(live)*Number(o.quantity)} </td> */}
-                    <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}> {o.fillsize} </td>
-                     <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}> {o.fillsize} </td>
+                    <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}> {o.quantity} </td>
+                     <td style={td} title={`Filled: ${o.filledshares} / Unfilled: ${o.unfilledshares}`}> {o.quantity} </td>
                       <td style={td}>{o.orderid}</td>
                         <td style={td}>{o.fillid}</td>
                 

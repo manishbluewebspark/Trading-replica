@@ -9,8 +9,8 @@ import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, upda
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import { adminMultipleSquareOff, adminPlaceMultiBrokerOrder, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
-import { createManualOrder } from '../../controllers/admin/orderManualController.js';
+import { adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 
 
 
@@ -22,6 +22,9 @@ router.get('/tokenstatussummary',getTokenStatusSummary)
 
 router.post('/multiple/place/order',authMiddleware,adminPlaceMultiBrokerOrder)
 router.get('/sequareoff',authMiddleware,adminMultipleSquareOff)
+router.post("/single/squareoff", authMiddleware, adminSingleSquareOff);
+
+
 router.get('/login/users',AdminLoginMultipleUser)
 router.get('/store/session',storeTokens)
 router.get('/get/session',getTokens)
@@ -65,7 +68,38 @@ router.post(
   upload.single("file"),
   uploadOrderExcel
 );
-router.post("/manual/create",authMiddleware, createManualOrder);
+router.post("/manual/create",
+  authMiddleware, 
+  async (req, res, next) => {
+    try {
+      const { buyPrice, sellPrice, buyTime, sellTime } = req.body;
+
+      // helper to check "empty"
+      const isEmpty = (v) =>
+        v === undefined || v === null || v === "";
+
+      const allFourEmpty =
+        isEmpty(buyPrice) &&
+        isEmpty(sellPrice) &&
+        isEmpty(buyTime) &&
+        isEmpty(sellTime);
+
+      if (allFourEmpty) {
+        // ✅ All 4 empty → use broker price controller
+        return createManualOrderWithBrokerPrice(req, res, next);
+      } else {
+        // ✅ At least one present → use normal manual order controller
+        return createManualOrder(req, res, next);
+      }
+    } catch (err) {
+      return res.json({
+      status: false,
+      statusCode:500,
+      message: err.message || "Internal Server Error",
+    });
+    }
+  }
+);
 
 
 //  clone user routes

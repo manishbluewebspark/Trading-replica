@@ -67,6 +67,11 @@ angelLoginUser:{
   type: DataTypes.BOOLEAN,
   allowNull: true,
 },
+angelLoginExpiry: {
+  type: DataTypes.DATE,
+  allowNull: true,
+  comment: "Expiry time for AngelOne login (auto logout after 10 hours)",
+},
 DematFund: {
   type: DataTypes.DECIMAL(10, 2), // 10 digits total, 2 decimals
   defaultValue: 0,
@@ -124,6 +129,15 @@ kite_secret:{
    type: DataTypes.STRING,
     allowNull: true
 },
+kite_pin:{
+   type: DataTypes.STRING,
+    allowNull: true
+},
+kite_client_id:{
+   type: DataTypes.STRING,
+    allowNull: true
+},
+
 
 }, {
   tableName: 'users',

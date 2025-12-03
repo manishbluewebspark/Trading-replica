@@ -1,11 +1,11 @@
 import express from 'express';
 import {  authMiddleware } from '../middleware/authMiddleware.js';
-import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getCloneUserHolding, getHoldingDataInAngelOne, getPerticularTradeBook, getPosition,
+import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getAngelTradeBooks, getCloneUserHolding, getHoldingDataInAngelOne, getPerticularTradeBook, getPosition,
    getTradeBook,
    getTradeDataForDeshboard, loginWithAngelOne, loginWithTOTPInAngelOne, logoutAngelOne,
     reGenerateTokenWithAngelOne } from '../controllers/angelController.js';
 import { createAngelOneCredential, getAngelOneCredential } from '../controllers/angelOneCrendential.js';
-import {  getInstrumentPostgre, searchInstrumentPostgre } from '../controllers/instrumentController.js';
+import {  getInstrumentPostgre, getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
 
 
 
@@ -38,7 +38,7 @@ router.get('/angelone/get/holdingdata',
 
 router.post('/agnelone/instrument/ltp',authMiddleware,getAngelOneLTP)
 
-router.get('/agnelone/instrument',getInstrumentPostgre)
+router.get('/agnelone/instrument',getMergedInstruments )
 router.get('/agnelone/instrument/search/:id',authMiddleware,searchInstrumentPostgre)
 
 
@@ -74,6 +74,11 @@ router.get('/angelone/get/order',getAngelOneOrder);
 router.get('/angelone/get/trade/book',getTradeBook)
 router.get('/perticular/trade/book',getPerticularTradeBook)
 // router.post('/gettradedatawithfilter/book',authMiddleware,getTradeBookWithDateFilter)
+
+
+
+// ===================== Angelone Apis  =====================
+router.get('/angelone/online/trade/books',authMiddleware,getAngelTradeBooks)
 
 
 export default router;

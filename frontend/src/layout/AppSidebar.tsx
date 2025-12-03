@@ -57,7 +57,12 @@ const navItems: NavItem[] = [
     path: "/currentposition",
     roles: ["admin", "user"],
   },
-
+  {
+    icon: <FaArrowTrendUp size={20} />,
+   name: "User Position",
+    path: "/userposition",
+    roles: ["admin", "user"],
+  },
    {
     icon: <FaHandHoldingUsd size={20} />,
     name: "Holding",

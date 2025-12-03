@@ -7,6 +7,22 @@ import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 import redis from "../utils/redis.js";  // your redis client
 
 
+
+async function Abc () {
+   // 1️⃣ Get all Kite users as RAW objects
+    const kiteUsers = await User.findAll({
+      where: { brokerName: "kite" },
+      raw: true, // 👈 plain JS objects, no instance methods
+      // attributes: ["id", "email", "kite_key", "kite_secret"]  // optional
+    });
+
+    console.log(kiteUsers);
+    
+}
+
+
+// Abc()
+
 export const getKiteAllInstruments = async (req, res) => {
   const REDIS_KEY = "kite_all_instruments";
   const TEN_HOURS_IN_SECONDS = 10 * 60 * 60; // 36000
@@ -109,7 +125,10 @@ export const kiteAppCredential = async (req, res) => {
 
     const userId = req.userId; // set by auth middleware
     
-    const { clientId, totpSecret } = req.body;
+    const { clientId, totpSecret,pin,apiKey } = req.body;
+
+    console.log(req.body);
+    
 
     // 1️⃣ Basic validation
     if (!userId) {
@@ -143,7 +162,9 @@ export const kiteAppCredential = async (req, res) => {
     }
 
     // 3️⃣ Update fields in User table
-    user.kite_key = clientId;
+    user.kite_pin = pin;
+    user.kite_client_id = clientId;
+    user.kite_key = apiKey;
     user.kite_secret = totpSecret; // if you want, you can encrypt this before saving
 
     await user.save();
@@ -262,6 +283,10 @@ export const kiteCallback = async (req, res) => {
       // attributes: ["id", "email", "kite_key", "kite_secret"]  // optional
     });
 
+
+    console.log(kiteUsers,'kiteUsers');
+    
+
     if (!kiteUsers || kiteUsers.length === 0) {
       return res.redirect(
         `${process.env.FRONTEND_URL}/kite-login-failed?error=${encodeURIComponent(
@@ -269,6 +294,9 @@ export const kiteCallback = async (req, res) => {
         )}`
       );
     }
+
+      console.log('kiteUsers done');
+
 
     // 2️⃣ Try each user one by one until session/token returns success
     for (const user of kiteUsers) {
@@ -309,6 +337,8 @@ export const kiteCallback = async (req, res) => {
           await User.update(
             {
               authToken: session.access_token,
+              angelLoginUser:true,
+              angelLoginExpiry: new Date(Date.now() + 10 * 60 * 60 * 1000), // 10 hours
               feedToken: session.public_token,
               refreshToken: session.enctoken, // may be undefined, that's fine
             },
@@ -533,6 +563,7 @@ export const getTradeDataForKiteDeshboard = async function (req, res, next) {
       broker: "Kite",
       message: "Kite tradebook fetched",
       data: pnlData,
+      onlineTrades:trades,
       pnl: totalSell - totalBuy,
       totalTraded: totalBuyLength,
       totalOpen: openCount,
@@ -795,7 +826,116 @@ export const placeKiteAllOrders = async (req, res) => {
   }
 };
 
+export const getKiteTrades = async (req, res) => {
+  try {
 
+   
+      const token = 'UqClhhd53tRS1kNGF4zDZsJhNwTcPpUi';
+
+    if (!token) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Kite access token missing in header (angelonetoken)",
+        error: null,
+      });
+    }
+
+    const  kite  = await getKiteClientForUserId(14)
+    //  const  kite  = await getKiteClientForUserId(13)
+
+    const orders = await kite.getOrderTrades("251203220916351");
+
+    console.log(orders);
+    
+
+    // const ordersWithTrades = await Promise.all(
+    //   orders.map(async (order) => {
+    //     let trades = [];
+    //     try {
+    //       trades = await kite.getOrderTrades(order.order_id);
+    //     } catch (err) {
+    //       console.log(
+    //         `Failed to fetch trades for ${order.order_id}`,
+    //         err.message
+    //       );
+    //     }
+    //     return { ...order, trades };
+    //   })
+    // );
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: orders,
+      message: "Successfully fetched orders with trades",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+export const getKiteOrders = async (req, res) => {
+  try {
+
+   
+      const token = 'UqClhhd53tRS1kNGF4zDZsJhNwTcPpUi';
+
+    if (!token) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Kite access token missing in header (angelonetoken)",
+        error: null,
+      });
+    }
+
+    const  kite  = await getKiteClientForUserId(14)
+
+  //  const orders = await kite.getOrders();
+
+    const orders = await kite.getOrderTrades("251203220916351");
+
+    console.log(orders);
+    
+
+    // const ordersWithTrades = await Promise.all(
+    //   orders.map(async (order) => {
+    //     let trades = [];
+    //     try {
+    //       trades = await kite.getOrderTrades(order.order_id);
+    //     } catch (err) {
+    //       console.log(
+    //         `Failed to fetch trades for ${order.order_id}`,
+    //         err.message
+    //       );
+    //     }
+    //     return { ...order, trades };
+    //   })
+    // );
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: orders,
+      message: "Successfully fetched orders with trades",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
 
 
 

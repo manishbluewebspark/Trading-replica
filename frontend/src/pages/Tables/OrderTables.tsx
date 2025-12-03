@@ -55,6 +55,11 @@ type Order = {
   buyprice: any;
   pnl: any;
   updatedAt: any;
+
+  // 👇 extra fields you’re using in columnDefs
+  buyTime?: string;
+  sellTime?: string;
+
 };
 
 const { RangePicker } = DatePicker;
@@ -224,17 +229,17 @@ export default function OrderTables() {
       instrumenttype: "Instrument",
       orderid: "OrderID",
       tradingsymbol: "Symbol",
-      optiontype: "OrderType",
+      ordertype: "OrderType",
       producttype: "ProductType",
       buyprice: "Buy Price",
-      price: "Sell Price",
+      fillprice: "Sell Price",
       pnl: "PnL",
       quantity: "OrderQty",
       fillsize: "TradedQty",
       status: "Status",
       text: "Message",
-      createdAt: "DateCreated",
-      updatedAt: "DateUpdated",
+      buyTime: "Buy Time",
+      filltime: "Sell Time",
     };
 
     const formattedOrders = convertHeaders(orders, headerMapping);
@@ -471,8 +476,8 @@ const pnlCellRenderer = (params: any) => {
       field: "buyTime",
       filter: true,
       sortable: true,
-            width: 120,
-      minWidth: 120,
+      width: 300,
+      minWidth: 250,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
     {
@@ -480,9 +485,9 @@ const pnlCellRenderer = (params: any) => {
       field: "filltime",
       filter: true,
       sortable: true,
-        width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
+      width: 300,
+      minWidth: 250,
+      cellStyle: { borderRight: '1px solid #1a2533ff' }
     },
     {
       headerName: "Message",

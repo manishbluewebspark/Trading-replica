@@ -957,23 +957,56 @@ export const getOrderInTables = async (req, res,next) => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-
-  const orderData = await Order.findAll({
-      where: {
-        userId:req.userId,
-         transactiontype:"SELL",
-          status:"COMPLETE",
-         createdAt: {
-      [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
-    },
-      },
-      order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
-      raw: true,
-    });
-
-
-    console.log(orderData,'order data');
     
+    // const orderData = await Order.findAll({
+    //   where: {
+    //     userId:req.userId,
+    //     fillid: {
+    //   [Op.ne]: null,      // 👈 fillid present (NOT NULL)
+    // },
+    //       orderstatuslocaldb: {
+    //   [Op.in]: ["FAILED","REJECTED","COMPLETE"]},   // 👈 fetch both
+    //      createdAt: {
+    //   [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
+    // },
+    //   },
+    //   order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
+    //   raw: true,
+    // });
+
+const orderData = await Order.findAll({
+  where: {
+    userId: req.userId,
+
+    createdAt: {
+      [Op.between]: [startOfDay, endOfDay],
+    },
+
+    [Op.or]: [
+      // 1️⃣ FAILED + REJECTED → BUY + SELL dono aayenge
+      {
+        orderstatuslocaldb: {
+          [Op.in]: ["FAILED", "REJECTED"],
+        },
+      },
+
+      // 2️⃣ COMPLETE → sirf SELL + fillid present
+      {
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+        fillid: {
+          [Op.and]: [
+            { [Op.ne]: null },
+            { [Op.ne]: "" },
+          ],
+        },
+      },
+    ],
+  },
+
+  order: [["createdAt", "DESC"]],
+  raw: true,
+});
 
 
     const buyCount = await Order.count({
@@ -990,6 +1023,8 @@ export const getOrderInTables = async (req, res,next) => {
    const formatted = orderData.map(o => ({
   ...o,
   createdAt: dayjs(o.createdAt).format("DD MMMM YYYY [at] hh:mm a"),
+  filltime: dayjs(o.filltime).format("DD MMMM YYYY [at] hh:mm a"),
+  buyTime: dayjs(o.buyTime).format("DD MMMM YYYY [at] hh:mm a"),
   updatedAt: dayjs(o.updatedAt).format("DD MMMM YYYY [at] hh:mm a"),
 }));
     
@@ -1000,6 +1035,12 @@ export const getOrderInTables = async (req, res,next) => {
           buydata:buyCount,
           message:'get data'
       });
+
+
+       
+   
+
+
     
     
     } catch (error) {
@@ -1032,7 +1073,7 @@ export const adminGetOrderInTables = async (req, res,next) => {
       where: {
         // userId:req.headers.userid,
       orderstatuslocaldb: {
-      [Op.in]: ["OPEN", "FAILED"],   // 👈 fetch both
+      [Op.in]: ["OPEN"],   // 👈 fetch both
     },
       createdAt: {
       [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
@@ -1093,17 +1134,52 @@ export const adminGetTradeInTables = async (req, res,next) => {
     endOfDay.setHours(23, 59, 59, 999);
 
 
+  // const orderData = await Order.findAll({
+  //     where: {
+  //       // userId:req.headers.userid,
+  //        transactiontype:"SELL",
+  //        createdAt: {
+  //     [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
+  //   },
+  //     },
+  //     order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
+  //     raw: true,
+  //   });
+
+
   const orderData = await Order.findAll({
-      where: {
-        // userId:req.headers.userid,
-         transactiontype:"SELL",
-         createdAt: {
-      [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data
+  where: {
+  
+
+    createdAt: {
+      [Op.between]: [startOfDay, endOfDay],
     },
+
+    [Op.or]: [
+      // 1️⃣ FAILED + REJECTED → BUY + SELL dono aayenge
+      {
+        orderstatuslocaldb: {
+          [Op.in]: ["FAILED", "REJECTED"],
+        },
       },
-      order: [['createdAt', 'DESC']], // 👈 sorts in descending order (latest first)
-      raw: true,
-    });
+
+      // 2️⃣ COMPLETE → sirf SELL + fillid present
+      {
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+        fillid: {
+          [Op.and]: [
+            { [Op.ne]: null },
+            { [Op.ne]: "" },
+          ],
+        },
+      },
+    ],
+  },
+
+  order: [["createdAt", "DESC"]],
+  raw: true,
+});
 
     const buyCount = await Order.count({
         where: {
@@ -1120,6 +1196,8 @@ export const adminGetTradeInTables = async (req, res,next) => {
   ...o,
   createdAt: dayjs(o.createdAt).format("DD MMMM YYYY [at] hh:mm a"),
   updatedAt: dayjs(o.updatedAt).format("DD MMMM YYYY [at] hh:mm a"),
+    filltime: dayjs(o.filltime).format("DD MMMM YYYY [at] hh:mm a"),
+  buyTime: dayjs(o.buyTime).format("DD MMMM YYYY [at] hh:mm a"),
 }));
     
      return res.json({
@@ -1156,7 +1234,7 @@ export const userGetTradeInTables = async (req, res,next) => {
       where: {
         userId:req.userId,
        orderstatuslocaldb: {
-            [Op.in]: ["OPEN", "FAILED"],   // 👈 fetch both
+            [Op.in]: ["OPEN"],   // 👈 fetch both
           },
          createdAt: {
       [Op.between]: [startOfDay, endOfDay], // 👈 Only today’s data

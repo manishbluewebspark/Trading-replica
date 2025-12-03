@@ -314,6 +314,27 @@ export default function TradeTable() {
       minWidth: 100,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+      {
+  headerName: "LTP",
+  field: "symboltoken",
+  cellRenderer: (params: any) => {
+    const order = params.data as Order;
+
+    const live = order.symboltoken
+      ? ltpByToken[order.symboltoken]
+      : undefined;
+
+    return (
+      <div className="py-2">
+          ₹{live}
+      </div>
+    );
+  },
+  width: 120,
+  minWidth: 100,
+  cellStyle: { borderRight: '1px solid #e2e8f0' }
+},
+
    {
   headerName: "PnL",
   field: "symboltoken",
@@ -456,8 +477,8 @@ export default function TradeTable() {
           </div>
         );
       },
-      width: 250,
-      minWidth: 200,
+      width: 700,
+      minWidth: 650,
       flex: 1
     }
   ], [ltpByToken]);
