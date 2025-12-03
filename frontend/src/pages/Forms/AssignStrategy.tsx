@@ -401,7 +401,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AgGridReact } from "ag-grid-react";
-import { Plus, Edit2, Trash2, Search, RefreshCw, X, Save } from "lucide-react";
+import { Plus, X, Save } from "lucide-react";
 
 
 import "ag-grid-community/styles/ag-grid.css";
@@ -516,6 +516,7 @@ const AssignStrategy: React.FC = () => {
   
   useEffect(() => {
     fetchStrategies();
+    setSearchTerm("")
   }, []);
   
   // CREATE Strategy

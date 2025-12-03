@@ -133,6 +133,9 @@ export default function MonthlyTarget() {
   const [activeUsersList, setActiveUsersList] = useState<any[]>([]);
   const [activeLabel, setActiveLabel] = useState("");
 
+  console.log(notGeneratedUsers);
+  
+
   // Fetch token stats from backend
   useEffect(() => {
     fetchTokenStatus();

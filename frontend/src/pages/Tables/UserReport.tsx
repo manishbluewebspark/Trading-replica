@@ -989,7 +989,8 @@ export default function UserReport() {
   }, [isGroupModalOpen, isPackageAssignModalOpen, creating]);
 
   const onGridReady = (params: any) => {
-    console.log("Grid ready");
+
+    console.log("Grid ready",params);
   };
 
   // Modal functions

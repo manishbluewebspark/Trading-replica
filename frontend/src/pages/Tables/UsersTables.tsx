@@ -1168,6 +1168,9 @@ export default function UsersTables() {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [menuDirection, setMenuDirection] = useState<"bottom" | "top">("bottom");
+
+  console.log(menuDirection);
+  
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const gridRef = useRef<AgGridReact>(null);
 
@@ -1647,7 +1650,7 @@ export default function UsersTables() {
 
 
 
-  const columnDefs: ColDef<User>[] = useMemo(() => [
+  const columnDefs: ColDef<any>[] = useMemo(() => [
     {
       field: undefined, // No field for row index
       headerName: '#',

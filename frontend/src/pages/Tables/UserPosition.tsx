@@ -1,8 +1,6 @@
 import  { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-// import * as XLSX from 'xlsx';
 import "antd/dist/reset.css";
-import { toast } from "react-toastify";
+
 import { getSocket } from "../../socket/Socket";
 import { useBrokerApi } from "../../api/brokers/brokerSelector";
 import { AgGridReact } from 'ag-grid-react';
@@ -129,7 +127,7 @@ const TransactionBadge = ({ type }: { type: string }) => {
 
 export default function UserPosition () {
 
-  const apiUrl = import.meta.env.VITE_API_URL;
+
   const { api } = useBrokerApi();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -189,6 +187,7 @@ export default function UserPosition () {
   fetchTrades();
   
     setPaginationPageSize(10)
+    setError(null)
   }, []);
 
   const filtered = useMemo(() => {
@@ -227,7 +226,7 @@ export default function UserPosition () {
   // };
 
   // AG Grid column definitions with proper TypeScript typing
-  const columnDefs: ColDef<Order>[] = useMemo(() => [
+  const columnDefs: ColDef<any>[] = useMemo(() => [
     { 
       headerName: "Symbol", 
       field: "tradingsymbol",

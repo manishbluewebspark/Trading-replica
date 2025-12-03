@@ -178,6 +178,8 @@ export default function OrderTableAdmin() {
   }
 
     fetchOrders();
+    setOnlyPrice("")
+    setSlotSIze("")
  setError(null)
   }, []);
 

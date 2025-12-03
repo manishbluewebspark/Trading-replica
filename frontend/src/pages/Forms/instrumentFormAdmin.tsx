@@ -1211,6 +1211,8 @@ export default function InstrumentFormAdmin() {
     fetchData();
     fetchStrategies();
     setQuickFilterText("");
+    setVariety("")
+    setDuration("")
   }, []);
 
 
