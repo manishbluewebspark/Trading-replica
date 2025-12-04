@@ -1036,6 +1036,10 @@ export default function InstrumentFormAdmin() {
   const [error, setError] = useState("");
 
   const [duration, setDuration] = useState("DAY");
+   const [ltp, setLtp] = useState(0);
+
+   console.log(ltp);
+   
   const [orderType, setOrderType] = useState("MARKET");
   const [variety, setVariety] = useState("NORMAL");
 
@@ -1131,6 +1135,48 @@ export default function InstrumentFormAdmin() {
 
 
 
+  const handleSell = async(row: any) => {
+
+     const LtlPayload = {
+          exchange: row.exch_seg,
+          tradingsymbol: row.symbol,
+          symboltoken: row.token,
+        };
+
+     const res = await axios.post(
+                `${apiUrl}/agnelone/instrument/ltp`,
+                LtlPayload,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+                    AngelOneToken: localStorage.getItem("angel_token") || "",
+                    userid: localStorage.getItem("userID"),
+              },
+          }
+      );
+
+       if(res.data.status===true) {
+
+        console.log(res.data.data);
+        
+
+        setLtp(res.data.data.data.ltp||0)
+
+         
+
+       }else{
+
+        
+
+         toast.error("Something went wrong.");
+          setLtp(0)
+         
+
+       }
+
+      
+
+};
 
 
   // ---------- AngelOne Normalizer ----------
@@ -1227,6 +1273,7 @@ export default function InstrumentFormAdmin() {
             onClick={() => {
               setSelectedScriptRow(params.data);
               setScriptModalOpen(true);
+              handleSell(params.data);   // example
             }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
           >
@@ -1307,15 +1354,11 @@ export default function InstrumentFormAdmin() {
 
   // ---------- Save / Place Order ----------
   const handleScriptSave = async () => {
+
     if (!selectedScriptRow) {
       toast.error("No scrip selected!");
       return;
     }
-
-    console.log(selectedScriptRow,'selectedScriptRow');
-
-
-    
 
     const payload = {
       token: selectedScriptRow.token,
@@ -1339,8 +1382,6 @@ export default function InstrumentFormAdmin() {
 
     };
 
-    console.log("payload", payload);
-
     try {
       const res = await axios.post(
         `${apiUrl}/admin/multiple/place/order`,
@@ -1361,7 +1402,11 @@ export default function InstrumentFormAdmin() {
     } catch (err) {
       toast.error("Something went wrong.");
     }
+
+
   };
+
+
 
   // ---------- JSX ----------
   return (

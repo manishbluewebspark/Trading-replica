@@ -830,7 +830,7 @@ export const getKiteTrades = async (req, res) => {
   try {
 
    
-      const token = 'UqClhhd53tRS1kNGF4zDZsJhNwTcPpUi';
+      const token = 'wSXhQRCYqZHVoU4Yoz03Uh0WbWv6Hj9E';
 
     if (!token) {
       return res.json({
@@ -841,10 +841,14 @@ export const getKiteTrades = async (req, res) => {
       });
     }
 
-    const  kite  = await getKiteClientForUserId(14)
+    const  kite  = await getKiteClientForUserId(15)
     //  const  kite  = await getKiteClientForUserId(13)
 
-    const orders = await kite.getOrderTrades("251203220916351");
+    const orders = await kite.getOrderTrades("1995709884309463040");
+
+
+  
+
 
     console.log(orders);
     

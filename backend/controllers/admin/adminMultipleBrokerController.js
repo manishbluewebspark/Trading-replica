@@ -54,19 +54,13 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     }
 
 
-    // console.log(users,'users');
-    
-
-    
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    // -------------------------------
-    // ⭐ RUN ALL BROKER ORDERS TOGETHER
-    // -------------------------------
+
     const settled = await Promise.allSettled(
       
       users.map(async (user) => {
@@ -89,14 +83,12 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       })
     );
 
-    // -------------------------------
-    // ⭐ FORMAT RESULTS PROPERLY
-    // -------------------------------
+
     const results = settled.map((item, idx) => {
       const user = users[idx];
 
       if (item.status === "fulfilled") {
-        return item.value; // Your service returned an object
+        return item.value; 
       } else {
         return {
           userId: user.id,
@@ -121,7 +113,11 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       message: err.message,
     });
   }
+
 };
+
+
+
 
 const safeErr = (e) => e?.message || e?.response?.data || String(e);
 

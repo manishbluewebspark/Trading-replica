@@ -353,7 +353,7 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
     const newOrder = await Order.create(orderData);
 
 
-    console.log(' db local done');
+   
     
 
     // ----------------------------------------
@@ -368,6 +368,8 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
       order_type: reqInput.orderType,
       price: reqInput.price,
     };
+
+     console.log(orderParams,' db orderParams done');
 
     // ----------------------------------------
     // 4) PLACE ORDER IN KITE

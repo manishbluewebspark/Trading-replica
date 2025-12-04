@@ -51,10 +51,17 @@ const app = express();
 
 app.use(cookieParser()); // <– parses cookies automatically
 
+
+
+const corsOptions = {
+ origin: "*",
+  credentials: true,  
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], 
+  allowedHeaders: ['Content-Type', 'Authorization'] 
+};
+
 app.use(
-  cors({
-    origin: "*",  
-  })
+  cors(corsOptions)
 );
 
 

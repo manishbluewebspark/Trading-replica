@@ -1373,7 +1373,8 @@ export const getAngelOneLTP = async (req, res,next) => {
             status: true,
             statusCode:200,
             data: resData.data,
-            message:''
+            message:'',
+             error: null,
         });
      }else{
        

@@ -1072,6 +1072,7 @@ export const adminGetOrderInTables = async (req, res,next) => {
   const orderData = await Order.findAll({
       where: {
         // userId:req.headers.userid,
+      transactiontype: "BUY",
       orderstatuslocaldb: {
       [Op.in]: ["OPEN"],   // 👈 fetch both
     },
@@ -1233,6 +1234,7 @@ export const userGetTradeInTables = async (req, res,next) => {
   const orderData = await Order.findAll({
       where: {
         userId:req.userId,
+         transactiontype: "BUY",
        orderstatuslocaldb: {
             [Op.in]: ["OPEN"],   // 👈 fetch both
           },
@@ -1327,6 +1329,8 @@ export const adminGetOrderWithDate = async (req, res,next) => {
   ...o,
   createdAt: dayjs(o.createdAt).format("DD MMMM YYYY [at] hh:mm a"),
   updatedAt: dayjs(o.updatedAt).format("DD MMMM YYYY [at] hh:mm a"),
+   filltime: dayjs(o.filltime).format("DD MMMM YYYY [at] hh:mm a"),
+  buyTime: dayjs(o.buyTime).format("DD MMMM YYYY [at] hh:mm a"),
 }));
     
         return res.json({
