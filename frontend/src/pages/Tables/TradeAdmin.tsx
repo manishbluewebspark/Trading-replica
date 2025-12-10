@@ -1354,6 +1354,7 @@ type Order = {
 const { RangePicker } = DatePicker;
 
 export default function TradeAdmin() {
+  
   const apiUrl = import.meta.env.VITE_API_URL;
 
   const [orders, setOrders] = useState<Order[]>([]);

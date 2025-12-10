@@ -2,11 +2,14 @@ import  { useEffect, useMemo, useState } from "react";
 import "antd/dist/reset.css";
 
 import { getSocket } from "../../socket/Socket";
-import { useBrokerApi } from "../../api/brokers/brokerSelector";
+
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+import axios from "axios";
+
 
 type Tick = {
   mode: 1 | 2 | 3;
@@ -128,7 +131,8 @@ const TransactionBadge = ({ type }: { type: string }) => {
 export default function UserPosition () {
 
 
-  const { api } = useBrokerApi();
+
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +168,13 @@ export default function UserPosition () {
     // 🔹 ASYNC WRAPPER
   const fetchTrades = async () => {
     try {
-      const tradeRes = await api.getTodayTrade();
+     
+       let tradeRes = await axios.get(`${apiUrl}//get/userpostion/tradebook`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+            "AngelOneToken": localStorage.getItem("angel_token") || "",
+          },
+        });
 
       if(tradeRes.data.status==true) {
 
@@ -218,12 +228,7 @@ export default function UserPosition () {
     });
   }, [orders, debouncedSearch]);
 
-  // const handleExcelDownload = () => {
-  //   const worksheet = XLSX.utils.json_to_sheet(orders);
-  //   const workbook = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  //   XLSX.writeFile(workbook, "orders.xlsx");
-  // };
+
 
   // AG Grid column definitions with proper TypeScript typing
   const columnDefs: ColDef<any>[] = useMemo(() => [

@@ -6,9 +6,15 @@ import {
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 export default function TradeChart() {
+
+
   const apiUrl = import.meta.env.VITE_API_URL;
+
+    const navigate = useNavigate();
 
   const [totalTrades, setTotalTrades] = useState(0);
   const [totalOpen, setTotalOpen] = useState(0);
@@ -16,23 +22,35 @@ export default function TradeChart() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/admin/get/recent/order`, {
+        const {data} = await axios.get(`${apiUrl}/admin/get/recent/order`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             AngelOneToken: localStorage.getItem("angel_token") || "",
           },
         });
 
-        console.log(res.data.totalSellTrades,'sccsddscs');
-        
+       
 
-        if (res.data.status === true) {
-          const result = res.data;
+          if(data.status==true) {
+        
+          const result = data;
           setTotalTrades(result.totalSellTrades || 0);
           setTotalOpen(result.totalOpenPositions || 0);
-        } else {
-          toast.error(res.data.message);
-        }
+        
+             }else if(data.status==false&&data.message=='Unauthorized'){
+
+               localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+        
+               navigate("/");
+        
+                    
+             }else{
+                    toast.error(data.error);    
+             }
       } catch (err: any) {
         toast.error(err.message);
       }

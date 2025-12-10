@@ -6,7 +6,9 @@ import userRoutes from './routes/userRoute.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import orderRoute from './routes/orderRoute.js';
 import fyersRoute from './routes/fyersRoute.js';
+import finavasiaRoute from './routes/finavasiaRoute.js';
 import kiteRoute from './routes/kiteRoute.js';
+import upStoxRoute from './routes/upstockRoute.js';
 import shoonyaRoute from './routes/shoonyaRoute.js';
 import angeloneRoute from './routes/angelOneRoute.js';
 import adminRoute from './routes/admin/adminOrderRoute.js';
@@ -23,51 +25,22 @@ import "./services/kiteSocket.js"
 import "./script/getData.js"
 
 
-import { connectSmartSocket } from "./services/smartapiFeed.js";
-import {bulkInsertPostgre} from "./script/postgre.js"
-
-// bulkInsertPostgre()
-// bulkUpdateSyFieldsJS()
-
 dotenv.config();
-
-// const corsOptions = {
-//   origin: [  
-//         process.env.CROSS_ORIGIN_APP_1,   // your React/Vite app
-//         process.env.CROSS_ORIGIN_APP_2,
-//         process.env.CROSS_ORIGIN_APP_3,
-//         process.env.CROSS_ORIGIN_APP_4,
-//         process.env.CROSS_ORIGIN_APP_5,
- 
-//   ],
-//   // credentials: true,  
-//   // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], 
-//   // allowedHeaders: ['Content-Type', 'Authorization'] 
-// };
-
-
 
 const app = express();
 
 app.use(cookieParser()); // <– parses cookies automatically
 
-
-
-const corsOptions = {
- origin: "*",
-  credentials: true,  
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], 
-  allowedHeaders: ['Content-Type', 'Authorization'] 
-};
-
 app.use(
-  cors(corsOptions)
+  cors({
+    origin: "*",  
+  })
 );
 
 
 app.use(express.json());
 
-// connectSmartSocket(2,process.env.SMART_AUTH_TOKEN,process.env.SMART_FEED_TOKEN,'ARJMA1921')
+
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -101,6 +74,10 @@ app.use('/api', fyersRoute);
 app.use('/api', kiteRoute);
 app.use('/api', angeloneRoute);
 app.use('/api', shoonyaRoute);
+app.use('/api', finavasiaRoute);
+app.use('/api', upStoxRoute);
+
+
 
 
 
@@ -141,20 +118,6 @@ sequelize.sync({ force: false }).then(() => {
 
 
 
-// import { exec } from "child_process";
-
-// const ssid = "Airtel_BWS411";
-
-// exec(
-//   `security find-generic-password -D "AirPort network password" -a "${ssid}" -w`,
-//   (err, stdout) => {
-//     if (err) {
-//       console.error("Cannot read password. Need permission:", err.message);
-//       return;
-//     }
-//     console.log("WiFi Password:", stdout.trim());
-//   }
-// );
 
 
 
@@ -165,31 +128,6 @@ sequelize.sync({ force: false }).then(() => {
 
 
 
-
-
-
-// Kite session response for user 3: {
-//   status: 'success',
-//   data: {
-//     user_type: 'individual/res_no_nn',
-//     email: 'bluewebspark@gmail.com',
-//     user_name: 'Manish Shukla',
-//     user_shortname: 'Manish',
-//     broker: 'ZERODHA',
-//     exchanges: [ 'NSE', 'BSE', 'MF' ],
-//     products: [ 'CNC', 'NRML', 'MIS', 'BO', 'CO' ],
-//     order_types: [ 'MARKET', 'LIMIT', 'SL', 'SL-M' ],
-//     avatar_url: null,
-//     user_id: 'JGQ802',
-//     api_key: 'kjxhagw7nl1ypg3t',
-//     access_token: 'AYo0dlqDOSxPweHkua2gbYBo1jL79fZa',
-//     public_token: 'Blh1giFr2P0Gp641HjA6KWphHOEMEItd',
-//     refresh_token: '',
-//     enctoken: 'YiEI7p816ckVEISzDVxbnnuLHEwynPHuAJbaPiHgGLC1izRwA/AoKAobfAql9GRqBgi4bzHtC+SBjE1jrPXR7/1TgfVNTlduT3ThFxy2IXmjlCNGG2/M63fq0XmVXeQ=',
-//     login_time: '2025-12-03 13:27:39',
-//     meta: { demat_consent: 'consent' }
-//   }
-// }
 
 
 

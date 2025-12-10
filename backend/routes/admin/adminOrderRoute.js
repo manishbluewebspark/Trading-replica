@@ -1,5 +1,5 @@
 import express from 'express';
-import { adminGetCloneUserHolding, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
+import { adminFetchOrder, adminFetchOrderHolding, adminGetCloneUserHolding, AdminGetHoldingMultiple, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
 import { getTokens, storeTokens } from '../../controllers/testController.js';
 import {AdminAuthMiddleware, authMiddleware} from '../../middleware/authMiddleware.js';
 import { adminGetUserAngelToken } from '../../controllers/userController.js';
@@ -18,7 +18,7 @@ const router = express.Router();
 
 
 
-router.get('/tokenstatussummary',getTokenStatusSummary)
+router.get('/tokenstatussummary',authMiddleware,getTokenStatusSummary)
 
 router.post('/multiple/place/order',authMiddleware,adminPlaceMultiBrokerOrder)
 router.get('/sequareoff',authMiddleware,adminMultipleSquareOff)
@@ -123,6 +123,13 @@ router.get('/get/holdingdata',
 )
 
 
+router.get('/getall/holdingdata',
 
+    authMiddleware, AdminGetHoldingMultiple
+ 
+)
+
+
+router.get('/fetch/borker/order',adminFetchOrderHolding)
 
 export default router;

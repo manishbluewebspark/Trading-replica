@@ -5,7 +5,7 @@ import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAng
    getTradeDataForDeshboard, loginWithAngelOne, loginWithTOTPInAngelOne, logoutAngelOne,
     reGenerateTokenWithAngelOne } from '../controllers/angelController.js';
 import { createAngelOneCredential, getAngelOneCredential } from '../controllers/angelOneCrendential.js';
-import {  getInstrumentPostgre, getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
+import {   getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
 
 
 

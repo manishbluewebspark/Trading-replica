@@ -5,6 +5,7 @@ import "antd/dist/reset.css"; // or "antd/dist/antd.css" for older versions
 import { toast } from "react-toastify";
 // import { useNavigate } from "react-router-dom";
 import { getSocket } from "../../socket/Socket";
+import { useNavigate } from "react-router";
 
 
 type Tick = {
@@ -87,6 +88,8 @@ export default function OrderTableAdmin() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
+    const navigate = useNavigate();
+
   const [orders, setOrders] = useState<Order[]>([]);
    
   const [loading, setLoading] = useState(true);
@@ -145,20 +148,21 @@ export default function OrderTableAdmin() {
 
        if(data.status==true) {
 
-        console.log(data.data);
-        
-
         setOrders(data.data);
 
        }else if(data.status==false&&data.message=='Unauthorized'){
 
-         toast.error('Unauthorized User');
+        
 
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("termsAccepted");
             localStorage.removeItem("feed_token");
             localStorage.removeItem("refresh_token");
+
+             toast.error('Unauthorized User');
+
+              navigate("/");
            
        }else{
 
@@ -167,8 +171,6 @@ export default function OrderTableAdmin() {
        }
         
       } catch (err: any) {
-
-        console.log(err);
         
          toast.error(err?.message || "Something went wrong");
          
@@ -227,80 +229,6 @@ export default function OrderTableAdmin() {
   }, [filtered, page, pageSize]);
 
 
-  // const handleUpdateClick = async(item: any) => {
-
-  //     const payload = {
-  //     exchange: item.exchange,
-  //     tradingsymbol: item.tradingsymbol,
-  //     symboltoken:item.symboltoken,
-  //   };
-
-  //    const res = await axios.post(`${apiUrl}/order/get/ltp`, payload, {
-  //           headers: {
-  //             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  //               "AngelOneToken": localStorage.getItem("angel_token") || "",
-  //           },
-  //         });
-
-  //          if(res?.data?.status==true) {
-
-  //            item.totalPrice = res?.data?.data.data.ltp*item.quantity
-
-  //           setOnlyPrice(res?.data?.data.data.ltp)
-  //           setSlotSIze(item.quantity)  
-  //           setSelectedItem({...item});
-  //           setShowForm(true);
-
-  //          }else{
-
-  //           toast.error(res?.data?.message || "Something went wrong");
-  //          }
-  //   }
-
-  // const handleCancelClick = async (item: any) => {
-
-  //   try {
-  //        let res = await axios.post(`${apiUrl}/order/cancel/order`, item, {
-  //           headers: {
-  //             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  //             "AngelOneToken": localStorage.getItem("angel_token") || "",
-  //              "userid":localStorage.getItem("userID")
-  //           },
-  //         })
-
-
-         
-          
-
-  //     if(res.data.status==true) {
-
-  //        toast.success(res.data.message);
-
-        
-
-  //     }else if(res.data.status==false&&res.data.status=='Unauthorized'){
-  //           localStorage.removeItem("token");
-  //           localStorage.removeItem("user");
-  //           localStorage.removeItem("termsAccepted");
-  //           localStorage.removeItem("feed_token");
-  //           localStorage.removeItem("refresh_token");
-           
-  //      }
-  //      else{
-
-  //       toast.error(res.data.message || "Something went wrong");
-         
-  //     }   
-  //   } catch (error:any) {
-
-  //     setError(error.message)
-
-  //       toast.error(error.messagee || "Something went wrong");
-
-  //   }
-
-  //     }
-
 
 const handleSellClick = async (item: any) => {
   if (!item || !item.orderid) {
@@ -327,12 +255,28 @@ const handleSellClick = async (item: any) => {
     );
 
     if (res.data.status) {
+
       toast.success(`Order ${item.orderid} squared off successfully`);
-    } else {
+
+    } else if(res.data.status==false&&res.data.message=='Unauthorized'){
+
+       localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+
+            toast.error('Unauthorized User');
+
+              navigate("/");
+
+    }else {
+
       toast.error(res.data.message || "Failed to square off");
+
     }
   } catch (err: any) {
-    console.error(err);
+   
     toast.error(err?.message || "Something went wrong");
   }
 };
@@ -373,6 +317,7 @@ const handleSellClick = async (item: any) => {
             localStorage.removeItem("refresh_token"); 
             
              toast.error("Unauthorized");
+              navigate("/");
        }
        else{
 
@@ -435,6 +380,8 @@ const handleSellClick = async (item: any) => {
             localStorage.removeItem("termsAccepted");
             localStorage.removeItem("feed_token");
             localStorage.removeItem("refresh_token");  
+
+             navigate("/");
        }
        else{
 
@@ -466,6 +413,8 @@ const handleSellClick = async (item: any) => {
             localStorage.removeItem("termsAccepted");
             localStorage.removeItem("feed_token");
             localStorage.removeItem("refresh_token");  
+
+             navigate("/");
        }
        else{
 
@@ -475,43 +424,7 @@ const handleSellClick = async (item: any) => {
 };
 
 
-      // const handleGetDates = async ()=>{
-          
-      //   let res = await axios.post(`${apiUrl}/order/datefilter/order`, dateRange, {
-      //       headers: {
-      //         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-      //           "AngelOneToken": localStorage.getItem("angel_token") || "",
-      //            "userid":localStorage.getItem("userID")
-      //       },
-      //     }) 
-
-      //     if(res.data.status==true) {
-
-      //               setOrders(Array.isArray(res.data.data) ? res.data.data : []);
-      //               setPage(1); // make sure pagination shows first page
-      //               toast.success(res.data?.message || "Filtered orders loaded");
-
-      // }else if(res.data.status==false&&res.data.status=='Unauthorized'){
-      //       localStorage.removeItem("token");
-      //       localStorage.removeItem("user");
-      //       localStorage.removeItem("termsAccepted");
-      //       localStorage.removeItem("feed_token");
-      //       localStorage.removeItem("refresh_token");  
-      //  }
-      //  else{
-
-      //    toast.error(res.data.message || "Something went wrong");
-      // }   
-          
-      // }
-
-
-      // 🧩 Function to handle selection
- 
-     
-
-  // 5) also reset to page 1 when the dataset itself changes
-
+    
   useEffect(() => {
   setPage(1);
 }, [orders]); // 🔑 ensures current page is valid after any new data

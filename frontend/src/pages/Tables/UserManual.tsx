@@ -38,7 +38,7 @@ const userManualData = [
       "Order Types: Market, Limit, Stop-loss.",
       "Products: MIS (Intraday), CNC (Delivery).",
       "Varieties: Regular, AMO (After Market Order), CO (Cover Order), Iceberg.",
-      "To buy/sell: Select symbol → Quantity → Product → Order Type → Place Order."
+      // "To buy/sell: Select symbol → Quantity → Product → Order Type → Place Order."
     ]
   },
   {

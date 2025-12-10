@@ -151,6 +151,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       angelOneSymbol:reqInput.angelOneSymbol||reqInput.symbol,
       angelOneToken:reqInput.angelOneToken||reqInput.token,
       broker: "fyers",
+      buyOrderId:reqInput?.buyOrderId
     };
 
 
@@ -237,12 +238,12 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
       // find today's OPEN BUY to close
       buyOrder = await Order.findOne({
         where: {
-          userId: user.id,
-          tradingsymbol: reqInput.symbol,
-          exchange: reqInput.exch_seg,
-          transactiontype: "BUY",
-          orderstatuslocaldb: "OPEN",
-          createdAt: { [Op.between]: [startOfDay, endOfDay] },
+
+
+           userId: user.id,
+            status:"COMPLETE",
+            orderstatuslocaldb: "OPEN",
+            orderid:String(reqInput?.buyOrderId)
         },
         raw: true,
       });

@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-
-
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 type Summary = { totalOrder: number; orderData: any[] };
 
 // ✔ Replace with your API URL
 const apiUrl = import.meta.env.VITE_API_URL;
 
+
+
 export default function RecentOrders() {
+
+  const navigate = useNavigate();
 
   const [openOrder, setOpenOrders] = useState<number>(0);
   const [trade, setTrade] = useState<number>(0);
@@ -26,22 +30,40 @@ export default function RecentOrders() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/admin/get/recent/order`, {
+        const {data} = await axios.get(`${apiUrl}/admin/get/recent/order`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             AngelOneToken: localStorage.getItem("angel_token") || "",
           },
         });
 
-       
+      if(data.status==true) {
+        
+          setOpenOrders(data?.totalOpenPositions)
+          setTrade(data?.totalSellTrades)
+         setSummary({
+          totalOrder: data?.todayOrderCount || 0,
+          orderData: data?.recentOrders || [],
+        });
+        
+             }else if(data.status==false&&data.message=='Unauthorized'){
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+
+               navigate("/");
+        
+                    
+             }else{
+                    toast.error(data.error);    
+             }
+             
 
   
-        setOpenOrders(res?.data?.totalOpenPositions)
-         setTrade(res?.data?.totalSellTrades)
-        setSummary({
-          totalOrder: res?.data?.todayOrderCount || 0,
-          orderData: res?.data?.recentOrders || [],
-        });
+   
       } catch (err) {
         console.log("Error fetching orders:", err);
       }
@@ -52,7 +74,7 @@ export default function RecentOrders() {
 
 
 
-   console.log(summary);
+   console.log(summary,'summary');
   
 
   return (
@@ -90,10 +112,10 @@ export default function RecentOrders() {
                   {item.transactiontype}
                 </td>
 
-                <td className="py-2 pr-4">{item.lotsize}</td>
-                <td className="py-2 pr-4">{item.averageprice}</td>
+                <td className="py-2 pr-4">{item.fillsize}</td>
+                <td className="py-2 pr-4">{item.fillprice}</td>
 
-                <td className="py-2 pr-4">{item.orderstatus}</td>
+                <td className="py-2 pr-4">{item.status}</td>
               </tr>
             ))}
 

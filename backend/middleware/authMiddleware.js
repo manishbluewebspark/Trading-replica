@@ -1,12 +1,11 @@
 
 import jwt from 'jsonwebtoken';
+import logger from "../common/logger.js";
+
 
 const authMiddleware = (req, res, next) => {
 
 const token = req.headers.authorization?.split(' ')[1];
-
-// let token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsInJvbGUiOiJ1c2VyIiwiYm9ya2VyIjoia2l0ZSIsImlhdCI6MTc2NDMxMTAyNiwiZXhwIjoxNzY0Mzk3NDI2fQ.vWLs1sB2A5vPriYVYolCjD_B1m9NK2RZfw1Ib8kY3cQ'
-
 
   if (!token) {
     
@@ -14,23 +13,49 @@ const token = req.headers.authorization?.split(' ')[1];
             status: false,
             statusCode:401,
             message: "Unauthorized",
-            error: null,
+            error: "Request with No Token Again Login",
         });
   }
  
   try {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     req.role = decoded.role
     req.userId = decoded.id;
     req.borker = decoded.borker;
+
+     if(req.role==='clone-user') {
+
+      return res.json({
+      status: true,
+      statusCode: 200,
+      data: [], // ✅ only yesterday+old positions
+      message:
+        "No Holding Data Found",
+    });  
+}
     
     next();
 
   } catch (err) {
 
-    return res.status(403).json({ message: 'Token invalid or expired' });
+    logger.error("API Request Failed", {
+    url: req.originalUrl,
+    method: req.method,
+    status: false,
+    userId: req?.userId || null,
+    error: err.message,          // store error message
+    stack: err.stack || null     // optional: saves trace
+  });
+
+    return res.json({
+            status: false,
+            statusCode:401,
+            message: "Unauthorized",
+            error: "Token invalid or expired",
+      });
+
   }
 };
 

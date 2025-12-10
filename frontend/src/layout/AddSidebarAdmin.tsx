@@ -701,7 +701,7 @@ const AddAppSidebarAdmin: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-       <Link to="/">
+       <Link to="/admin/deshboard">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img

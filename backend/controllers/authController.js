@@ -152,10 +152,18 @@ const password = (req.body.password || "").trim();
       const brokerLower = broker?.toString().trim().toLowerCase();
 
 
+      console.log(brokerLower);
+      
+
+
      const brokerData = await BrokerModel.findOne({
           where: { brokerName: brokerLower },
           raw: true,
         });
+
+
+        console.log(brokerData);
+        
 
     if (!brokerData) {
           return res.json({
@@ -492,7 +500,7 @@ const password = (req.body.password || "").trim();
 
     if (!user) {
 
-      console.log(user,'user');
+     
       
 
       return res.json({
@@ -928,38 +936,11 @@ export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
 
 
 
-// Step 3: Get AngelOne Profile
-
-
-
-
-
-
-// Step 4: Get AngelOne Profile
-
-
-
-
-// Step 5: Generate Token
-
-
-
-
-
-
-
-
 // ---------- ZERODHA ----------
 // controllers/kiteController.js
 const kite = new KiteConnect({
   api_key: process.env.KITE_API_KEY,
 });
-
-
-
-
-
-
 
 
 // 1. Redirect to Groww authorize page

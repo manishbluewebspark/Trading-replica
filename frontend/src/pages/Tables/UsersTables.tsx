@@ -1716,7 +1716,7 @@ export default function UsersTables() {
       width: 140,
       cellRenderer: (params: any) => (
         <span className="bg-gray-50 text-gray-700 px-3 py-1 rounded-full text-sm">
-          @{params.value}
+          {params.value}
         </span>
       )
     },
@@ -1726,7 +1726,7 @@ export default function UsersTables() {
       width: 170,
       cellRenderer: (params: any) => (
         <span className="bg-gray-50 text-gray-700 px-3 py-1 rounded-full text-sm">
-          @{params.value}
+          {params.value}
         </span>
       )
     },

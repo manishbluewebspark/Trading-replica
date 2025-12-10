@@ -181,6 +181,7 @@ export default function SignUpForm() {
                    <option value="finvasia">Finvasia</option>
                   <option value="fyers">Fyers</option>
                   <option value="grow">Grow</option>
+                    <option value="upstox">UpStox</option>
                 </select>
               </div>
 

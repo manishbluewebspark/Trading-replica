@@ -4,8 +4,10 @@ import { getKiteAllInstruments,getKiteFunds, kiteCallback, kiteLogin,getTradeDat
     getKiteAllOrders,getKiteProfile,getKiteProfile2,getKiteTradesData,
     kiteAppCredential,
     getKiteTrades,
-    getKiteOrders
+    getKiteOrders,
+    getKiteHolding
  } from '../controllers/kiteController.js';
+import { placeKiteOrderTest, testLocalSell } from '../services/placeKiteOrder.js';
 
 
 
@@ -35,13 +37,22 @@ router.get('/kite/profile',authMiddleware,getKiteProfile)
 router.get('/kite/profile2',authMiddleware,getKiteProfile2)
 router.get('/kite/trade',authMiddleware,getKiteTradesData)
 
+router.get('/kite/get/holdingdata',authMiddleware,getKiteHolding)
+
+
+
+
 
 router.get('/kite/online/data',getKiteTrades)
 
 router.get('/kite/online/data2',getKiteOrders)
 
+router.get('/kite/test/orderupdate',placeKiteOrderTest)
 
 
+
+
+router.get('/localtestsellkite',testLocalSell)
 
 
 

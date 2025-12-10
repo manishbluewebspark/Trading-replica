@@ -242,7 +242,13 @@ export default function OrderTables() {
       filltime: "Sell Time",
     };
 
-    const formattedOrders = convertHeaders(orders, headerMapping);
+    // ⭐ Add static value for "transactiontype"
+  const updatedOrders = orders.map(o => ({
+    ...o,
+    transactiontype: "BUY",  // <-- put your value here
+  }));
+
+    const formattedOrders = convertHeaders(updatedOrders, headerMapping);
     const ws = XLSX.utils.json_to_sheet(formattedOrders);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");

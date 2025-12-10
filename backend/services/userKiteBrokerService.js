@@ -28,7 +28,7 @@ export const getKiteClientForUserId = async (userId) => {
     throw new Error("Kite access token not available for this user");
   }
 
-  const kite = KiteAccess(user.kite_key, accessToken);
+  const kite = await KiteAccess(user.kite_key, accessToken);
 
   return kite
   

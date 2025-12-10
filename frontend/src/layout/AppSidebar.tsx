@@ -331,7 +331,7 @@ const AppSidebar: React.FC = () => {
         className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
           }`}
       >
-        <Link to="/">
+        <Link to="/new/deshboard">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img

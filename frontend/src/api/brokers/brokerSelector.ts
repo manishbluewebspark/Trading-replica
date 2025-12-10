@@ -3,7 +3,8 @@ import { angelOneApi } from "./angelOneApi";
 import { kiteApi } from "./kiteApi";
 import { cloneUserOneApi } from "./cloneUserApi";
 import { fyersApi } from "./fyersApi";
-
+import {finvasiaApi} from "./finvasiaApi"
+import {upStoxApi} from "./upStoxApi"
 
 export const useBrokerApi = () => {
 
@@ -28,6 +29,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: angelOneApi,
       image: brokerImage,
+      brokerName:broker
+
     };
   }
 
@@ -35,6 +38,7 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: kiteApi,
       image: brokerImage,
+       brokerName:broker
     };
   }
 
@@ -42,6 +46,23 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: fyersApi,
       image: brokerImage,
+       brokerName:broker
+    };
+  }
+
+   if (broker === "upstox"&&userRole==='user') {
+    return {
+      api: upStoxApi,
+      image: brokerImage,
+       brokerName:broker
+    };
+  }
+
+   if (broker === "finvasia"&&userRole==='user') {
+    return {
+      api: finvasiaApi,
+      image: brokerImage,
+       brokerName:broker
     };
   }
 
@@ -49,6 +70,7 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: cloneUserOneApi,
       image: brokerImage,
+       brokerName:broker
     };
   }
 

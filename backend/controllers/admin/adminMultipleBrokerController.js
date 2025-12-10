@@ -5,34 +5,86 @@ import { placeKiteOrder, placeKiteOrderLocalDb } from "../../services/placeKiteO
 import { placeFyersOrder } from "../../services/placeFyersOrder.js";
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
+import { logSuccess, logError } from "../../utils/loggerr.js";
+
 
 export const getTokenStatusSummary = async (req, res) => {
   try {
-    // Fetch both groups
+
+   const now = new Date();
+
+    // 1️⃣ Auto-expire all users whose expiry time is in the past
+    await User.update(
+      {
+        angelLoginUser: false,
+        angelLoginExpiry: null,
+      },
+      {
+        where: {
+          angelLoginUser: true,
+           role: "user", // ✅ update only real users, not admin or clone-user
+          angelLoginExpiry: {
+            [Op.lt]: now, // expiry < current time → expired
+          },
+        },
+      }
+    );
+
+    
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+
     const generatedUsers = await User.findAll({
-      where: { angelLoginUser: true },
+  where: {
+    angelLoginUser: true,
+    role:"user",
+  },
+  attributes: [
+    ["id", "_id"],
+    "firstName",
+    "lastName",
+    "angelLoginExpiry"
+  ]
+});
+
+  
+  const notGeneratedUsers = await User.findAll({
+      where: { 
+        angelLoginUser: false,
+        role:"user",
+       },
       attributes: [["id", "_id"], "firstName","lastName"]
     });
 
-    const notGeneratedUsers = await User.findAll({
-      where: { angelLoginUser: false },
-      attributes: [["id", "_id"], "firstName","lastName"]
-    });
+    
+    //  logSuccess(req, { });
+
 
     // Prepare the summary response
     return res.json({
+      status: true,
       generatedCount: generatedUsers.length,
       notGeneratedCount: notGeneratedUsers.length,
       generatedUsers,
       notGeneratedUsers
     });
 
-  } catch (error) {
-    console.error("Error fetching token summary:", error);
-    res.status(500).json({ message: "Server error" });
+  } catch (err) {
+
+    // logError(req, err);
+  
+    res.status(500).json({
+       status: false,
+       message: "Server error",
+       error:err.message,
+       data:null
+    });
   }
 };
-
 
 
 export const adminPlaceMultiBrokerOrder = async (req, res) => {
@@ -47,9 +99,13 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     });
 
     if (!users.length) {
+
+        logSuccess(req, {  message: "No users found for this group",});
+
       return res.json({
         status: false,
         message: "No users found for this group",
+        error:  "No users found for this group",
       });
     }
 
@@ -72,6 +128,9 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
           return await placeKiteOrder(user, input,startOfDay, endOfDay);
         }
         if (user.brokerName.toLowerCase() === "fyers") {
+          return await placeFyersOrder(user, input,startOfDay, endOfDay);
+        }
+         if (user.brokerName.toLowerCase() === "upstox") {
           return await placeFyersOrder(user, input,startOfDay, endOfDay);
         }
 
@@ -117,10 +176,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
 };
 
 
-
-
 const safeErr = (e) => e?.message || e?.response?.data || String(e);
-
 
 
 export const adminMultipleSquareOff = async (req, res) => {
@@ -208,6 +264,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             angelOneToken:o?.angelOneToken||o.token,
             angelOneSymbol:o?.angelOneSymbol||o?.symbol,
             broker: o?.broker,
+            buyOrderId: o?.buyOrderId,
             
           };
 
@@ -282,6 +339,9 @@ export const adminMultipleSquareOff = async (req, res) => {
 
 
 export const adminSingleSquareOff = async (req, res) => {
+
+  console.log(req.body);
+  
   try {
     const { orderId } = req.body; // 👈 ya req.params.orderId agar URL se bhejna ho
 
@@ -371,6 +431,7 @@ export const adminSingleSquareOff = async (req, res) => {
       angelOneToken: o?.angelOneToken || o.token,
       angelOneSymbol: o?.angelOneSymbol || o?.symbol,
       broker: o?.broker,
+      buyOrderId: String(orderId)
     };
 
     console.log(reqInput,'reqInput');

@@ -63,6 +63,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       broker:'angelone',
       angelOneSymbol:reqInput?.angelOneSymbol||reqInput.symbol,
       angelOneToken:reqInput.angelOneToken||reqInput.token,
+        buyOrderId:reqInput?.buyOrderId
     };
 
     // 2) Save pending order locally
@@ -134,16 +135,11 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
 
 
        buyOrder = await Order.findOne({
-              where: {
-                userId: user.id,
-                variety: reqInput.variety,
-                tradingsymbol: reqInput.symbol,
-                symboltoken: reqInput.token,
-                exchange: reqInput.exch_seg,
-                ordertype: reqInput.orderType,
-                orderstatuslocaldb:"OPEN",
-                transactiontype: "BUY",
-                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+              where: { 
+            userId: user.id,
+            status:"COMPLETE",
+            orderstatuslocaldb: "OPEN",
+            orderid:String(reqInput?.buyOrderId)
               },
               raw: true
             });
@@ -218,7 +214,7 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
             tradedValue: matched.tradevalue,
             fillprice: matched.fillprice,
             fillsize: matched.fillsize,
-            filltime: matched.filltime,
+            filltime: matched.filltime.toISOString(),
             fillid: matched.fillid,
             pnl:pnl,
             buyTime:buyTime,

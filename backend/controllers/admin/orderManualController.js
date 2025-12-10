@@ -40,10 +40,6 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
   try {
 
     let data = req.body;
-
-
-    console.log(data);
-    
   
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -72,6 +68,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
 
     // -------- Generate IDs --------
     let now = new Date().toISOString();
+    
     data.orderid = generateOrderId();
     data.uniqueorderid = generateUniqueOrderUUID();
     data.fillid = generateFillId();
@@ -81,8 +78,6 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.status = data.status || "COMPLETE";
     data.orderstatus = data.orderstatus || "COMPLETE";
     data.orderstatuslocaldb =  data.orderstatuslocaldb
-    data.updatetime = data.updatetime || now;
-    data.exchtime = data.exchtime || now;
     data.exchorderupdatetime = data.exchorderupdatetime || now;
     data.parentorderid = data.parentorderid || "";
     data.ordertag = data.ordertag || "MANUAL_ORDER";
@@ -102,6 +97,10 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.unfilledshares = data.unfilledshares || "0";
 
     data.quantity = data.lotSize;
+
+
+    console.log(now,'now');
+    
 
     // ------------------------------------------------------
     //              FIND TODAY'S BUY ORDER
@@ -182,9 +181,6 @@ export const createManualOrder = async (req, res) => {
   try {
 
     let data = req.body;
-
-    console.log(data,'data');
-    
     
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -201,10 +197,7 @@ export const createManualOrder = async (req, res) => {
       data.totalPrice = Number(data.lotSize) * Number(data.price);
     }
 
-    
-
     // -------- Generate IDs --------
-    let now = new Date().toISOString();
     data.orderid = generateOrderId();
     data.uniqueorderid = generateUniqueOrderUUID();
     data.fillid = generateFillId();
@@ -214,9 +207,6 @@ export const createManualOrder = async (req, res) => {
     data.status = data.status || "COMPLETE";
     data.orderstatus = data.orderstatus || "COMPLETE";
     data.orderstatuslocaldb = 'COMPLETE'
-    data.updatetime = data.updatetime || now;
-    data.exchtime = data.exchtime || now;
-    data.exchorderupdatetime = data.exchorderupdatetime || now;
     data.parentorderid = data.parentorderid || "";
     data.ordertag = data.ordertag || "MANUAL_ORDER";
     data.transactiontype = 'SELL',
@@ -224,26 +214,21 @@ export const createManualOrder = async (req, res) => {
 
     data.fillsize = data.lotSize || 0;
 
-        const buyTime = new Date(data.buyTime);
+    const buyTime = data.buyTime
 
-    // Convert to ISO string and replace the 'Z' if needed
-    const isoStringBuy = buyTime.toISOString();
+ // Treat input as IST and convert to UTC
+   const utcString = new Date(buyTime).toISOString();
 
-    // If you want to ensure milliseconds are included (even if zero):
-    const formattedTimeBuy = isoStringBuy.replace(/\.\d+Z$/, '.000Z');
+    data.buyTime = utcString
 
-    data.buyTime = formattedTimeBuy;
+    const sellTime = data.sellTime
 
-    const sellTime = new Date(data.sellTime);
+    const utcStringSell = new Date(sellTime).toISOString();
 
-    // Convert to ISO string and replace the 'Z' if needed
-    const isoString = sellTime.toISOString();
+    data.filltime = utcStringSell;
 
-    // If you want to ensure milliseconds are included (even if zero):
-    const formattedTime = isoString.replace(/\.\d+Z$/, '.000Z');
-
-    data.filltime = formattedTime;
-
+    data.price =  Number(data.sellPrice)
+     
     data.strikeprice = data.strikeprice || 0;
     data.optiontype = data.optiontype || "";
     data.expirydate = data.expirydate || "";
@@ -254,7 +239,7 @@ export const createManualOrder = async (req, res) => {
     data.unfilledshares = data.unfilledshares || "0";
 
 
-    data.quantity = data.lotSize;
+    data.quantity = data.fillsize;
     data.fillprice = Number(data.sellPrice)
     data.buyprice = Number(data.buyPrice)
     data.buysize =  data.fillsize;
@@ -262,14 +247,14 @@ export const createManualOrder = async (req, res) => {
    
     data.buyvalue = data.fillsize*data.buyPrice;
 
-    // // -------- Save Final Order --------
-    // const order = await Order.create(data);
+    // -------- Save Final Order --------
+    const order = await Order.create(data);
 
-    // return res.status(201).json({
-    //   status: true,
-    //   message: "Manual Order Created Successfully",
-    //   data: order,
-    // });
+    return res.status(201).json({
+      status: true,
+      message: "Manual Order Created Successfully",
+      data: order,
+    });
 
   } catch (err) {
     console.log("Create Order Error:", err);

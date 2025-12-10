@@ -1,129 +1,18 @@
-// import { useState } from "react";
-// import Chart from "react-apexcharts";
-// import { ApexOptions } from "apexcharts";
-// import { Dropdown } from "../ui/dropdown/Dropdown";
-// import { DropdownItem } from "../ui/dropdown/DropdownItem";
-// import { MoreDotIcon } from "../../icons";
-// import { Link } from "react-router-dom";
-
-// export default function MonthlyTarget() {
-//   const [isOpen, setIsOpen] = useState(false);
-//   const [series] = useState<number[]>([70, 30]);
-
-//   const options: ApexOptions = {
-//     colors: ["#1C64F2", "#E74694"],
-//     chart: {
-//       height: 320,
-//       width: "100%",
-//       type: "donut",
-//       fontFamily: "Inter, sans-serif",
-//     },
-//     stroke: {
-//       colors: ["transparent"],
-//     },
-//     plotOptions: {
-//       pie: {
-//         donut: {
-//           size: "80%",
-//           labels: {
-//             show: true,
-//             name: {
-//               show: true,
-//               fontFamily: "Inter, sans-serif",
-//               offsetY: 20,
-//             },
-//             total: {
-//               showAlways: true,
-//               show: true,
-//               label: "Total Tokens",
-//               fontFamily: "Inter, sans-serif",
-//               formatter: (w) => {
-//                 const sum = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
-//                 return sum.toString();
-//               },
-//             },
-
-//             value: {
-//               show: true,
-//               fontFamily: "Inter, sans-serif",
-//               offsetY: -20,
-//               formatter: (value) => value.toString(),
-//             },
-//           },
-//         },
-//       },
-//     },
-//     grid: {
-//       padding: {
-//         top: -2,
-//       },
-//     },
-//     labels: ["Token Generated", "Token Not Generated"],
-//     dataLabels: {
-//       enabled: false,
-//     },
-//     legend: {
-//       position: "bottom",
-//       fontFamily: "Inter, sans-serif",
-//     },
-//   };
-
-//   function toggleDropdown() {
-//     setIsOpen(!isOpen);
-//   }
-
-//   function closeDropdown() {
-//     setIsOpen(false);
-//   }
-
-//   return (
-//     <div className="rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
-//       <div className="px-5 pt-5 bg-white shadow-default rounded-2xl pb-11 dark:bg-gray-900 sm:px-6 sm:pt-6">
-//         <div className="flex justify-between">
-//           <div>
-//             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-//               Token Status
-//             </h3>
-//             <p className="mt-1 text-gray-500 text-theme-sm dark:text-gray-400">
-//               Overview of token generation
-//             </p>
-//           </div>
-//           <div className="relative inline-block">
-//             <button className="dropdown-toggle" onClick={toggleDropdown}>
-//               <MoreDotIcon className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 size-6" />
-//             </button>
-//             <Dropdown isOpen={isOpen} onClose={closeDropdown} className="w-40 p-2">
-// <DropdownItem onItemClick={closeDropdown} className="...">
-//   <Link to="/token-status" className="w-full h-full block">
-//     View More
-//   </Link>
-// </DropdownItem>
-//             </Dropdown>
-//           </div>
-//         </div>
-//         <div className="mt-6">
-//           <Chart options={options} series={series} type="donut" height={320} />
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
 
 import { useState, useEffect } from "react";
 import Chart from "react-apexcharts";
-import { ApexOptions } from "apexcharts";
+import type { ApexOptions } from "apexcharts";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function MonthlyTarget() {
 
-    const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = import.meta.env.VITE_API_URL as string;
+  const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
   const [series, setSeries] = useState<number[]>([0, 0]);
@@ -133,28 +22,51 @@ export default function MonthlyTarget() {
   const [activeUsersList, setActiveUsersList] = useState<any[]>([]);
   const [activeLabel, setActiveLabel] = useState("");
 
-  console.log(notGeneratedUsers);
-  
-
   // Fetch token stats from backend
   useEffect(() => {
     fetchTokenStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchTokenStatus() {
     try {
+      const { data } = await axios.get(`${apiUrl}/admin/tokenstatussummary`,
+         {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      }
 
-      const {data} = await axios.get(`${apiUrl}/admin/tokenstatussummary`);
+      );
 
-      console.log(data);
+     if(data.status==true) {
+
+      setSeries([data.generatedCount || 0, data.notGeneratedCount || 0]);
+      setGeneratedUsers(data.generatedUsers || []);
+      setNotGeneratedUsers(data.notGeneratedUsers || []);
+      setActiveUsersList(data.generatedUsers || []);
+      setActiveLabel("Token Generated Users");
+
+     }else if(data.status==false&&data.message=='Unauthorized'){
+
+       localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+
+       navigate("/");
+
+            
+     }else{
+            toast.error(data.error);    
+     }
       
+    } catch (err:any) {
 
-      setActiveUsersList(data.generatedUsers)
-      setSeries([data.generatedCount, data.notGeneratedCount]);
-      setGeneratedUsers(data.generatedUsers);
-      setNotGeneratedUsers(data.notGeneratedUsers);
-    } catch (err) {
-      console.error("Error fetching token status:", err);
+      toast.error(err.message);    
+    
     }
   }
 
@@ -165,16 +77,20 @@ export default function MonthlyTarget() {
       width: "100%",
       type: "donut",
       events: {
-        dataPointSelection: ( config) => {
+        // IMPORTANT: correct signature (event, chartContext, config)
+        dataPointSelection: (_event, _chartContext, config) => {
           const index = config.dataPointIndex;
 
           if (index === 0) {
+            // First slice: "Token Generated"
             setActiveUsersList(generatedUsers);
             setActiveLabel("Token Generated Users");
-          } else {
-            // setActiveUsersList(notGeneratedUsers);
-              setActiveUsersList(generatedUsers);
+          } else if (index === 1) {
+            // Second slice: "Token Not Generated"
+            setActiveUsersList(notGeneratedUsers);
             setActiveLabel("Token Not Generated Users");
+          } else {
+            return; // clicked somewhere else (e.g., center)
           }
 
           setShowModal(true);
@@ -195,7 +111,10 @@ export default function MonthlyTarget() {
               show: true,
               label: "Total Tokens",
               formatter: (w) =>
-                w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0),
+                w.globals.seriesTotals.reduce(
+                  (a: number, b: number) => a + b,
+                  0
+                ),
             },
           },
         },
@@ -224,11 +143,18 @@ export default function MonthlyTarget() {
             </div>
 
             <div className="relative inline-block">
-              <button className="dropdown-toggle" onClick={() => setIsOpen(!isOpen)}>
+              <button
+                className="dropdown-toggle"
+                onClick={() => setIsOpen((prev) => !prev)}
+              >
                 <MoreDotIcon className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 size-6" />
               </button>
 
-              <Dropdown isOpen={isOpen} onClose={() => setIsOpen(false)} className="w-40 p-2">
+              <Dropdown
+                isOpen={isOpen}
+                onClose={() => setIsOpen(false)}
+                className="w-40 p-2"
+              >
                 <DropdownItem onItemClick={() => setIsOpen(false)}>
                   <Link to="/token-status" className="w-full h-full block">
                     View More
@@ -251,10 +177,17 @@ export default function MonthlyTarget() {
             <h2 className="text-xl font-semibold mb-3">{activeLabel}</h2>
 
             <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {activeUsersList.length === 0 && (
+                <li className="text-gray-500 text-sm">No users found.</li>
+              )}
+
               {activeUsersList.map((u) => (
-                <li key={u._id} className="p-2 border rounded flex justify-between">
-                  <span>{u.firstName+" "+u.lastName}</span>
-                  <span className="text-gray-500 text-sm">{u._id}</span>
+                <li
+                  key={u._id}
+                  className="p-2 border rounded flex justify-between items-center text-sm"
+                >
+                  <span>{`${u.firstName || ""} ${u.lastName || ""}`}</span>
+                  <span className="text-gray-500">{u._id}</span>
                 </li>
               ))}
             </ul>

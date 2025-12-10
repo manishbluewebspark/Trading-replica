@@ -10,6 +10,7 @@ import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { handleAngelOneUser } from "../../services/handleAngelOneUser.js";
 import { handleKiteUser } from "../../services/handleKiteUser.js";
+import { getKiteClientForUserId } from "../../services/userKiteBrokerService.js";
 
 
 const ANGEL_ONE_PLACE_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder";
@@ -2248,26 +2249,37 @@ export const refreshAngelFundsForAllUsers = async (req, res) => {
 
 export const adminGetRecentOrder = async (req, res) => {
   try {
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
+
+    // 🔁 Since filltime is VARCHAR with ISO UTC string -> compare with ISO strings
+    const toDateISO = todayStart.toISOString(); // e.g. "2025-12-03T18:30:00.000Z"
+    const fromDateISO = todayEnd.toISOString();
+
+
+
     // 1️⃣ Today total orders
     const todayOrders = await Order.findAll({
       where: {
-        createdAt: {
-          [Op.between]: [todayStart, todayEnd],
+        filltime: {
+          [Op.between]: [toDateISO, fromDateISO],
         },
       },
-      order: [["createdAt", "DESC"]],
+      order: [["filltime", "DESC"]],
       raw: true,
     });
 
     // 2️⃣ Last 5 recent orders
-    const recentOrders = await Order.findAll({
-      order: [["createdAt", "DESC"]],
+    const recentOrders = await Order.findAll(
+     
+      {
+      where: { status: "COMPLETE" },   // ✅ Correct placement
+      order: [["filltime", "DESC"]],
       limit: 5,
       raw: true,
     });
@@ -2622,76 +2634,7 @@ export const adminGetRecentOrder = async (req, res) => {
 export const adminGetCloneUserHolding = async (req, res) => {
   try {
 
-    const userId = req.userId; // ensure middleware sets this
-
-      let resObj =   {
-          "holdings": [
-               {
-                    "tradingsymbol": "TATASTEEL-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE081A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 111.87,
-                    "ltp": 130.15,
-                    "symboltoken": "3499",
-                    "close": 129.6,
-                    "profitandloss": 37,
-                    "pnlpercentage": 16.34
-               },
-               {
-                    "tradingsymbol": "PARAGMILK-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE883N01014",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 154.03,
-                    "ltp": 201,
-                    "symboltoken": "17130",
-                    "close": 192.1,
-                    "profitandloss": 94,
-                    "pnlpercentage": 30.49
-               },
-               {
-                    "tradingsymbol": "SBIN-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE062A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 8,
-                    "quantity": 8,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 573.1,
-                    "ltp": 579.05,
-                    "symboltoken": "3045",
-                    "close": 570.5,
-                    "profitandloss": 48,
-                    "pnlpercentage": 1.04
-               }
-          ],
-          "totalholding": {
-               "totalholdingvalue": 5294,
-               "totalinvvalue": 5116,
-               "totalprofitandloss": 178.14,
-               "totalpnlpercentage": 3.48
-          }
-     }
-
+   
        return res.json({
             status: true,
             statusCode:200,
@@ -2712,11 +2655,479 @@ export const adminGetCloneUserHolding = async (req, res) => {
 };
 
 
+// async function fetchAngelTradesForUser(user,status) {
+//   try {
+//     const config = {
+//       method: "get",
+//       url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook",
+//       headers: {
+//         Authorization: `Bearer ${user.authToken}`,
+//         "Content-Type": "application/json",
+//         Accept: "application/json",
+//         "X-UserType": "USER",
+//         "X-SourceID": "WEB",
+//         "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+//         "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+//         "X-MACAddress": process.env.MAC_Address,
+//         "X-PrivateKey": process.env.PRIVATE_KEY,
+//       },
+//     };
+
+//     const response = await axios(config);
+
+//     const trades = response.data?.data || [];
+
+//     // 1) Collect all Angel orderids from tradebook
+//     const orderIds = trades
+//       .map(t => t.orderid)
+//       .filter(id => !!id);
+
+//     // 2) Check which ones are present in local `orders` table
+//     const existingOrders = await Order.findAll({
+//       where: {
+//         userId: user.id,
+//         orderid: orderIds, // Sequelize IN
+//       },
+//       attributes: ["orderid"],
+//       raw: true,
+//     });
+
+//     const existingOrderIdSet = new Set(
+//       existingOrders.map(o => String(o.orderid))
+//     );
+
+//     // 3) Normalize + add orderBy
+//     return trades.map((t) => {
+//       const oid = String(t.orderid || "");
+//       const isInLocalDb = existingOrderIdSet.has(oid);
+
+//       return {
+//         userId: user.id,
+//         username: user.username,
+//         brokerName: "angelone",
+
+//         // SAME FIELD NAMES AS KITE
+//         order_id: t.orderid,
+//         trade_id: t.fillid,
+
+//         exchange: t.exchange,
+//         tradingsymbol: t.tradingsymbol,
+//         instrument_token: null, // Angel does not provide this
+
+//         product: t.producttype,
+//         average_price: Number(t.fillprice),
+//         quantity: Number(t.fillsize),
+//         transaction_type: t.transactiontype,
+
+//         fill_timestamp: convertAngelTimeToISO(t.filltime),
+
+//         // 🔥 NEW FIELD: mark trades that match local software orders
+//         orderBy: isInLocalDb ? "software" : "broker",
+//       };
+//     });
+//   } catch (err) {
+//     console.error(
+//       "Angel trade fetch error:",
+//       err.response?.data || err.message
+//     );
+//     return [];
+//   }
+// }
+
+// Helper for time conversion: "13:27:53" → today's ISO timestamp
+
+
+async function fetchAngelTradesForUser(user, status) {
+  try {
+    // ---------- ORDER MODE: TRADEBOOK ----------
+    if (status === "order") {
+      const config = {
+        method: "get",
+        url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook",
+        headers: {
+          Authorization: `Bearer ${user.authToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-UserType": "USER",
+          "X-SourceID": "WEB",
+          "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+          "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+          "X-MACAddress": process.env.MAC_Address,
+          "X-PrivateKey": process.env.PRIVATE_KEY,
+        },
+      };
+
+      const response = await axios(config);
+      const trades = response.data?.data || [];
+
+      // 1) Saare Angel orderids collect karo
+      const orderIds = trades
+        .map((t) => t.orderid)
+        .filter((id) => !!id);
+
+      // 2) Local DB me check karo kaunse orderid already present hai
+      const existingOrders = await Order.findAll({
+        where: {
+          userId: user.id,
+          orderid: orderIds, // Sequelize IN
+        },
+        attributes: ["orderid"],
+        raw: true,
+      });
+
+      const existingOrderIdSet = new Set(
+        existingOrders.map((o) => String(o.orderid))
+      );
+
+      // 3) Normalize + add orderBy
+      return trades.map((t) => {
+        const oid = String(t.orderid || "");
+        const isInLocalDb = existingOrderIdSet.has(oid);
+
+        return {
+          userId: user.id,
+          username: user.username,
+          brokerName: "angelone",
+
+          // SAME TRADE FIELDS STYLE AS KITE
+          order_id: t.orderid,
+          trade_id: t.fillid,
+
+          exchange: t.exchange,
+          tradingsymbol: t.tradingsymbol,
+          instrument_token: null, // Angel doesn't send this
+
+          product: t.producttype,
+          average_price: Number(t.fillprice),
+          quantity: Number(t.fillsize),
+          transaction_type: t.transactiontype,
+
+          fill_timestamp: convertAngelTimeToISO(t.filltime),
+
+          // software vs broker
+          orderBy: isInLocalDb ? "software" : "broker",
+        };
+      });
+    }
+
+    // ---------- HOLDING MODE ----------
+    const holdingConfig = {
+      method: "get",
+      url: "https://apiconnect.angelone.in/rest/secure/angelbroking/portfolio/v1/getAllHolding",
+      headers: {
+        Authorization: `Bearer ${user.authToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-UserType": "USER",
+        "X-SourceID": "WEB",
+        "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+        "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+        "X-MACAddress": process.env.MAC_Address,
+        "X-PrivateKey": process.env.PRIVATE_KEY,
+      },
+    };
+
+    const holdingResponse = await axios(holdingConfig);
+
+    const holdings = holdingResponse.data?.data?.holdings || [];
+
+    // holdings ko normalize karo
+    return holdings.map((h) => ({
+      userId: user.id,
+      username: user.username,
+      brokerName: "angelone",
+
+      // trade specific fields (not applicable here)
+      order_id: null,
+      trade_id: null,
+      transaction_type: null,
+      fill_timestamp: null,
+
+      // Holding-style fields (similar idea to what you’ll use for Kite holdings)
+      exchange: h.exchange,
+      tradingsymbol: h.tradingsymbol,
+      instrument_token: h.symboltoken || null,
+
+      product: h.product, // DELIVERY
+      quantity: Number(h.quantity),
+      average_price: Number(h.averageprice),
+      ltp: Number(h.ltp),
+      close: Number(h.close),
+      profitandloss: Number(h.profitandloss),
+      pnlpercentage: Number(h.pnlpercentage),
+
+      // For holdings we mark as broker by default
+      orderBy: "broker",
+
+      type: "holding",
+    }));
+  } catch (err) {
+    console.error(
+      "Angel data fetch error:",
+      err.response?.data || err.message
+    );
+    return [];
+  }
+}
+
+function convertAngelTimeToISO(timeStr) {
+  if (!timeStr) return null;
+
+  // Create today's date with provided time
+  const today = new Date();
+  const [h, m, s] = timeStr.split(":");
+
+  today.setHours(h);
+  today.setMinutes(m);
+  today.setSeconds(s);
+
+  return today.toISOString();
+}
+
+
+
+async function fetchKiteTradesForUser(user,status) {
+  try {
+    
+    const kite = await getKiteClientForUserId(user.id);
+
+    let  trades
+
+     if(status==='order') {
+        
+       trades  = await kite.getTrades();
+
+     }else{
+
+        trades  = await kite.getHoldings();
+     }
+  
+
+    // 1) Saare order_id collect karo
+    const orderIds = trades
+      .map(t => t.order_id)
+      .filter(id => !!id); // null/undefined hatao
+
+    // 2) Local DB me check karo kaunse orderid already present hai
+    const existingOrders = await Order.findAll({
+      where: {
+        userId: user.id,
+        orderid: orderIds, // Sequelize IN clause
+      },
+      attributes: ["orderid"],
+      raw: true,
+    });
+
+    // 3) Fast lookup ke liye Set banao
+    const existingOrderIdSet = new Set(
+      existingOrders.map(o => String(o.orderid))
+    );
+
+    // 4) Map & normalize trades + add orderBy
+    return trades.map((t) => {
+      const oid = String(t.order_id || "");
+
+      const isInLocalDb = existingOrderIdSet.has(oid);
+
+      return {
+        userId: user.id,
+        username: user.username,
+        brokerName: "kite",
+
+        // SAME FIELDS AS ANGEL
+        order_id: t.order_id,
+        trade_id: t.trade_id,
+
+        exchange: t.exchange,
+        tradingsymbol: t.tradingsymbol,
+        instrument_token: t.instrument_token,
+
+        product: t.product,
+        average_price: t.average_price,
+        quantity: t.quantity,
+        transaction_type: t.transaction_type,
+
+        fill_timestamp:
+          t.exchange_timestamp ||
+          t.fill_timestamp ||
+          t.order_timestamp,
+
+        // 👉 NEW FIELD
+        orderBy: isInLocalDb ? "software" : "broker", // ya "kite" / "api" etc. else
+
+        // raw: t  // agar chahiye to uncomment
+      };
+    });
+  } catch (err) {
+    console.error("Kite trade fetch error:", err.message);
+    return [];
+  }
+}
+
+
+export const adminFetchOrder = async function (req,res,next) {
+
+  let users = await User.findAll({
+      where: {
+        angelLoginUser: true,   // ✅ filter here
+        role:"user"
+      },
+      raw: true
+    });
+
+     const allTradePromises = users.map(async (user) => {
+      try {
+        if (user.brokerName === "kite") {
+          return await fetchKiteTradesForUser(user,'order');
+        }
+
+        if (user.brokerName === "angelone") {
+          return await fetchAngelTradesForUser(user,'order');
+        }
+
+        if (user.brokerName === "fyers") {
+          return await fetchFyersTradesForUser(user,'order');
+        }
+
+        // unknown broker – skip
+        console.warn("Unknown broker for user", user.id, user.brokerName);
+        return [];
+      } catch (err) {
+        console.error(`Error fetching trades for user ${user.id}`, err.message);
+        return [];
+      }
+    });
+
+    let allTradesNested = await Promise.all(allTradePromises);
+    let allTrades = allTradesNested.flat();
+
+    // sort by time (latest first)
+    allTrades = allTrades.sort((a, b) => {
+      const ta = new Date(a.time || 0).getTime();
+      const tb = new Date(b.time || 0).getTime();
+      return tb - ta;
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Trades fetched successfully",
+      userCount: users.length,
+      tradeCount: allTrades.length,
+      data: allTrades,
+    });
+  
+  
+
+  
+
+
+  
+}
+
+
+export const adminFetchOrderHolding = async function (req,res,next) {
+
+  let users = await User.findAll({
+      where: {
+        angelLoginUser: true,   // ✅ filter here
+        role:"user"
+      },
+      raw: true
+    });
+
+     const allTradePromises = users.map(async (user) => {
+      try {
+        if (user.brokerName === "kite") {
+          return await fetchKiteTradesForUser(user,'holding');
+        }
+
+        if (user.brokerName === "angelone") {
+          return await fetchAngelTradesForUser(user,'holding');
+        }
+
+        if (user.brokerName === "fyers") {
+          return await fetchFyersTradesForUser(user,'holding');
+        }
+
+        // unknown broker – skip
+        console.warn("Unknown broker for user", user.id, user.brokerName);
+        return [];
+      } catch (err) {
+        console.error(`Error fetching trades for user ${user.id}`, err.message);
+        return [];
+      }
+    });
+
+    let allTradesNested = await Promise.all(allTradePromises);
+    let allTrades = allTradesNested.flat();
+
+    // sort by time (latest first)
+    allTrades = allTrades.sort((a, b) => {
+      const ta = new Date(a.time || 0).getTime();
+      const tb = new Date(b.time || 0).getTime();
+      return tb - ta;
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Trades fetched successfully",
+      userCount: users.length,
+      tradeCount: allTrades.length,
+      data: allTrades,
+    });
+  
+}
+
+
+
+export const AdminGetHoldingMultiple = async (req, res) => {
+  try {
+    
+    // 2️⃣ Compute start of TODAY in IST, convert to UTC ISO for string comparison
+    const nowUtc = new Date();
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30
+
+    // Convert current UTC -> IST
+    const istNow = new Date(nowUtc.getTime() + IST_OFFSET_MS);
+    istNow.setHours(0, 0, 0, 0); // start of day in IST (00:00:00)
+
+    // Convert IST start-of-day back to UTC
+    const startOfTodayUtc = new Date(istNow.getTime() - IST_OFFSET_MS);
+    const startOfTodayIso = startOfTodayUtc.toISOString(); // e.g. "2025-12-10T00:00:00.000Z"
+
+    // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
+    const localOldOrders = await Order.findAll({
+      where: {
+        orderstatuslocaldb: "OPEN",
+        filltime: {
+          [Op.lt]: startOfTodayIso,  // only yesterday & older
+        },
+      },
+    });
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: localOldOrders, // ✅ only yesterday+old positions
+      message:
+        "Successfully fetched holdings matching local COMPLETE orders (excluding today's filltime)",
+    });
+  } catch (error) {
+    console.error("❌ getKiteHolding error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
 
 
 
 
-
+ 
 
 
 

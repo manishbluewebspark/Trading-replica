@@ -66,14 +66,14 @@ export const getAllUsers = async (req, res) => {
     // 2) हर user का password decrypt करो
     const decryptedUsers = await Promise.all(
       users.map(async (user) => {
-        console.log(user.firstName);
+       
 
         const encrypted = user.password;
-        console.log("Encrypted:", encrypted, "Secret:", process.env.CRYPTO_SECRET);
+        
 
         const plainPassword = await decrypt(encrypted, process.env.CRYPTO_SECRET);
 
-        console.log("Decrypted:", plainPassword);
+        
 
         return {
           ...user,                // plain user object
@@ -105,7 +105,7 @@ export const getAllUsers = async (req, res) => {
       data: merged,
     });
   } catch (error) {
-    console.log(error);
+   
     return res.status(500).json({
       status: false,
       statusCode: 500,

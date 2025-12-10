@@ -76,8 +76,6 @@ export const getCloneAllUsers = async (req, res) => {
       })
     );
 
-    console.log("Final results:", results);
-
     return res.json({
       status: true,
       message: "Users fetched successfully",
@@ -723,10 +721,13 @@ export const uploadOrderExcel= async (req, res) => {
     const jsonData = [];
 
     worksheet.eachRow((row, rowNumber) => {
+     
       // Skip header row
       if (rowNumber === 1) return;
 
       const rowObj = {};
+
+       
 
       row.eachCell((cell, colNumber) => {
         const excelHeader = worksheet.getRow(1).getCell(colNumber).value;
@@ -738,10 +739,14 @@ export const uploadOrderExcel= async (req, res) => {
 
         const dbField = headerMap[headerText];
 
+           
+
         if (dbField) {
           rowObj[dbField] = cell.value;
         }
       });
+
+
 
       if (rowObj.buyTime) {
         rowObj.buyTime = String(parseISTToDate(rowObj.buyTime));
@@ -752,6 +757,9 @@ export const uploadOrderExcel= async (req, res) => {
 
       jsonData.push(rowObj);
     });
+
+     console.log(jsonData,'excel file upload');
+
 
     // Remove completely empty rows
     const rowsToInsert = jsonData.filter((row) =>
@@ -815,7 +823,8 @@ export const uploadOrderExcel= async (req, res) => {
 
     // 🔹 4) Generate order ids / unique ids / fill ids
     rowsToInsert.forEach((row) => {
-      row.orderid = generateOrderId();
+      // row.orderid = generateOrderId();
+      row.orderid =row.orderid;
       row.uniqueorderid = generateUniqueOrderUUID();
       row.fillid = generateFillId();
       row.userNameId = row.username
@@ -850,6 +859,10 @@ export const uploadOrderExcel= async (req, res) => {
     });
   } catch (err) {
 
+
+
+    console.log(err);
+    
 
     await t.rollback();
 

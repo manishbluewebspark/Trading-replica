@@ -379,7 +379,6 @@ function readNullTerminatedAscii(buf, offset, maxLen) {
   return buf.toString("utf8", offset, i);
 }
 
-
 function startHeartbeat() {
 
     console.log('startHeartbeat');
@@ -438,8 +437,6 @@ export async function emitOrderGet(authToken) {
 
     console.log('done emit');
     
-      
-
   } catch (err) {
     
     console.warn("emitOrderGet skipped (socket not ready yet):", err.message);

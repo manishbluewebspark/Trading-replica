@@ -17,9 +17,12 @@ const Order = sequelize.define(
         type: DataTypes.STRING,
         allowNull: false,
         set(value) {
-          // Trim spaces + remove leading/trailing whitespace
-          this.setDataValue("userNameId", value.trim());
-        }
+  if (value === null || value === undefined) {
+    this.setDataValue("userNameId", null);
+  } else {
+    this.setDataValue("userNameId", String(value).trim());
+  }
+}
       },
     variety: {
       type: DataTypes.STRING,
@@ -195,7 +198,6 @@ const Order = sequelize.define(
     fillid: {
       type: DataTypes.STRING,
       allowNull: true,
-      unique: true, // Each fill is unique
     },
     filltime: {
       type: DataTypes.STRING,
@@ -214,6 +216,10 @@ const Order = sequelize.define(
       allowNull: true,
     },
   buyTime: {
+    type: DataTypes.STRING,
+    allowNull: true,
+   },
+    buyOrderId: {
     type: DataTypes.STRING,
     allowNull: true,
    },

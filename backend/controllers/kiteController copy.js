@@ -4,16 +4,71 @@ import { KiteAccess } from "../utils/kiteClient.js";
 import axios from "axios";
 import crypto from "crypto";
 import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
-import { Op } from "sequelize";
+import redis from "../utils/redis.js";  // your redis client
+
+
+
+async function Abc () {
+   // 1️⃣ Get all Kite users as RAW objects
+    const kiteUsers = await User.findAll({
+      where: { brokerName: "kite" },
+      raw: true, // 👈 plain JS objects, no instance methods
+      // attributes: ["id", "email", "kite_key", "kite_secret"]  // optional
+    });
+
+    console.log(kiteUsers);
+    
+}
+
+
+// Abc()
 
 export const getKiteAllInstruments = async (req, res) => {
+  const REDIS_KEY = "kite_all_instruments";
+  const TEN_HOURS_IN_SECONDS = 10 * 60 * 60; // 36000
+
   try {
+    const startTime = Date.now();
+
+    // ===========================================
+    // 1️⃣ Try Redis Cache First
+    // ===========================================
+    const cachedData = await redis.get(REDIS_KEY);
+
+    if (cachedData) {
+      console.log("📦 KITE instruments served from Redis cache");
+
+      return res.json({
+        status: true,
+        statusCode: 200,
+        data: JSON.parse(cachedData),
+        cache: true,
+        message: "Kite instruments fetched from Redis cache",
+      });
+    }
+
+    // ===========================================
     // 2️⃣ If not in cache → Call Kite API
     // ===========================================
     const apiKey = process.env.KITE_API_KEY;
     const kite = KiteAccess(apiKey);
 
     const instruments = await kite.getInstruments(); // heavy call
+
+    // ===========================================
+    // 3️⃣ Store in Redis (Expire in 10 hours)
+    // ===========================================
+    await redis.set(
+      REDIS_KEY,
+      JSON.stringify(instruments),
+      "EX",
+      TEN_HOURS_IN_SECONDS
+    );
+
+    const endTime = Date.now();
+    console.log(
+      `✅ KITE instruments fetched LIVE & cached. Time: ${(endTime - startTime) / 1000}s`
+    );
 
     return res.json({
       status: true,
@@ -23,6 +78,7 @@ export const getKiteAllInstruments = async (req, res) => {
       message: "Kite instruments fetched from API and cached in Redis",
     });
   } catch (error) {
+    console.error("❌ getKiteAllInstruments error:", error);
 
     return res.json({
       status: false,
@@ -395,9 +451,6 @@ export const getTradeDataForKiteDeshboard = async function (req, res, next) {
 
     const trades = await kite.getTrades();
 
-    console.log(trades,'trades');
-    
-
     if (!Array.isArray(trades) || trades.length === 0) {
       return res.json({
         status: true,
@@ -769,7 +822,7 @@ export const placeKiteAllOrders = async (req, res) => {
 
 
 // ===================== Holding ORDER =====================
-export const getKiteHolding1 = async (req, res) => {
+export const getKiteHolding = async (req, res) => {
   try {
  
   const token = req.headers.angelonetoken;
@@ -787,7 +840,7 @@ export const getKiteHolding1 = async (req, res) => {
 
     const orders = await kite.getHoldings();
 
-    console.log(orders,'holding');
+    console.log(orders);
     
 
     
@@ -808,104 +861,12 @@ export const getKiteHolding1 = async (req, res) => {
   }
 };
 
-export const getKiteHolding = async (req, res) => {
-  try {
-    const token = req.headers.angelonetoken;
-
-    if (!token) {
-      return res.json({
-        status: false,
-        statusCode: 401,
-        message: "Kite access token missing in header (angelonetoken)",
-        error: null,
-      });
-    }
-
-    // 1️⃣ Get Kite client and live holdings
-    const kite = await getKiteClientForUserId(req.userId);
-    const holdings = await kite.getHoldings(); // array of current holdings
-
-    console.log("🔹 Kite holdings count:", holdings.length);
-
-    // 2️⃣ Compute start of TODAY in IST, convert to UTC ISO for string comparison
-    const nowUtc = new Date();
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30
-
-    // Convert current UTC -> IST
-    const istNow = new Date(nowUtc.getTime() + IST_OFFSET_MS);
-    istNow.setHours(0, 0, 0, 0); // start of day in IST (00:00:00)
-
-    // Convert IST start-of-day back to UTC
-    const startOfTodayUtc = new Date(istNow.getTime() - IST_OFFSET_MS);
-    const startOfTodayIso = startOfTodayUtc.toISOString(); // e.g. "2025-12-10T00:00:00.000Z"
-
-    console.log("🕒 startOfTodayUtc ISO:", startOfTodayIso);
-
-    // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
-    const localOldOrders = await Order.findAll({
-      where: {
-        userId: req.userId,
-        orderstatuslocaldb: "OPEN",
-        filltime: {
-          [Op.lt]: startOfTodayIso,  // only yesterday & older
-        },
-      },
-    });
-
-    console.log("📦 Local old COMPLETE orders:", localOldOrders.length);
-
-    // 4️⃣ Build set of symbols from local old orders (adjust field name if different)
-    const oldSymbolSet = new Set(
-      localOldOrders
-        .map((o) => o.tradingsymbol || o.symbol || o.kiteSymbol)
-        .filter(Boolean)
-    );
-
-    // 5️⃣ Filter Kite holdings to only those which exist in local old orders
-    const filteredHoldings = holdings.filter((h) =>
-      oldSymbolSet.has(h.tradingsymbol)
-    );
-
-    // 6️⃣ (Optional) Enrich holdings with related local orders
-    const enrichedHoldings = filteredHoldings.map((h) => {
-      const relatedOrders = localOldOrders.filter(
-        (o) =>
-          (o.tradingsymbol || o.symbol || o.kiteSymbol) === h.tradingsymbol
-      );
-      return {
-        // ...h,
-        // localOrders: relatedOrders,
-             ...relatedOrders,
-
-      };
-    });
-
-    return res.json({
-      status: true,
-      statusCode: 200,
-      data: enrichedHoldings, // ✅ only yesterday+old positions
-      message:
-        "Successfully fetched holdings matching local COMPLETE orders (excluding today's filltime)",
-    });
-  } catch (error) {
-    console.error("❌ getKiteHolding error:", error);
-    return res.json({
-      status: false,
-      statusCode: 500,
-      message: "Unexpected error occurred. Please try again.",
-      data: null,
-      error: error.message,
-    });
-  }
-};
-
-
 
 export const getKiteTrades = async (req, res) => {
   try {
 
    
-      const token = "kZubR1P8yQxTDDZgAxo9K4roFO9C3oBW";
+      const token = "UJpnO6tIPu9GqtuBltC9isIdHieGpiaS";
 
     if (!token) {
       return res.json({
@@ -919,16 +880,15 @@ export const getKiteTrades = async (req, res) => {
     const  kite  = await getKiteClientForUserId(15)
     //  const  kite  = await getKiteClientForUserId(13)
 
-    const orders = await kite.getOrderHistory("1998298472356274176");
-
-     const completeObj = orders.find(
-          item => item.status?.toLowerCase() === "complete"
-        );
-
-        // const orders = await kite.getOrders();
+    const orders = await kite.getOrderTrades("1996800237145972736");
 
     // const orders = await kite.getHoldings();
-    
+
+
+  
+
+
+    console.log(orders);
     
 
     // const ordersWithTrades = await Promise.all(
@@ -949,7 +909,7 @@ export const getKiteTrades = async (req, res) => {
     return res.json({
       status: true,
       statusCode: 200,
-      data: completeObj,
+      data: orders,
       message: "Successfully fetched orders with trades",
     });
   } catch (error) {
@@ -980,11 +940,11 @@ export const getKiteOrders = async (req, res) => {
 
     const  kite  = await getKiteClientForUserId(3)
 
-  //  const orders = await kite.getOrders();
+   const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("251210170432958");
+    // const orders = await kite.getOrderTrades("251203220916351");
 
-    console.log(orders,'orders orders');
+    console.log(orders);
     
 
     // const ordersWithTrades = await Promise.all(

@@ -1044,11 +1044,14 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
 export const getHoldingDataInAngelOne = async (req, res,next) => {
     try {
 
+      // let token = req.headers.angelonetoken
+       let token = '3gGVlaapWvs14k1T7bOcurwtexholcmf'
+
       var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/portfolio/v1/getAllHolding',
         headers: { 
-             'Authorization': `Bearer ${req.headers.angelonetoken}`,
+             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json', 
             'Accept': 'application/json', 
             'X-UserType': 'USER', 
@@ -1341,6 +1344,9 @@ export const getPosition = async (req, res,next) => {
 export const getAngelOneLTP = async (req, res,next) => {
     try {
 
+      console.log(req.body);
+      
+
        var data = JSON.stringify({
             "exchange":req.body.exchange,
             "tradingsymbol":req.body.tradingsymbol,
@@ -1366,6 +1372,9 @@ export const getAngelOneLTP = async (req, res,next) => {
     };
 
     let resData = await axios(config)
+
+    console.log(resData,'resData');
+    
 
      if(resData?.data?.status==true) {
 
