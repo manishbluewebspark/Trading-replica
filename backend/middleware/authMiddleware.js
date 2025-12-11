@@ -25,7 +25,10 @@ const token = req.headers.authorization?.split(' ')[1];
     req.userId = decoded.id;
     req.borker = decoded.borker;
 
-     if(req.role==='clone-user') {
+    console.log(req.url);
+    
+
+     if(req.role==='clone-user'&&req.url==='kite/get/holdingdata') {
 
       return res.json({
       status: true,

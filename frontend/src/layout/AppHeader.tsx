@@ -94,6 +94,10 @@ const [bankNifty, setBankNifty] = useState<number | null>(
 
          let resData = response.data
 
+         console.log(resData,'resData');
+
+         
+         
          if(resData.status==true){
 
            setUserPackageName(resData.data.packageName)

@@ -245,6 +245,7 @@ export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
       product:kiteProductType,  // DELIVERY.                // mistake in fields 
       order_type: reqInput.orderType,
       price: reqInput.price,
+      market_protection: 5 // protection points
     };
 
     // ----------------------------------------
@@ -483,10 +484,6 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
 
     const newOrder = await Order.create(orderData);
 
-
-   
-    
-
     // ----------------------------------------
     // 3) KITE PAYLOAD
     // ----------------------------------------
@@ -498,6 +495,7 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
       product:reqInput.productType,  // DELIVERY.                // mistake in fields 
       order_type: reqInput.orderType,
       price: reqInput.price,
+      market_protection: 5 // protection points
     };
 
      console.log(orderParams,' db orderParams done');

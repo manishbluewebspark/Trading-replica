@@ -927,11 +927,17 @@ export const getCloneUserFund = async (req, res) => {
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
+             // 🔁 Since filltime is VARCHAR with ISO UTC string -> compare with ISO strings
+    const startISO = startOfDay.toISOString(); // e.g. "2025-12-03T18:30:00.000Z"
+    const endISO = endOfDay.toISOString();
+
+
+
         const todayOrders = await Order.findAll({
           where: {
             userId: req.userId,
-            createdAt: {
-              [Op.between]: [startOfDay, endOfDay]
+            filltime: {
+              [Op.between]: [startISO, endISO]
             }
           },
           raw: true,
@@ -1104,11 +1110,15 @@ export const getCloneUserTrade = async (req, res) => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
+     // 🔁 Since filltime is VARCHAR with ISO UTC string -> compare with ISO strings
+    const startISO = startOfDay.toISOString(); // e.g. "2025-12-03T18:30:00.000Z"
+    const endISO = endOfDay.toISOString();
+
     const trades = await Order.findAll({
       where: {
         userId,
         transactiontype:"SELL",
-        createdAt: { [Op.between]: [startOfDay, endOfDay] },
+        filltime: { [Op.between]: [startISO, endISO] },
       },
       raw: true,
     });
@@ -1187,7 +1197,7 @@ export const getCloneUserTrade = async (req, res) => {
       where: {
         userId,
         orderstatuslocaldb: "OPEN",
-        createdAt: { [Op.between]: [startOfDay, endOfDay] },
+        filltime: { [Op.between]: [startISO, endISO] },
       },
     });
 
