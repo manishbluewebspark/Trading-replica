@@ -6,6 +6,7 @@ import { placeFyersOrder } from "../../services/placeFyersOrder.js";
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { logSuccess, logError } from "../../utils/loggerr.js";
+import { placeFinavasiaOrder } from "../../services/placeFinavasiaOrder.js";
 
 
 export const getTokenStatusSummary = async (req, res) => {
@@ -132,6 +133,9 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
         }
          if (user.brokerName.toLowerCase() === "upstox") {
           return await placeFyersOrder(user, input,startOfDay, endOfDay);
+        }
+        if (user.brokerName.toLowerCase() === "finvasia") {
+          return await placeFinavasiaOrder(user, input,startOfDay, endOfDay);
         }
 
         return {
@@ -445,7 +449,10 @@ export const adminSingleSquareOff = async (req, res) => {
       brokerRes = await placeKiteOrderLocalDb(user, reqInput, startOfDay, endOfDay);
     } else if (user.brokerName.toLowerCase() === "fyers" && user.role === "user") {
       brokerRes = await placeFyersOrder(user, reqInput, startOfDay, endOfDay);
-    } else {
+    }else if (user.brokerName.toLowerCase() === "finvasia" && user.role === "user") {
+      brokerRes = await placeFyersOrder(user, reqInput, startOfDay, endOfDay);
+    }
+    else {
       return res.json({
         status: false,
         message: `Unknown or invalid broker: ${user.broker}`,

@@ -63,6 +63,7 @@ import OrdersAdminPage from "./pages/Forms/OrderAdminPage";
 import UserManual from "./pages/Tables/UserManual";
 import KiteCrendential from "./pages/Forms/KiteCredential";
 import Userposition from "./pages/Tables/UserPosition";
+import FinavasiaCrendetial from "./pages/Forms/FinavasiaCredential";
 
 export default function App() {
 
@@ -136,24 +137,20 @@ export default function App() {
             <Route path="/angelonecredential" element={<ProtectedRoute><AngelOneCredential /></ProtectedRoute>} />
             <Route path="/kitecredential" element={<ProtectedRoute><KiteCrendential /></ProtectedRoute>} />
 
+            <Route path="/finavasiacredential" element={<ProtectedRoute><FinavasiaCrendetial /></ProtectedRoute>} />
+
+
             <Route path="/userposition" element={<ProtectedRoute><Userposition /></ProtectedRoute>} />
 
-
-
-
-             <Route path="/angel/order" element={<ProtectedRoute><AngelOrderTable /></ProtectedRoute>} />
+            <Route path="/angel/order" element={<ProtectedRoute><AngelOrderTable /></ProtectedRoute>} />
             <Route path="/angel/trades" element={<ProtectedRoute><AngelTradeTable /></ProtectedRoute>} />
-
-                     <Route path="/admin/deshboard" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                    <Route path="/new/deshboard" element={<ProtectedRoute><DashboardMain /></ProtectedRoute>} />
-
-               <Route path="/admin/usertable" element={<ProtectedRoute><UsersTables /></ProtectedRoute>} />
-                <Route path="/admin/order" element={<ProtectedRoute><OrderTableAdmin /></ProtectedRoute>} />
-
-                 <Route path="/admin/strategy" element={<ProtectedRoute><AssignStrategy /></ProtectedRoute>} />
-
-                  <Route path="/admin/broker" element={<ProtectedRoute><BrokerPage /></ProtectedRoute>} />
-                  <Route path="/admin/holding/order" element={<ProtectedRoute><HoldingOrderAdmin /></ProtectedRoute>} />
+            <Route path="/admin/deshboard" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/new/deshboard" element={<ProtectedRoute><DashboardMain /></ProtectedRoute>} />
+            <Route path="/admin/usertable" element={<ProtectedRoute><UsersTables /></ProtectedRoute>} />
+            <Route path="/admin/order" element={<ProtectedRoute><OrderTableAdmin /></ProtectedRoute>} />
+            <Route path="/admin/strategy" element={<ProtectedRoute><AssignStrategy /></ProtectedRoute>} />
+            <Route path="/admin/broker" element={<ProtectedRoute><BrokerPage /></ProtectedRoute>} />
+            <Route path="/admin/holding/order" element={<ProtectedRoute><HoldingOrderAdmin /></ProtectedRoute>} />
 
 
 

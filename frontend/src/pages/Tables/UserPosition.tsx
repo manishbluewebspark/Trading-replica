@@ -169,7 +169,7 @@ export default function UserPosition () {
   const fetchTrades = async () => {
     try {
      
-       let tradeRes = await axios.get(`${apiUrl}//get/userpostion/tradebook`, {
+       let tradeRes = await axios.get(`${apiUrl}/order/userposition/common/todaytrade`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             "AngelOneToken": localStorage.getItem("angel_token") || "",

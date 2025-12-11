@@ -1098,6 +1098,8 @@ export const getCloneUserTrade1 = async (req, res) => {
   }
 };
 
+
+
 export const getCloneUserTrade = async (req, res) => {
   try {
     let pnlValues = 0;
@@ -1120,6 +1122,40 @@ export const getCloneUserTrade = async (req, res) => {
         transactiontype:"SELL",
         filltime: { [Op.between]: [startISO, endISO] },
       },
+      raw: true,
+    });
+
+     const tradesOnline = await Order.findAll({
+      where: {
+        userId,
+        orderstatuslocaldb:"OPEN",
+        transactiontype:"BUY",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+
+      // 🔹 Shape fields to match frontend exactly
+      attributes: [
+        "tradingsymbol",
+        "exchange",
+
+        // DB: transactiontype  → API: transaction_type
+        ["transactiontype", "transaction_type"],
+
+        // DB: producttype      → API: product
+        ["producttype", "product"],
+
+        // DB: fillprice        → API: average_price
+        ["fillprice", "average_price"],
+
+        // DB: fillsize         → API: quantity
+        ["fillsize", "quantity"],
+
+        // DB: orderid          → API: order_id
+        ["orderid", "order_id"],
+
+        // DB: fillid           → API: trade_id
+        ["fillid", "trade_id"],
+      ],
       raw: true,
     });
 
@@ -1203,7 +1239,9 @@ export const getCloneUserTrade = async (req, res) => {
 
     const totalTraded = trades.length; // number of completed trades / rows
 
-    console.log("Clone user totals → pnl:", pnlData);
+  
+    console.log(tradesOnline,'tradesOnline');
+    
 
     return res.status(200).json({
       status: true,
@@ -1211,7 +1249,8 @@ export const getCloneUserTrade = async (req, res) => {
       message: "Getting clone-user trade data",
       data: pnlData,
       pnl: toMoney(pnlValues),   // ✅ sum of PnL column
-      totalTraded,               // number of rows
+      totalTraded,  
+      onlineTrades:tradesOnline,             // number of rows
       totalOpen: openCount,
       error: null,
     });
@@ -1224,4 +1263,6 @@ export const getCloneUserTrade = async (req, res) => {
     });
   }
 };
+
+
 

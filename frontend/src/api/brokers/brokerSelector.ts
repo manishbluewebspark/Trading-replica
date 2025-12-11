@@ -29,7 +29,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: angelOneApi,
       image: brokerImage,
-      brokerName:broker
+      brokerName:broker,
+      role:userRole
 
     };
   }
@@ -38,7 +39,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: kiteApi,
       image: brokerImage,
-       brokerName:broker
+       brokerName:broker,
+        role:userRole
     };
   }
 
@@ -46,7 +48,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: fyersApi,
       image: brokerImage,
-       brokerName:broker
+       brokerName:broker,
+        role:userRole
     };
   }
 
@@ -54,7 +57,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: upStoxApi,
       image: brokerImage,
-       brokerName:broker
+       brokerName:broker,
+        role:userRole
     };
   }
 
@@ -62,7 +66,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: finvasiaApi,
       image: brokerImage,
-       brokerName:broker
+       brokerName:broker,
+        role:userRole
     };
   }
 
@@ -70,7 +75,8 @@ if (broker === "angelone"&&userRole==='user') {
     return {
       api: cloneUserOneApi,
       image: brokerImage,
-       brokerName:broker
+       brokerName:broker,
+       role:userRole
     };
   }
 

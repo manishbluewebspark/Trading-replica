@@ -8,7 +8,7 @@ export const finvasiaApi = {
   generateToken: async () => {
     try {
       
-      const { data } = await http.get("/finavasia", {
+      const { data } = await http.get("/finavasia/logintotp", {
         headers: authHeaders(),
       });
 
@@ -30,7 +30,7 @@ export const finvasiaApi = {
   getFund: async () => {
     try {
 
-      return await http.get("/kite/fund", {
+      return await http.get("/finvasia/fund", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",

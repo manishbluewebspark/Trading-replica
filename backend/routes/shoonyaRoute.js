@@ -1,13 +1,22 @@
 import express from 'express';
-import { getShoonyaFunds, getShoonyaOrders, getShoonyaTrades, shoonyaLogin } from '../controllers/shoonyaController.js';
+import {  finvasiaAppCredential, getShoonyaFunds, getShoonyaOrders, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 
 
 const router = express.Router();
 
-router.post('/finvasia/login', shoonyaLogin);
+router.post('/finvasia/login', authMiddleware,shoonyaLogin);
+router.post('/finavasia/appcredential/create', authMiddleware,finvasiaAppCredential);
 
-router.post('/finvasia/fund', getShoonyaFunds);
+
+
+
+
+router.get('/finavasia/logintotp',authMiddleware,shoonyaLoginWithTotp );
+
+
+router.get('/finvasia/fund',authMiddleware, getShoonyaFunds);
 
 router.post('/finvasia/orders', getShoonyaOrders);
 

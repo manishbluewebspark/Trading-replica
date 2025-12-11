@@ -6,7 +6,6 @@ import userRoutes from './routes/userRoute.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import orderRoute from './routes/orderRoute.js';
 import fyersRoute from './routes/fyersRoute.js';
-import finavasiaRoute from './routes/finavasiaRoute.js';
 import kiteRoute from './routes/kiteRoute.js';
 import upStoxRoute from './routes/upstockRoute.js';
 import shoonyaRoute from './routes/shoonyaRoute.js';
@@ -74,7 +73,7 @@ app.use('/api', fyersRoute);
 app.use('/api', kiteRoute);
 app.use('/api', angeloneRoute);
 app.use('/api', shoonyaRoute);
-app.use('/api', finavasiaRoute);
+
 app.use('/api', upStoxRoute);
 
 

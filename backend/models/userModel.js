@@ -120,6 +120,7 @@ packageDate:{
 packageFromDate:{
    type: DataTypes.DATE,
       allowNull: true,
+      
 },
 kite_key:{
    type: DataTypes.STRING,
@@ -135,6 +136,14 @@ kite_pin:{
 },
 kite_client_id:{
    type: DataTypes.STRING,
+    allowNull: true
+},
+finavacia_vendor_code:{
+ type: DataTypes.STRING,
+    allowNull: true
+},
+finavacia_imei:{
+ type: DataTypes.STRING,
     allowNull: true
 },
 

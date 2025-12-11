@@ -484,6 +484,7 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
 
     const newOrder = await Order.create(orderData);
 
+
     // ----------------------------------------
     // 3) KITE PAYLOAD
     // ----------------------------------------
@@ -592,9 +593,6 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
 
     await newOrder.update({
       uniqueorderid:detailsData.exchange_order_id,
-      exchorderupdatetime:detailsData.fill_timestamp.toISOString(),
-      exchtime:detailsData.fill_timestamp.toISOString(),
-      updatetime:detailsData.fill_timestamp.toISOString(),
       averageprice:detailsData.average_price,
       lotsize:detailsData.quantity,
       symboltoken:reqInput.kiteToken||reqInput.token,
@@ -678,6 +676,12 @@ export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay
     };
   }
 };
+
+
+
+
+
+
 
 
 

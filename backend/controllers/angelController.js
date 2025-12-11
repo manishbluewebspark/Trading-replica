@@ -887,9 +887,6 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
                   });
             }
 
-
-          
-
         var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook',
@@ -1040,6 +1037,225 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
 
     }
 }
+
+export const getTradeDataUserPostion = async function (req, res, next) {
+  try {
+    let totalBuyLength = 0;
+
+    const angelToken = req.headers.angelonetoken;
+
+    if (!angelToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login In AngelOne Account",
+        error: null,
+      });
+    }
+
+    const config = {
+      method: "get",
+      url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook",
+      headers: {
+        Authorization: `Bearer ${angelToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-UserType": "USER",
+        "X-SourceID": "WEB",
+        "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+        "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+        "X-MACAddress": process.env.MAC_Address,
+        "X-PrivateKey": process.env.PRIVATE_KEY,
+      },
+    };
+
+    const response = await axios(config);
+
+    if (!response.data?.status) {
+      return res.json({
+        status: false,
+        statusCode: 203,
+        message: "AngelOne API error",
+        data: [],
+        pnl: 0,
+        totalTraded: 0,
+        totalOpen: 0,
+        error: response.data?.message || null,
+      });
+    }
+
+    const trades = response.data.data; // tradebook array
+
+    // No trades at all
+    if (!trades || trades.length === 0) {
+      return res.json({
+        status: true,
+        statusCode: 203,
+        message: "No trades in AngelOne tradebook",
+        data: [],
+        pnl: 0,
+        totalTraded: 0,
+        totalOpen: await Order.count({
+          where: { userId: req.userId, orderstatuslocaldb: "OPEN" },
+        }),
+        error: null,
+      });
+    }
+
+    // 1️⃣ Collect AngelOne orderids from tradebook
+    const angelOrderIds = trades.map((t) => String(t.orderid));
+
+    // 2️⃣ Find matching orderids in local DB for this user
+    const existingOrders = await Order.findAll({
+      where: {
+        userId: req.userId,
+        orderid: {
+          [Op.in]: angelOrderIds,
+        },
+      },
+      attributes: ["orderid"],
+      raw: true,
+    });
+
+    const existingIdsSet = new Set(
+      existingOrders.map((o) => String(o.orderid))
+    );
+
+    // 3️⃣ Filter only trades NOT in local DB
+    const newTrades = trades.filter(
+      (t) => !existingIdsSet.has(String(t.orderid))
+    );
+
+    console.log(newTrades, "AngelOne newTrades (not in local DB)");
+
+    if (!newTrades.length) {
+      return res.json({
+        status: true,
+        statusCode: 203,
+        message: "No NEW AngelOne trades to process (all already in local DB)",
+        data: [],
+        pnl: 0,
+        totalTraded: 0,
+        totalOpen: await Order.count({
+          where: { userId: req.userId, orderstatuslocaldb: "OPEN" },
+        }),
+        error: null,
+      });
+    }
+
+    const toMoney = (n) => Math.round(n * 100) / 100;
+
+    // 4️⃣ PnL calculation on NEW trades only
+    function calculatePnL(orders) {
+      const grouped = {};
+      const results = [];
+      let grandPnl = 0;
+
+      // group by symbol
+      for (const o of orders) {
+        if (!grouped[o.tradingsymbol]) grouped[o.tradingsymbol] = [];
+        grouped[o.tradingsymbol].push(o);
+      }
+
+      for (const [symbol, list] of Object.entries(grouped)) {
+        const buys = list.filter(
+          (o) => String(o.transactiontype).toUpperCase() === "BUY"
+        );
+        const sells = list.filter(
+          (o) => String(o.transactiontype).toUpperCase() === "SELL"
+        );
+
+        let totalBuyQty = 0,
+          totalBuyValue = 0;
+        buys.forEach((b) => {
+          const qty = Number(b.fillsize) || 0;
+          const value = Number(b.tradevalue) || 0; // tradevalue = price * qty
+          totalBuyQty += qty;
+          totalBuyValue += value;
+        });
+
+        let totalSellQty = 0,
+          totalSellValue = 0;
+        sells.forEach((s) => {
+          const qty = Number(s.fillsize) || 0;
+          const value = Number(s.tradevalue) || 0;
+          totalSellQty += qty;
+          totalSellValue += value;
+        });
+
+        if (totalBuyQty > 0 && totalSellQty > 0) {
+          const matchedQty = Math.min(totalBuyQty, totalSellQty);
+          const buyAvg = totalBuyValue / totalBuyQty;
+          const sellAvg = totalSellValue / totalSellQty;
+          const pnl = (sellAvg - buyAvg) * matchedQty;
+
+          grandPnl += pnl;
+
+          results.push({
+            label: symbol,
+            win: toMoney(buyAvg),
+            loss: toMoney(sellAvg),
+            quantity: matchedQty,
+            pnl: toMoney(pnl),
+          });
+        }
+      }
+
+      return { pnlData: results, totalPnl: toMoney(grandPnl) };
+    }
+
+    const { pnlData, totalDataPnl } = calculatePnL(newTrades);
+
+    // 5️⃣ Buy/Sell totals for NEW trades only
+    let totalBuy = 0;
+    let totalSell = 0;
+
+    newTrades.forEach((trade) => {
+      const type = String(trade.transactiontype).toUpperCase();
+      const value = Number(trade.tradevalue) || 0;
+
+      if (type === "BUY") {
+        totalBuy += value;
+        totalBuyLength++;
+      } else if (type === "SELL") {
+        totalSell += value;
+      }
+    });
+
+    const openCount = await Order.count({
+      where: {
+        userId: req.userId,
+        orderstatuslocaldb: "OPEN",
+      },
+    });
+
+    return res.json({
+      status: true,
+      statusCode: 203,
+      message: "AngelOne NEW trades fetched (not in local DB)",
+      data: pnlData,              // per-symbol PnL
+      pnl: totalDataPnl,              // PnL from new trades
+      totalTraded: totalBuyLength,
+      totalOpen: openCount,
+      onlineTrades: newTrades,    // raw new trades if you want to sync
+      error: null,
+    });
+  } catch (error) {
+    console.log(error?.message || error, "AngelOne userposition error");
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Error getting AngelOne trade data",
+      data: [],
+      pnl: 0,
+      totalTraded: 0,
+      totalOpen: 0,
+      error: error?.message || null,
+    });
+  }
+};
+
 
 export const getHoldingDataInAngelOne = async (req, res,next) => {
     try {
@@ -1192,6 +1408,8 @@ export const getHoldingDataInAngelOne = async (req, res,next) => {
         });
     }
 };
+
+
 
 export const getCloneUserHolding = async (req, res) => {
   try {
