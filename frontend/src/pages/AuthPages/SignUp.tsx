@@ -7,7 +7,7 @@ export default function SignUp() {
     <>
       <PageMeta
         title="Software Setu"
-        description="This is React.js SignUp Tables Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
+        description="Software Setu"
       />
      
         <SignUpForm />

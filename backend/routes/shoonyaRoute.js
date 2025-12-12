@@ -18,8 +18,14 @@ router.get('/finavasia/logintotp',authMiddleware,shoonyaLoginWithTotp );
 
 router.get('/finvasia/fund',authMiddleware, getShoonyaFunds);
 
-router.post('/finvasia/orders', getShoonyaOrders);
 
+
+
+router.get('/finvasia/orders', getShoonyaOrders);
+router.get('/finvasia/trades', getShoonyaTrades);
+
+
+router.post('/finvasia/orders', getShoonyaOrders);
 router.post('/finvasia/trades', getShoonyaTrades);
 
 

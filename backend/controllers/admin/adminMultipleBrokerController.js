@@ -6,7 +6,7 @@ import { placeFyersOrder } from "../../services/placeFyersOrder.js";
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { logSuccess, logError } from "../../utils/loggerr.js";
-import { placeFinavasiaOrder } from "../../services/placeFinavasiaOrder.js";
+import { placeFinavasiaOrder, placeFinavasiaOrderLocalDb } from "../../services/placeFinavasiaOrder.js";
 
 
 export const getTokenStatusSummary = async (req, res) => {
@@ -32,11 +32,13 @@ export const getTokenStatusSummary = async (req, res) => {
       }
     );
 
+      logSuccess(req, [{name:"mahesh" }]);
+
     
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const endOfToday = new Date();
+    const enOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
 
@@ -77,7 +79,7 @@ export const getTokenStatusSummary = async (req, res) => {
 
   } catch (err) {
 
-    // logError(req, err);
+    logError(req,err,{message:"place order not fetch obj"});
   
     res.status(500).json({
        status: false,
@@ -89,11 +91,14 @@ export const getTokenStatusSummary = async (req, res) => {
 };
 
 
+// ==============update logger code ==============================
 export const adminPlaceMultiBrokerOrder = async (req, res) => {
 
   try {
 
     const input = req.body;
+
+     logSuccess(req, {forntendReqData:input});
     
     const users = await User.findAll({
       where: { strategyName: input.groupName },
@@ -102,15 +107,12 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
 
     if (!users.length) {
 
-        logSuccess(req, {  message: "No users found for this group",});
-
       return res.json({
         status: false,
         message: "No users found for this group",
         error:  "No users found for this group",
       });
     }
-
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -124,19 +126,19 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       users.map(async (user) => {
         
         if (user.brokerName.toLowerCase() === "angelone") {
-          return await placeAngelOrder(user, input, startOfDay, endOfDay);
+          return await placeAngelOrder(user, input, startOfDay, endOfDay,req);
         }
         if (user.brokerName.toLowerCase() === "kite") {
-          return await placeKiteOrder(user, input,startOfDay, endOfDay);
+          return await placeKiteOrder(user, input,startOfDay, endOfDay,req);
         }
         if (user.brokerName.toLowerCase() === "fyers") {
-          return await placeFyersOrder(user, input,startOfDay, endOfDay);
+          return await placeFyersOrder(user, input,startOfDay, endOfDay,req);
         }
          if (user.brokerName.toLowerCase() === "upstox") {
-          return await placeFyersOrder(user, input,startOfDay, endOfDay);
+          return await placeFyersOrder(user, input,startOfDay, endOfDay,req);
         }
         if (user.brokerName.toLowerCase() === "finvasia") {
-          return await placeFinavasiaOrder(user, input,startOfDay, endOfDay);
+          return await placeFinavasiaOrder(user, input,startOfDay, endOfDay,req);
         }
 
         return {
@@ -282,22 +284,29 @@ export const adminMultipleSquareOff = async (req, res) => {
               user,
               reqInput,
               startOfDay,
-              endOfDay
+              endOfDay,
+              req
             );
           } else if (user.brokerName.toLowerCase() === "kite"&&user.role==='user') {
             brokerRes = await placeKiteOrderLocalDb(
               user,
               reqInput,
               startOfDay,
-              endOfDay
+              endOfDay,
+                 req
             );
           }else if (user.brokerName.toLowerCase() === "fyers"&&user.role==='user') {
             brokerRes =  await placeFyersOrder(
               user,
               reqInput,
               startOfDay,
-               endOfDay
+               endOfDay,
+                  req
               );
+          }else if (user.brokerName.toLowerCase() === "finvasia"&&user.role==='user')  {
+
+            brokerRes = await placeFinavasiaOrderLocalDb(user, reqInput, startOfDay, endOfDay,   req);
+
           }else {
             return {
               orderId: o.id,
@@ -345,8 +354,6 @@ export const adminMultipleSquareOff = async (req, res) => {
 
 export const adminSingleSquareOff = async (req, res) => {
 
-  console.log(req.body);
-  
   try {
     const { orderId } = req.body; // 👈 ya req.params.orderId agar URL se bhejna ho
 
@@ -445,13 +452,13 @@ export const adminSingleSquareOff = async (req, res) => {
     let brokerRes;
 
     if (user.brokerName.toLowerCase() === "angelone" && user.role === "user") {
-      brokerRes = await placeAngelOrder(user, reqInput, startOfDay, endOfDay);
+      brokerRes = await placeAngelOrder(user, reqInput, startOfDay, endOfDay,   req);
     } else if (user.brokerName.toLowerCase() === "kite" && user.role === "user") {
-      brokerRes = await placeKiteOrderLocalDb(user, reqInput, startOfDay, endOfDay);
+      brokerRes = await placeKiteOrderLocalDb(user, reqInput, startOfDay, endOfDay,   req);
     } else if (user.brokerName.toLowerCase() === "fyers" && user.role === "user") {
-      brokerRes = await placeFyersOrder(user, reqInput, startOfDay, endOfDay);
+      brokerRes = await placeFyersOrder(user, reqInput, startOfDay, endOfDay,   req);
     }else if (user.brokerName.toLowerCase() === "finvasia" && user.role === "user") {
-      brokerRes = await placeFyersOrder(user, reqInput, startOfDay, endOfDay);
+      brokerRes = await placeFinavasiaOrderLocalDb(user, reqInput, startOfDay, endOfDay,   req);
     }
     else {
       return res.json({

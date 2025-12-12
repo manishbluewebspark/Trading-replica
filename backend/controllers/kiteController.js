@@ -378,6 +378,15 @@ export const getKiteFunds = async (req, res) => {
   try {
     const token = req.headers.angelonetoken;
 
+     const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
     if (!token) {
       return res.json({
         status: false,
@@ -403,6 +412,7 @@ export const getKiteFunds = async (req, res) => {
       where: {
         userId: req.userId,
         orderstatuslocaldb: "COMPLETE", // ONLY completed orders
+        filltime: { [Op.between]: [startISO, endISO] },
       },
       order: [["createdAt", "DESC"]], // Latest first
       raw: true,
@@ -764,8 +774,9 @@ export const getTradeDataForKiteDeshboard2 = async function (req, res) {
   }
 };
 
-export const getTradeDataForKiteDeshboard = async function (req, res) {
+export const getTradeDataForKiteDeshboard1 = async function (req, res) {
   try {
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -787,6 +798,9 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
       raw: true,
     });
 
+    console.log(trades,'trades');
+    
+
     // 🔥 Sort trades in FIFO order (IMPORTANT!)
     trades.sort((a, b) => new Date(a.filltime) - new Date(b.filltime));
 
@@ -796,8 +810,11 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
         userId,
         orderstatuslocaldb: "COMPLETE",
         transactiontype: "BUY",
+          filltime: { [Op.between]: [startISO, endISO] },
       },
     });
+
+  console.log(TotalTrades,'TotalTrades');
 
     if (!trades.length) {
       return res.json({
@@ -895,6 +912,10 @@ function calculateFIFO(trades) {
       where: { userId, orderstatuslocaldb: "OPEN" },
     });
 
+
+    console.log(totalPnL,'TotalTrades');
+    
+
     return res.json({
       status: true,
       statusCode: 200,
@@ -917,7 +938,188 @@ function calculateFIFO(trades) {
   }
 };
 
+export const getTradeDataForKiteDeshboard = async function (req, res) {
+  try {
+    // ✅ Today range (UTC based on ISO)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const userId = req.userId;
+
+    // ✅ Fetch today's completed trades from DB
+    let trades = await Order.findAll({
+      where: {
+        userId,
+        broker: "kite",
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+      raw: true,
+    });
+
+    // ✅ Total BUY trades count (your requirement)
+    const TotalTrades = await Order.count({
+      where: {
+        userId,
+        broker: "kite",
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "BUY",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // ✅ Open orders count (OPEN + PENDING)
+    const openOrders = await Order.count({
+      where: {
+        userId,
+        broker: "kite",
+        orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+      },
+    });
+
+    if (!trades.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        broker: "Kite",
+        message: "No trades found",
+        data: [],
+        onlineTrades: [],
+        pnl: 0,
+        totalTraded: TotalTrades,
+        totalOpen: openOrders,
+      });
+    }
+
+    // ✅ IMPORTANT: FIFO needs stable sorting
+    // - Sort by filltime ascending
+    // - If same time, BUY first then SELL
+    // - If still same, by id ascending
+    trades.sort((a, b) => {
+      const ta = new Date(a.filltime).getTime();
+      const tb = new Date(b.filltime).getTime();
+
+      if (ta !== tb) return ta - tb;
+
+      // BUY before SELL for same timestamp
+      if (a.transactiontype !== b.transactiontype) {
+        return a.transactiontype === "BUY" ? -1 : 1;
+      }
+
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+
+    // ------------------------------
+    // ✅ FIFO PnL CALCULATION
+    // ------------------------------
+    function calculateFIFO(sortedTrades) {
+      const grouped = {};
+      const output = [];
+      let totalPnL = 0;
+
+      for (const t of sortedTrades) {
+        const symbol = t.tradingsymbol;
+
+        if (!grouped[symbol]) {
+          grouped[symbol] = {
+            buys: [], // FIFO queue
+            totalBuyValue: 0,
+            totalBuyQty: 0,
+            totalSellValue: 0,
+            totalSellQty: 0,
+            pnl: 0,
+          };
+        }
+
+        const g = grouped[symbol];
+
+        const qty = Number(t.fillsize || t.quantity || 0);
+        const price = Number(t.fillprice || t.averageprice || t.price || 0);
+
+        if (!qty || !price) continue;
+
+        // BUY
+        if (t.transactiontype === "BUY") {
+          g.buys.push({ qty, price });
+          g.totalBuyQty += qty;
+          g.totalBuyValue += qty * price;
+        }
+
+        // SELL
+        if (t.transactiontype === "SELL") {
+          g.totalSellQty += qty;
+          g.totalSellValue += qty * price;
+
+          let remaining = qty;
+
+          while (remaining > 0 && g.buys.length) {
+            const buy = g.buys[0];
+            const matched = Math.min(buy.qty, remaining);
+
+            const pnl = (price - buy.price) * matched;
+            g.pnl += pnl;
+            totalPnL += pnl;
+
+            buy.qty -= matched;
+            remaining -= matched;
+
+            if (buy.qty === 0) g.buys.shift();
+          }
+        }
+      }
+
+      // Output per symbol
+      for (const [symbol, g] of Object.entries(grouped)) {
+        if (g.totalBuyQty > 0 && g.totalSellQty > 0) {
+          const buyAvg = g.totalBuyValue / g.totalBuyQty;
+          const sellAvg = g.totalSellValue / g.totalSellQty;
+          const matchedQty = Math.min(g.totalBuyQty, g.totalSellQty);
+
+          output.push({
+            label: symbol,
+            win: Number(buyAvg.toFixed(2)),   // avg buy
+            loss: Number(sellAvg.toFixed(2)), // avg sell
+            quantity: matchedQty,
+            pnl: Number(g.pnl.toFixed(2)),
+          });
+        }
+      }
+
+      return {
+        pnlData: output,
+        totalPnL: Number(totalPnL.toFixed(2)),
+      };
+    }
+
+    const { pnlData, totalPnL } = calculateFIFO(trades);
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      broker: "Kite",
+      message: "Kite tradebook fetched",
+      data: pnlData,
+      onlineTrades: trades,
+      pnl: totalPnL,
+      totalTraded: TotalTrades,
+      totalOpen: openOrders,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 
 
@@ -1312,27 +1514,16 @@ export const getKiteTrades = async (req, res) => {
   try {
 
    
-      const token = "kZubR1P8yQxTDDZgAxo9K4roFO9C3oBW";
-
-    if (!token) {
-      return res.json({
-        status: false,
-        statusCode: 401,
-        message: "Kite access token missing in header (angelonetoken)",
-        error: null,
-      });
-    }
-
-    const  kite  = await getKiteClientForUserId(21)
+    const  kite  = await getKiteClientForUserId(13)
     //  const  kite  = await getKiteClientForUserId(13)
 
-    const orders = await kite.getOrderHistory("1999016218648125440");
+    // const orders = await kite.getOrderHistory("1999368808602804224");
 
-     const completeObj = orders.find(
-          item => item.status?.toLowerCase() === "complete"
-        );
+    //  const completeObj = orders.find(
+    //       item => item.status?.toLowerCase() === "complete"
+    //     );
 
-        // const orders = await kite.getOrders();
+        const orders = await kite.getOrders();
 
     // const orders = await kite.getHoldings();
     
@@ -1356,7 +1547,7 @@ export const getKiteTrades = async (req, res) => {
     return res.json({
       status: true,
       statusCode: 200,
-      data: completeObj,
+      data: orders,
       message: "Successfully fetched orders with trades",
     });
   } catch (error) {
@@ -1373,23 +1564,13 @@ export const getKiteTrades = async (req, res) => {
 export const getKiteOrders = async (req, res) => {
   try {
 
-   
-       const token = "YkMd1a1XF8a3jg0AspGWGCzTxYVO9mT5";
-
-    if (!token) {
-      return res.json({
-        status: false,
-        statusCode: 401,
-        message: "Kite access token missing in header (angelonetoken)",
-        error: null,
-      });
-    }
-
-    const  kite  = await getKiteClientForUserId(21)
+  
+  const  kite  = await getKiteClientForUserId(13)
 
   //  const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("1999016218648125440");
+    const orders = await kite.getOrderTrades("1999389801488588800");
+    
 
     console.log(orders,'orders orders');
     

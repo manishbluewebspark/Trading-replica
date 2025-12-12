@@ -10,7 +10,7 @@ export default function Images() {
     <>
       <PageMeta
         title="Software Setu"
-        description="This is React.js Images page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
+        description="Software Setu"
       />
       <PageBreadcrumb pageTitle="Images" />
       <div className="space-y-5 sm:space-y-6">

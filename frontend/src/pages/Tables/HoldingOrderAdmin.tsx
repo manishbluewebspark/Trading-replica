@@ -1160,26 +1160,82 @@ export default function HoldingOrderAdmin() {
 
   const columnDefs: ColDef<Order>[] = useMemo(
     () => [
-      {
-        headerName: "Sell",
-        field: "userNameId",
-        width: 200,
-        minWidth: 180,
-        cellStyle: { borderRight: "1px solid #e2e8f0" },
-        cellRenderer: (params: any) => {
-          const order = params.data as Order;
-          return (
-            <div className="py-2 flex items-center justify-center">
-              <button
-                onClick={() => handleSellClick(order)}
-                className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                SELL
-              </button>
-            </div>
-          );
-        },
-      },
+      // {
+      //   headerName: "Sell",
+      //   field: "userNameId",
+      //   width: 200,
+      //   minWidth: 180,
+      //   cellStyle: { borderRight: "1px solid #e2e8f0" },
+      //   cellRenderer: (params: any) => {
+      //     const order = params.data as Order;
+      //     return (
+      //       <div className="py-2 flex items-center justify-center">
+      //         <button
+      //           onClick={() => handleSellClick(order)}
+      //           className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+      //         >
+      //           SELL
+      //         </button>
+      //       </div>
+      //     );
+      //   },
+      // },
+
+{
+  headerName: "Sell",
+  field: "userNameId",
+  width: 200,
+  minWidth: 180,
+  cellStyle: { borderRight: "1px solid #e2e8f0" },
+  cellRenderer: (params: any) => {
+    const order = params.data as Order;
+    return (
+//       <div className="py-2 flex items-center justify-center">
+//         <button
+//           onClick={() => handleSellClick(order)}
+//          className="px-4 py-1.5 text-xs font-semibold rounded-md
+// text-white shadow-sm
+// bg-gradient-to-r from-green-500 to-green-700
+// hover:from-green-600 hover:to-green-800
+// transition-all duration-200"
+//         >
+//           SELL
+//         </button>
+//       </div>
+
+<div className="py-2 flex items-center justify-center">
+  <button
+    onClick={() => handleSellClick(order)}
+    disabled={order.transactiontype === "SELL"}
+    title={order.transactiontype === "SELL" ? "Already Sold" : "Click to Sell"}
+    className={`
+      inline-flex items-center gap-[6px]
+      px-[14px] py-[4px]
+      rounded-[16px]
+      text-[12px] font-semibold
+      tracking-[0.5px]
+      text-white!
+      border-0
+      transition-all duration-200 ease-in-out
+      ${
+        order.transactiontype === "SELL"
+          ? "bg-gray-400 cursor-not-allowed opacity-60"
+          : "bg-[#dc2626] hover:bg-red-700 cursor-pointer"
+      }
+    `}
+  >
+    <span className="text-[13px] leading-none">⬇</span>
+    SELL
+  </button>
+</div>
+
+
+
+
+    );
+  },
+}
+,
       {
         headerName: "UserId",
         field: "userNameId",

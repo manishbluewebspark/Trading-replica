@@ -43,15 +43,7 @@ const token = req.headers.authorization?.split(' ')[1];
 
   } catch (err) {
 
-    logger.error("API Request Failed", {
-    url: req.originalUrl,
-    method: req.method,
-    status: false,
-    userId: req?.userId || null,
-    error: err.message,          // store error message
-    stack: err.stack || null     // optional: saves trace
-  });
-
+   
     return res.json({
             status: false,
             statusCode:401,

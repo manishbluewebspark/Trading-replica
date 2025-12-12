@@ -2,727 +2,504 @@
 
 import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 import Order from "../models/orderModel.js";
-import { Op } from "sequelize";
+import { logSuccess, logError } from "../utils/loggerr.js";
 
+// -------------------- MAPPERS --------------------
 function getKiteProductCode(type) {
-  
   if (!type) return "";
 
   switch (type.toUpperCase()) {
     case "DELIVERY":
-      return "CNC";     // Cash & Carry for equity
-
+      return "CNC";
     case "CARRYFORWARD":
-      return "NRML";    // F&O Carryforward (Normal)
-
+      return "NRML";
     case "MARGIN":
-      return "MTF";     // Margin Trading Facility (MTF)
-
+      return "MTF";
     case "INTRADAY":
-      return "MIS";     // MIS Intraday
-
+      return "MIS";
     case "BO":
-      return "MIS";     // Bracket orders use MIS internally
-
+      return "MIS";
     default:
-      return type.toUpperCase(); // fallback, safe
+      return type.toUpperCase();
   }
 }
 
-
 function mapVarietyToKite(variety) {
-  if (!variety) return "regular"; // default
+  if (!variety) return "regular";
 
   switch (variety.toUpperCase()) {
     case "NORMAL":
-      return "regular"; // Regular order
+      return "regular";
     case "STOPLOSS":
-      return "co"; // Cover order (SL)
+      return "co";
     case "ROBO":
-      return "iceberg"; // Bracket order (ROBO)
+      return "iceberg";
     default:
-      return "regular"; // fallback
+      return "regular";
   }
 }
 
+// -------------------- HELPERS --------------------
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export const placeKiteOrderTest = async (req,res,next) => {
-  try {
-
-    // 1) Set access token
-  let kite = await getKiteClientForUserId(15)
-
-    // ----------------------------------------
-    // 4) PLACE ORDER IN KITE
-    // ----------------------------------------
-    let placeRes = {
-      order_id:"1998326319347163136"
-    }
-
-    let newOrder = await Order.findOne(
-      { where: { orderid: placeRes.order_id }}
-    )
-
-    console.log(newOrder,'newOrder');
-    
-
-    const orderid = placeRes.order_id;
-
-    // ----------------------------------------
-    // 5) GET ORDER DETAILS FROM KITE
-    // ----------------------------------------
-    let detailsData = {};
-    try {
-        
-      const detailRes = await kite.getOrderTrades(orderid);
-
-      console.log(detailRes,'detailRes');
-      
-    
-
-      if (Array.isArray(detailRes) && detailRes.length > 0) {
-
-       detailsData = await detailRes[0]
-       
-      }
-    } catch (err) {
-      
-    return res.json({
-      status: false,
-      data: null,
-      message: err.message,
-      error:'1'
-    });
-
-    }
-
-    // ----------------------------------------
-    // 6) HANDLE BUY / SELL LOGIC
-    // ----------------------------------------
-    let finalStatus = "OPEN";
-    let buyOrder
-    let pnl = 0
-    let buyTime = ''
-    
-    console.log(detailsData,'detailsData');
-    
-    let updateDB =  await newOrder.update({
-      uniqueorderid:detailsData.exchange_order_id,
-      averageprice:detailsData.average_price,
-      lotsize:detailsData.quantity,
-      symboltoken:newOrder.symboltoken,
-      triggerprice:detailsData.average_price,
-      price:detailsData.average_price,
-      orderstatuslocaldb: finalStatus,
-    });
-
-
-    
-    
-
-    // ----------------------------------------
-    // 8) (OPTIONAL) TRADES FETCH
-    // ----------------------------------------
+async function fetchTradesWithRetry(kite, orderid, req, retries = 3, delayMs = 1200) {
+  for (let i = 1; i <= retries; i++) {
     try {
       const trades = await kite.getOrderTrades(orderid);
 
-      console.log(trades,'trades');
-      
+      logSuccess(req, {
+        msg: "Kite getOrderTrades retry",
+        attempt: i,
+        orderid,
+        tradesCount: Array.isArray(trades) ? trades.length : 0,
+      });
 
-      if (Array.isArray(trades) && trades.length > 0) {
-        
-        const t = await trades[0];
-
-        console.log(t,'t');
-        
-         if(t.transaction_type==='BUY') {
-             pnl = 0 ;
-             buyTime = "NA";
-         }
-
-         console.log(t?.fill_timestamp,'this');
-         
-
-           // Update order
-          await newOrder.update({
-            tradedValue: t.average_price * Number(newOrder.quantity),
-            fillprice: t.average_price,
-            fillsize: newOrder.quantity,
-            fillid: t.trade_id,
-            filltime: t?.fill_timestamp
-              ? new Date(t.fill_timestamp).toISOString()
-              : null,
-            status: "COMPLETE",
-            pnl: pnl,
-
-          });
-
-    return res.json({
-      status: true,
-      data: null,
-      message: 'update done',
-  })
-      }else{
-
-        
-      }
-
-    } catch (err) {
-    return res.json({
-      status: false,
-      data: null,
-      message: err.message,
-       error:'2'
-    });
-        
+      if (Array.isArray(trades) && trades.length > 0) return trades;
+    } catch (e) {
+      logError(req, e, { msg: "Kite getOrderTrades failed", attempt: i, orderid });
     }
 
-  } catch (err) {
-
-  return res.json({
-      status: false,
-      data: null,
-      message: err.message,
-      error:'3'
-  })
-
+    if (i < retries) await sleep(delayMs);
   }
-};
+  return [];
+}
 
-
-export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay) => {
+async function getKiteOrderSnapshot(kite, orderid, req) {
   try {
+    const orders = await kite.getOrders();
+    const order = Array.isArray(orders)
+      ? orders.find((o) => String(o.order_id) === String(orderid))
+      : null;
 
-    // 1) Set access token
-  let kite = await getKiteClientForUserId(user.id)
+    logSuccess(req, {
+      msg: "Kite getOrders snapshot",
+      orderid,
+      found: !!order,
+      status: order?.status,
+      average_price: order?.average_price,
+      filled_quantity: order?.filled_quantity,
+    });
 
-  const kiteProductType = await getKiteProductCode( reqInput.productType);
+    return order || null;
+  } catch (e) {
+    logError(req, e, { msg: "Kite getOrders snapshot failed", orderid });
+    return null;
+  }
+}
 
-  const kiteVerity = await mapVarietyToKite(reqInput.variety)
+async function findBuyOrderForSell({ userId, reqInput, req }) {
+  // ✅ 1) best: buyOrderId
+  if (reqInput?.buyOrderId) {
+    const buyOrder = await Order.findOne({
+      where: {
+        userId,
+        orderid: String(reqInput.buyOrderId),
+        transactiontype: "BUY",
+        status: "COMPLETE",
+      },
+      raw: true,
+    });
 
-    // ----------------------------------------
-    // 2) CREATE LOCAL PENDING ORDER
-    // ----------------------------------------
+    logSuccess(req, {
+      msg: "BUY match by buyOrderId",
+      buyOrderId: reqInput.buyOrderId,
+      found: !!buyOrder,
+    });
+
+    if (buyOrder) return buyOrder;
+  }
+
+  // ✅ 2) fallback: symbol + exchange + qty + OPEN
+  const buyOrder2 = await Order.findOne({
+    where: {
+      userId,
+      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      exchange: reqInput.exch_seg,
+      quantity: String(reqInput.quantity),
+      transactiontype: "BUY",
+      status: "COMPLETE",
+      orderstatuslocaldb: "OPEN",
+    },
+    order: [["createdAt", "DESC"]],
+    raw: true,
+  });
+
+  logSuccess(req, {
+    msg: "BUY match by fallback symbol/exchange/qty",
+    found: !!buyOrder2,
+    symbol: reqInput.kiteSymbol || reqInput.symbol,
+    exchange: reqInput.exch_seg,
+    qty: reqInput.quantity,
+  });
+
+  return buyOrder2 || null;
+}
+
+// ======================================================================
+// ✅ placeKiteOrder (with mappings + retry + snapshot + logs)
+// ======================================================================
+export const placeKiteOrder = async (user, reqInput, startOfDay, endOfDay, req) => {
+  let newOrder = null;
+
+  try {
+    logSuccess(req, { msg: "Kite order flow started", userId: user?.id, reqInput });
+
+    // 1) Kite instance
+    const kite = await getKiteClientForUserId(user.id);
+    logSuccess(req, { msg: "Kite client created", userId: user.id });
+
+    // 2) Mappings
+    const kiteProductType = getKiteProductCode(reqInput.productType);
+    logSuccess(req, { msg: "Mapped product type", input: reqInput.productType, kiteProductType });
+
+    const kiteVariety = mapVarietyToKite(reqInput.variety);
+    logSuccess(req, { msg: "Mapped order variety", input: reqInput.variety, kiteVariety });
+
+    // 3) Local pending order
     const orderData = {
-      symboltoken:reqInput.kiteToken||reqInput.token,
-      variety:kiteVerity || "regular",    // mistage in fields 
-      tradingsymbol:reqInput.kiteSymbol|| reqInput.symbol,
-      instrumenttype:reqInput.instrumenttype,
-      transactiontype: reqInput.transactiontype,
+      symboltoken: reqInput.kiteToken || reqInput.token,
+      variety: kiteVariety || "regular",
+      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      instrumenttype: reqInput.instrumenttype,
+      transactiontype: (reqInput.transactiontype || "").toUpperCase(),
       exchange: reqInput.exch_seg,
       ordertype: reqInput.orderType,
-      quantity: reqInput.quantity,
+      quantity: String(reqInput.quantity),
       producttype: kiteProductType,
-      price: reqInput.price,
+      price: Number(reqInput.price || 0),
       orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice,
-      actualQuantity: reqInput.actualQuantity,
+      totalPrice: reqInput.totalPrice ?? null,
+      actualQuantity: reqInput.actualQuantity ?? null,
       userId: user.id,
-      broker:'kite',
-      angelOneSymbol:reqInput.angelOneSymbol||reqInput.symbol,
-      angelOneToken:reqInput.angelOneToken||reqInput.token,
+      broker: "kite",
+      angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
+      angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
+      buyOrderId: reqInput?.buyOrderId || null,
     };
 
+    logSuccess(req, { msg: "Prepared local order object", orderData });
 
-    console.log(orderData,'orderData');
-    
+    newOrder = await Order.create(orderData);
+    logSuccess(req, { msg: "Local order saved", localRowId: newOrder.id });
 
-    const newOrder = await Order.create(orderData);
-
-
-    console.log(' db local done');
-    
-
-    // ----------------------------------------
-    // 3) KITE PAYLOAD
-    // ----------------------------------------
+    // 4) Kite payload
     const orderParams = {
       exchange: reqInput.exch_seg,
-      tradingsymbol: reqInput.kiteSymbol|| reqInput.symbol,
-      transaction_type: reqInput.transactiontype,
+      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      transaction_type: (reqInput.transactiontype || "").toUpperCase(),
       quantity: Number(reqInput.quantity),
-      product:kiteProductType,  // DELIVERY.                // mistake in fields 
+      product: kiteProductType,
       order_type: reqInput.orderType,
-      price: reqInput.price,
-      market_protection: 5 // protection points
+      price: Number(reqInput.price || 0),
+      market_protection: 5,
     };
 
-    // ----------------------------------------
-    // 4) PLACE ORDER IN KITE
-    // ----------------------------------------
+    logSuccess(req, { msg: "Prepared Kite payload", orderParams });
+
+    // 5) Place order
     let placeRes;
     try {
-
-    placeRes = await kite.placeOrder(orderData.variety, orderParams);
-
-    console.log(placeRes,'kite place order');
-    
-
+      placeRes = await kite.placeOrder(orderData.variety, orderParams);
+      logSuccess(req, { msg: "Kite order placed", placeRes });
     } catch (err) {
+      logError(req, err, { msg: "Kite order placement failed" });
 
-      console.log(err,'kite place order');
-      
+      await newOrder.update({
+        orderstatuslocaldb: "FAILED",
+        status: "FAILED",
+        text: err?.message || "Kite order placement failed",
+        buyTime: new Date().toISOString(),
+      });
 
-      await newOrder.update({ orderstatuslocaldb: "FAILED",status:"FAILED",text:err.message,
-        // filltime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
-        buyTime:new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
-       });
-
-      return {
-        userId: user.id,
-        broker: "Kite",
-        result: "BROKER_REJECTED",
-        message: err.message,
-      };
+      return { userId: user.id, broker: "Kite", result: "BROKER_REJECTED", message: err?.message };
     }
 
-    const orderid = placeRes.order_id;
-
-    // save order id
+    const orderid = placeRes?.order_id;
     await newOrder.update({ orderid });
+    logSuccess(req, { msg: "Order ID saved locally", orderid });
 
-    // ----------------------------------------
-    // 5) GET ORDER DETAILS FROM KITE
-    // ----------------------------------------
-    let detailsData = {};
-    try {
-        
-      const detailRes = await kite.getOrderTrades(orderid);
+    // 6) Snapshot + Trades retry
+    const snap = await getKiteOrderSnapshot(kite, orderid, req);
+    const trades = await fetchTradesWithRetry(kite, orderid, req, 3, 1200);
+    const trade = trades.length ? trades[0] : null;
 
-      console.log(detailRes,'detailRes');
-      
-    
+    if (trade) logSuccess(req, { msg: "Using trade[0]", trade });
 
-      if (Array.isArray(detailRes) && detailRes.length > 0) {
-
-       detailsData = await detailRes[0]
-       
-      }
-    } catch (e) {
-       console.log(e,'get order histry');
-      // details optional
-    }
-
-    // ----------------------------------------
-    // 6) HANDLE BUY / SELL LOGIC
-    // ----------------------------------------
+    // 7) SELL pairing
+    let buyOrder = null;
     let finalStatus = "OPEN";
-    let buyOrder
-    
-    // If SELL → close all BUY orders today
-    if (reqInput.transactiontype === "SELL") {
+    const txType = (reqInput.transactiontype || "").toUpperCase();
 
-       buyOrder = await Order.findOne({
-          where: {
-            userId: user.id,
-            tradingsymbol: reqInput.kiteSymbol|| reqInput.symbol,
-            exchange: reqInput.exch_seg,
-            quantity:reqInput.quantity,
-            transactiontype: "BUY",
-            status:"COMPLETE",
-            orderstatuslocaldb: "OPEN",
-            // createdAt: { [Op.between]: [startOfDay, endOfDay] },
-              },
-              raw: true
-            });
-            
+    if (txType === "SELL") {
+      buyOrder = await findBuyOrderForSell({ userId: user.id, reqInput, req });
 
-        if (buyOrder) {
-
+      if (buyOrder) {
         await Order.update(
           { orderstatuslocaldb: "COMPLETE" },
           { where: { id: buyOrder.id } }
         );
-
+        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id });
       }
 
       finalStatus = "COMPLETE";
     }
 
-
-    console.log(detailsData,'detailsData');
-    
-
-    // ----------------------------------------
-    // 7) UPDATE LOCAL ORDER WITH FINAL STATUS
-    // ----------------------------------------
-
-
-    let objUpdate1 = await newOrder.update({
-      uniqueorderid:detailsData.exchange_order_id,
-      averageprice:detailsData.average_price,
-      lotsize:detailsData.quantity,
-      symboltoken:reqInput.kiteToken||reqInput.token,
-      triggerprice:detailsData.average_price,
-      price:detailsData.average_price,
+    // 8) Update from snapshot (even if no trades)
+    await newOrder.update({
+      uniqueorderid: snap?.exchange_order_id || null,
+      averageprice: snap?.average_price != null ? Number(snap.average_price) : null,
+      lotsize: snap?.filled_quantity != null ? Number(snap.filled_quantity) : null,
+      triggerprice: snap?.trigger_price != null ? Number(snap.trigger_price) : null,
+      price: snap?.average_price != null ? Number(snap.average_price) : Number(reqInput.price || 0),
+      status: snap?.status ? String(snap.status).toUpperCase() : null,
       orderstatuslocaldb: finalStatus,
     });
 
-    console.log('update in local db 2',objUpdate1);
-    
+    logSuccess(req, {
+      msg: "Local order updated by snapshot",
+      orderid,
+      snapStatus: snap?.status,
+      finalStatus,
+    });
 
-    // ----------------------------------------
-    // 8) (OPTIONAL) TRADES FETCH
-    // ----------------------------------------
-    try {
-      const trades = await kite.getOrderTrades(orderid);
+    // 9) Final trade update if trade exists
+    if (trade) {
+      const tradePrice = Number(trade.average_price || trade.price || 0);
+      const tradeQty = Number(trade.quantity || 0);
 
-      console.log(trades,'trades');
-      
+      const buyPrice = Number(buyOrder?.fillprice || 0);
+      const buyQty = Number(buyOrder?.fillsize || 0);
+      const buyValue = Number(buyOrder?.tradedValue || 0);
+      let buyTime = buyOrder?.filltime || "NA";
 
-      if (Array.isArray(trades) && trades.length > 0) {
-        
-        const t = await trades[0];
-
-        console.log(t,'t');
-        
-
-        const buyPrice  = buyOrder?.fillprice     || 0;
-        const buySize   = buyOrder?.fillsize      || 0;
-        const buyValue  = buyOrder?.tradedValue   || 0;
-         let buyTime  =   buyOrder?.filltime|| 'NA';
-
-        // Calculate PNL safely
-        let  pnl = ( Number(reqInput.quantity) * t.average_price) - (buyPrice * buySize);
-
-           
-         if(t.transaction_type==='BUY') {
-             pnl = 0 ;
-             buyTime = "NA";
-         }
-
-         console.log(t,'trade data');
-         
-         
-
-          // Update order
-        let updateObj2 =   await newOrder.update({
-            tradedValue: t.average_price * Number(reqInput.quantity),
-            fillprice: t.average_price,
-             fillprice: t.average_price,
-            fillsize: Number(reqInput.quantity),
-            fillid: t.trade_id,
-            price:t.average_price,
-            filltime: t?.fill_timestamp
-              ? t?.fill_timestamp.toISOString()
-              : null,
-            status: "COMPLETE",
-            pnl: pnl,
-            buyTime:buyTime,
-            buyprice: buyPrice,
-            buysize: buySize,
-            buyvalue: buyValue,
-          });
-
-              console.log(updateObj2,'update in local db 3');
-      }else{
-
-          console.log(trades,'hhhy');
-          
-
+      let pnl = tradePrice * tradeQty - buyPrice * buyQty;
+      if (String(trade.transaction_type || "").toUpperCase() === "BUY") {
+        pnl = 0;
+        buyTime = "NA";
       }
 
-    } catch (e) {
-        console.log(e,'get order trade');
-        
+      logSuccess(req, { msg: "Calculated PnL", orderid, pnl, tradePrice, tradeQty, buyPrice, buyQty });
+
+      await newOrder.update({
+        tradedValue: tradePrice * tradeQty,
+        fillprice: tradePrice,
+        fillsize: tradeQty,
+        fillid: trade.trade_id || null,
+        filltime: trade.fill_timestamp ? new Date(trade.fill_timestamp).toISOString() : null,
+        status: "COMPLETE",
+        pnl,
+        buyTime,
+        buyprice: buyPrice,
+        buysize: buyQty,
+        buyvalue: buyValue,
+      });
+
+      logSuccess(req, { msg: "Final order updated in DB using trade", orderid });
+    } else {
+      logSuccess(req, { msg: "No trade found after retries (non-fatal)", orderid });
     }
 
-    return {
-      userId: user.id,
-      broker: "Kite",
-      result: "SUCCESS",
-      orderid,
-    };
-  } catch (err) {
+    logSuccess(req, { msg: "Kite order flow completed", orderid });
 
-    console.log(err,'err');
-    
-    return {
-      userId: user.id,
-      broker: "Kite",
-      result: "ERROR",
-      message: err.message,
-    };
+    return { userId: user.id, broker: "Kite", result: "SUCCESS", orderid };
+  } catch (err) {
+    logError(req, err, { msg: "Unexpected Kite order failure" });
+
+    try {
+      if (newOrder?.id) {
+        await newOrder.update({
+          orderstatuslocaldb: "FAILED",
+          status: "FAILED",
+          text: err?.message || "Unexpected error",
+          buyTime: new Date().toISOString(),
+        });
+      }
+    } catch (e2) {
+      logError(req, e2, { msg: "Failed to mark local order FAILED in catch" });
+    }
+
+    return { userId: user?.id, broker: "Kite", result: "ERROR", message: err?.message };
   }
 };
 
-export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay) => {
+// ======================================================================
+// ✅ placeKiteOrderLocalDb (NO mapping; still retry + snapshot + logs)
+// ======================================================================
+export const placeKiteOrderLocalDb = async (user, reqInput, startOfDay, endOfDay, req) => {
+  let newOrder = null;
+
   try {
+    logSuccess(req, { msg: "Kite LocalDB order flow started", userId: user?.id, reqInput });
 
-    // 1) Set access token
-    let kite = await getKiteClientForUserId(user.id)
+    // 1) Kite instance
+    const kite = await getKiteClientForUserId(user.id);
+    logSuccess(req, { msg: "Kite client created", userId: user.id });
 
-    // ----------------------------------------
-    // 2) CREATE LOCAL PENDING ORDER
-    // ----------------------------------------
+    // 2) Local pending order
     const orderData = {
-      symboltoken:reqInput.kiteToken||reqInput.token,
-      variety:reqInput.variety || "regular",    // mistage in fields 
-      tradingsymbol:reqInput.kiteSymbol|| reqInput.symbol,
-      instrumenttype:reqInput.instrumenttype,
-      transactiontype: reqInput.transactiontype,
+      symboltoken: reqInput.kiteToken || reqInput.token,
+      variety: reqInput.variety || "regular",
+      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      instrumenttype: reqInput.instrumenttype,
+      transactiontype: (reqInput.transactiontype || "").toUpperCase(),
       exchange: reqInput.exch_seg,
       ordertype: reqInput.orderType,
-      quantity: reqInput.quantity,
-      producttype: reqInput.productType,
-      price: reqInput.price,
+      quantity: String(reqInput.quantity),
+      producttype: reqInput.productType, // ✅ direct store (as you want)
+      price: Number(reqInput.price || 0),
       orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice,
-      actualQuantity: reqInput.actualQuantity,
+      totalPrice: reqInput.totalPrice ?? null,
+      actualQuantity: reqInput.actualQuantity ?? null,
       userId: user.id,
-      broker:'kite',
-      angelOneSymbol:reqInput.angelOneSymbol||reqInput.symbol,
-      angelOneToken:reqInput.angelOneToken||reqInput.token,
+      broker: "kite",
+      angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
+      angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
-      buyOrderId:reqInput?.buyOrderId
+      buyOrderId: reqInput?.buyOrderId || null,
     };
 
+    logSuccess(req, { msg: "Prepared local order object", orderData });
 
-    console.log(orderData,'orderData');
-    
+    newOrder = await Order.create(orderData);
+    logSuccess(req, { msg: "Local order saved", localRowId: newOrder.id });
 
-    const newOrder = await Order.create(orderData);
-
-
-    // ----------------------------------------
-    // 3) KITE PAYLOAD
-    // ----------------------------------------
+    // 3) Kite payload (direct)
     const orderParams = {
       exchange: reqInput.exch_seg,
-      tradingsymbol: reqInput.kiteSymbol|| reqInput.symbol,
-      transaction_type: reqInput.transactiontype,
+      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      transaction_type: (reqInput.transactiontype || "").toUpperCase(),
       quantity: Number(reqInput.quantity),
-      product:reqInput.productType,  // DELIVERY.                // mistake in fields 
+      product: reqInput.productType,
       order_type: reqInput.orderType,
-      price: reqInput.price,
-      market_protection: 5 // protection points
+      price: Number(reqInput.price || 0),
+      market_protection: 5,
     };
 
-     console.log(orderParams,' db orderParams done');
+    logSuccess(req, { msg: "Prepared Kite payload", orderParams });
 
-    // ----------------------------------------
-    // 4) PLACE ORDER IN KITE
-    // ----------------------------------------
+    // 4) Place order
     let placeRes;
     try {
-
-    placeRes = await kite.placeOrder(orderData.variety, orderParams);
-
-    console.log(placeRes,'kite place order');
-    
-
+      placeRes = await kite.placeOrder(orderData.variety, orderParams);
+      logSuccess(req, { msg: "Kite order placed", placeRes });
     } catch (err) {
+      logError(req, err, { msg: "Kite order placement failed" });
 
-      console.log(err,'kite place order');
-      
+      await newOrder.update({
+        orderstatuslocaldb: "FAILED",
+        status: "FAILED",
+        text: err?.message || "Kite order placement failed",
+        buyTime: new Date().toISOString(),
+      });
 
-      await newOrder.update({ orderstatuslocaldb: "FAILED",status:"FAILED",text:err.message,
-        // filltime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
-        buyTime:new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
-       });
-
-      return {
-        userId: user.id,
-        broker: "Kite",
-        result: "BROKER_REJECTED",
-        message: err.message,
-      };
+      return { userId: user.id, broker: "Kite", result: "BROKER_REJECTED", message: err?.message };
     }
 
-    const orderid = placeRes.order_id;
-
-    // save order id
+    const orderid = placeRes?.order_id;
     await newOrder.update({ orderid });
+    logSuccess(req, { msg: "Order ID saved locally", orderid });
 
-    // ----------------------------------------
-    // 5) GET ORDER DETAILS FROM KITE
-    // ----------------------------------------
-    let detailsData = {};
-    try {
-        
-       const detailRes = await kite.getOrderTrades(orderid);
-    
+    // 5) Snapshot + Trades retry
+    const snap = await getKiteOrderSnapshot(kite, orderid, req);
+    const trades = await fetchTradesWithRetry(kite, orderid, req, 3, 1200);
+    const trade = trades.length ? trades[0] : null;
 
-      if (Array.isArray(detailRes) && detailRes.length > 0) {
+    if (trade) logSuccess(req, { msg: "Using trade[0]", trade });
 
-        detailsData = detailRes[0]; // fallback
-       
-      }
-    } catch (e) {
-       console.log(e,'get order histry');
-      // details optional
-    }
-
-    // ----------------------------------------
-    // 6) HANDLE BUY / SELL LOGIC
-    // ----------------------------------------
+    // 6) SELL pairing
+    let buyOrder = null;
     let finalStatus = "OPEN";
-    let buyOrder
+    const txType = (reqInput.transactiontype || "").toUpperCase();
 
+    if (txType === "SELL") {
+      buyOrder = await findBuyOrderForSell({ userId: user.id, reqInput, req });
 
-    // If SELL → close all BUY orders today
-    if (reqInput.transactiontype === "SELL") {
-
-       buyOrder = await Order.findOne({
-          where: {
-            userId: user.id,
-            status:"COMPLETE",
-            orderstatuslocaldb: "OPEN",
-            orderid:String(reqInput?.buyOrderId)
-              },
-              raw: true
-            });
-            
-
-        if (buyOrder) {
-
+      if (buyOrder) {
         await Order.update(
           { orderstatuslocaldb: "COMPLETE" },
-          { where: { orderid: reqInput?.buyOrderId } }
+          { where: { id: buyOrder.id } }
         );
-
+        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id });
       }
 
       finalStatus = "COMPLETE";
     }
 
-    // ----------------------------------------
-    // 7) UPDATE LOCAL ORDER WITH FINAL STATUS
-    // ----------------------------------------
-
+    // 7) Update from snapshot (even if no trades)
     await newOrder.update({
-      uniqueorderid:detailsData.exchange_order_id,
-      averageprice:detailsData.average_price,
-      lotsize:detailsData.quantity,
-      symboltoken:reqInput.kiteToken||reqInput.token,
-      triggerprice:detailsData.average_price,
-      price:detailsData.average_price,
+      uniqueorderid: snap?.exchange_order_id || null,
+      averageprice: snap?.average_price != null ? Number(snap.average_price) : null,
+      lotsize: snap?.filled_quantity != null ? Number(snap.filled_quantity) : null,
+      triggerprice: snap?.trigger_price != null ? Number(snap.trigger_price) : null,
+      price: snap?.average_price != null ? Number(snap.average_price) : Number(reqInput.price || 0),
+      status: snap?.status ? String(snap.status).toUpperCase() : null,
       orderstatuslocaldb: finalStatus,
     });
 
-    // ----------------------------------------
-    // 8) (OPTIONAL) TRADES FETCH
-    // ----------------------------------------
-    try {
-      const trades = await kite.getOrderTrades(orderid);
+    logSuccess(req, {
+      msg: "Local order updated by snapshot",
+      orderid,
+      snapStatus: snap?.status,
+      finalStatus,
+    });
 
-    
-      
+    // 8) Final trade update if trade exists
+    if (trade) {
+      const tradePrice = Number(trade.average_price || trade.price || 0);
+      const tradeQty = Number(trade.quantity || 0);
 
-      if (Array.isArray(trades) && trades.length > 0) {
-        
-        const t = await trades[0];
+      const buyPrice = Number(buyOrder?.fillprice || 0);
+      const buyQty = Number(buyOrder?.fillsize || 0);
+      const buyValue = Number(buyOrder?.tradedValue || 0);
+      let buyTime = buyOrder?.filltime || "NA";
 
-        const buyPrice  = buyOrder?.fillprice     || 0;
-        const buySize   = buyOrder?.fillsize      || 0;
-        const buyValue  = buyOrder?.tradedValue   || 0;
-         let buyTime  =   buyOrder?.filltime|| 0;
-
-        // Calculate PNL safely
-        let  pnl = ( Number(reqInput.quantity) * t.average_price) - (buyPrice * buySize);
-
-           
-         if(t.transaction_type==='BUY') {
-             pnl = 0 ;
-             buyTime = "NA";
-         }
-
-         console.log(t,'trade data');
-         
-         
-
-          // Update order
-          await newOrder.update({
-            tradedValue: t.average_price * Number(reqInput.quantity),
-            fillprice: t.average_price,
-            fillsize: Number(reqInput.quantity),
-            fillid: t.trade_id,
-            filltime: t?.fill_timestamp.toISOString(),
-            status: "COMPLETE",
-            pnl: pnl,
-            buyTime:buyTime,
-            buyprice: buyPrice,
-            buysize: buySize,
-            buyvalue: buyValue,
-          });
-      }else{
-
-          console.log(trades,'hhhy');
-          
-
+      let pnl = tradePrice * tradeQty - buyPrice * buyQty;
+      if (String(trade.transaction_type || "").toUpperCase() === "BUY") {
+        pnl = 0;
+        buyTime = "NA";
       }
 
-    } catch (e) {
-        console.log(e,'get order trade');
-        
+      logSuccess(req, { msg: "Calculated PnL", orderid, pnl, tradePrice, tradeQty, buyPrice, buyQty });
+
+      await newOrder.update({
+        tradedValue: tradePrice * tradeQty,
+        fillprice: tradePrice,
+        fillsize: tradeQty,
+        fillid: trade.trade_id || null,
+        filltime: trade.fill_timestamp ? new Date(trade.fill_timestamp).toISOString() : null,
+        status: "COMPLETE",
+        pnl,
+        buyTime,
+        buyprice: buyPrice,
+        buysize: buyQty,
+        buyvalue: buyValue,
+      });
+
+      logSuccess(req, { msg: "Final order updated in DB using trade", orderid });
+    } else {
+      logSuccess(req, { msg: "No trade found after retries (non-fatal)", orderid });
     }
 
-    return {
-      userId: user.id,
-      broker: "Kite",
-      result: "SUCCESS",
-      orderid,
-    };
-  } catch (err) {
+    logSuccess(req, { msg: "Kite LocalDB order flow completed", orderid });
 
-    console.log(err,'err');
-    
-    return {
-      userId: user.id,
-      broker: "Kite",
-      result: "ERROR",
-      message: err.message,
-    };
+    return { userId: user.id, broker: "Kite", result: "SUCCESS", orderid };
+  } catch (err) {
+    logError(req, err, { msg: "Unexpected LocalDB Kite order failure" });
+
+    try {
+      if (newOrder?.id) {
+        await newOrder.update({
+          orderstatuslocaldb: "FAILED",
+          status: "FAILED",
+          text: err?.message || "Unexpected error",
+          buyTime: new Date().toISOString(),
+        });
+      }
+    } catch (e2) {
+      logError(req, e2, { msg: "Failed to mark local order FAILED in catch" });
+    }
+
+    return { userId: user?.id, broker: "Kite", result: "ERROR", message: err?.message };
   }
 };
-
-
-
-
-
-
-
-
-
-export const testLocalSell = async (req,res,next) => {
-
-  let array = {
-  symboltoken: '532648',
-  variety: 'regular',
-  tradingsymbol: 'YESBANK',
-  instrumenttype: '',
-  transactiontype: 'SELL',
-  exchange: 'BSE',
-  ordertype: 'MARKET',
-  quantity: '1',
-  producttype: 'MIS',
-  price: 22.11,
-  orderstatuslocaldb: 'PENDING',
-  totalPrice: null,
-  actualQuantity: null,
-  userId: 3,
-  broker: 'kite',
-  angelOneSymbol: 'YESBANK',
-  angelOneToken: '532648',
-  userNameId: '02439',
-  buyOrderId: '251210170353170'
-}
-
-
-  let buyOrder = await Order.findOne({
-          where: {
-            userId: array.userId,
-            status:"COMPLETE",
-            orderstatuslocaldb: "OPEN",
-            orderid:String(array?.buyOrderId)
-              },
-              raw: true
-            });
-
-
-
-            console.log(buyOrder);
-            
-  
-}

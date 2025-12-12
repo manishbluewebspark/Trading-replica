@@ -40,10 +40,10 @@ export default function InstrumentFormAdmin() {
   const [error, setError] = useState("");
 
   const [duration, setDuration] = useState("DAY");
-   const [ltp, setLtp] = useState(0);
+  const [ltp, setLtp] = useState(0);
 
-   console.log(ltp);
-   
+  console.log(ltp);
+
   const [orderType, setOrderType] = useState("MARKET");
   const [variety, setVariety] = useState("NORMAL");
 
@@ -139,41 +139,41 @@ export default function InstrumentFormAdmin() {
 
 
 
-  const handleSell = async(row: any) => {
+  const handleSell = async (row: any) => {
 
-     const LtlPayload = {
-          exchange: row.exch_seg,
-          tradingsymbol: row.symbol,
-          symboltoken: row.token,
-        };
+    const LtlPayload = {
+      exchange: row.exch_seg,
+      tradingsymbol: row.symbol,
+      symboltoken: row.token,
+    };
 
-     const res = await axios.post(
-                `${apiUrl}/agnelone/instrument/ltp`,
-                LtlPayload,
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-                    AngelOneToken: localStorage.getItem("angel_token") || "",
-                    userid: localStorage.getItem("userID"),
-              },
-          }
-      );
+    const res = await axios.post(
+      `${apiUrl}/agnelone/instrument/ltp`,
+      LtlPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+          userid: localStorage.getItem("userID"),
+        },
+      }
+    );
+
+    console.log(res.data.data);
+
+
+    if (res.data.status === true) {
 
       console.log(res.data.data);
-      
 
-       if(res.data.status===true) {
+      setLtp(res.data.data.data.ltp || 0)
 
-        console.log(res.data.data);
-        
-        setLtp(res.data.data.data.ltp||0)
+    } else {
 
-       }else{
-
-        //  toast.error("Something went wrong.");
-          setLtp(0)
-       }
-};
+      //  toast.error("Something went wrong.");
+      setLtp(0)
+    }
+  };
 
 
   // ---------- AngelOne Normalizer ----------
@@ -266,16 +266,39 @@ export default function InstrumentFormAdmin() {
       {
         headerName: "Action",
         cellRenderer: (params: any) => (
+          // <button
+          //   onClick={() => {
+          //     setSelectedScriptRow(params.data);
+          //     setScriptModalOpen(true);
+          //     handleSell(params.data);   // example
+          //   }}
+          //   className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+          // >
+          //   Buy
+          // </button>
           <button
             onClick={() => {
               setSelectedScriptRow(params.data);
               setScriptModalOpen(true);
-              handleSell(params.data);   // example
+              handleSell(params.data); // example
             }}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+            className="
+    inline-flex items-center gap-1.5
+    px-4 py-1.5
+    text-xs font-semibold
+    rounded-md
+    text-white!
+    shadow-sm
+    bg-gradient-to-r from-green-500 to-green-700
+    hover:from-green-600 hover:to-green-800
+    transition-all duration-200
+  "
+            title="Click to Buy"
           >
-            Buy
+            <span className="text-sm leading-none">⬆</span>
+            BUY
           </button>
+
         ),
         minWidth: 100,
         sortable: false,
@@ -286,22 +309,22 @@ export default function InstrumentFormAdmin() {
         field: "token",
         minWidth: 250,
         filter: "agTextColumnFilter",
-        cellStyle: {fontSize: '15px'}
+        cellStyle: { fontSize: '15px' }
       },
-  
-       { headerName: "Symbol",
-         field: "symbol",
-          minWidth: 250,
-           filter: "agTextColumnFilter",
-            cellStyle: {fontSize: '20px'}
-        },
-         {
-           headerName: "Kite Symbol",
-           field: "kite_tradingsymbol",
-            minWidth: 120,
-             filter: "agTextColumnFilter",
-               cellStyle: {fontSize: '20px'}
-          },
+      {
+        headerName: "Symbol",
+        field: "symbol",
+        minWidth: 250,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '18px' }
+      },
+      {
+        headerName: "Kite Symbol",
+        field: "kite_tradingsymbol",
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
     ],
     []
   );
@@ -420,7 +443,7 @@ export default function InstrumentFormAdmin() {
             placeholder='AG Grid Quick Filter ( "NIFTY02DEC2525800PE" or "NIFTY")'
             className="border p-2 w-full rounded"
           />
-         
+
         </div>
 
         <div className="flex items-center gap-4">
@@ -446,7 +469,7 @@ export default function InstrumentFormAdmin() {
             </select>
           </div>
 
-          
+
         </div>
       </div>
 
@@ -467,7 +490,7 @@ export default function InstrumentFormAdmin() {
             rowSelection="single"
             pagination
             paginationPageSize={10000}
-            rowHeight={34}
+            rowHeight={45}
             suppressFieldDotNotation
             onGridReady={onGridReady}
             quickFilterText={quickFilterText}
@@ -489,7 +512,7 @@ export default function InstrumentFormAdmin() {
                 onClick={() => setScriptModalOpen(false)}
                 className="text-white text-2xl leading-none font-bold pb-1"
               >
-                <MdOutlineCancel  className="w-8 h-8 hover:text-gray-600"/>
+                <MdOutlineCancel className="w-8 h-8 hover:text-gray-600" />
               </button>
             </div>
 
@@ -497,31 +520,28 @@ export default function InstrumentFormAdmin() {
             <div className="border-b border-gray-200">
               <div className="flex">
                 <button
-                  className={`flex-1 py-3 text-center font-medium ${
-                    activeTab === "Quick"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500"
-                  }`}
+                  className={`flex-1 py-3 text-center font-medium ${activeTab === "Quick"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500"
+                    }`}
                   onClick={() => setActiveTab("Quick")}
                 >
                   Quick
                 </button>
                 <button
-                  className={`flex-1 py-3 text-center font-medium ${
-                    activeTab === "Regular"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500"
-                  }`}
+                  className={`flex-1 py-3 text-center font-medium ${activeTab === "Regular"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500"
+                    }`}
                   onClick={() => setActiveTab("Regular")}
                 >
                   Regular
                 </button>
                 <button
-                  className={`flex-1 py-3 text-center font-medium ${
-                    activeTab === "Iceberg"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500"
-                  }`}
+                  className={`flex-1 py-3 text-center font-medium ${activeTab === "Iceberg"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-500"
+                    }`}
                   onClick={() => setActiveTab("Iceberg")}
                 >
                   Iceberg
@@ -554,7 +574,7 @@ export default function InstrumentFormAdmin() {
                   Longterm <span className="text-xs text-gray-500">CNC</span>
                 </label>
 
-                 <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2">
                   <input
                     type="radio"
                     name="productType"
@@ -565,9 +585,9 @@ export default function InstrumentFormAdmin() {
                   NORMAL <span className="text-xs text-gray-500">NMRL</span>
                 </label>
 
-                
+
               </div>
-               
+
 
               {/* Qty / Prices */}
               <div className="grid grid-cols-3 gap-5 mb-5">
@@ -696,7 +716,7 @@ export default function InstrumentFormAdmin() {
 
               {/* Margin Info */}
               <div className="text-sm text-gray-600 mb-6">
-                Required Fund ₹{(ltp*selectedScriptRow.lotsize).toFixed(2)}
+                Required Fund ₹{(ltp * selectedScriptRow.lotsize).toFixed(2)}
               </div>
 
               {/* Buttons */}

@@ -9,7 +9,7 @@ export default function Badges() {
     <div>
       <PageMeta
         title="Software Setu"
-        description="This is React.js Badges Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
+        description="Software Setu"
       />
       <PageBreadcrumb pageTitle="Badges" />
       <div className="space-y-5 sm:space-y-6">

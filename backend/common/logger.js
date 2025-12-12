@@ -16,6 +16,7 @@ const orderedJsonFormat = winston.format((info) => {
     method: info.method ?? null,
     status: info.status ?? null,
     userId: info.userId ?? null,
+    data: info.data ?? null,     // ✅ object OR array
     message: info.message,
     timestamp: info.timestamp,
   };

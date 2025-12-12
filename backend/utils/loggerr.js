@@ -7,19 +7,20 @@ export function logSuccess(req, extraData = {}) {
     method: req.method,
     status: true,
     userId: req?.userId || null,
-    ...extraData
+   data: extraData, // 👈 always store here
   });
 }
 
 // ERROR Log (error)
-export function logError(req, err, extraData = {}) {
-  logger.error("API Request Failed", {
+export function logError(req, err,extraData = {} ) {
+  logger.error(err.message||"API Request Failed", {
     url: req.originalUrl,
     method: req.method,
     status: false,
     userId: req?.userId || null,
     error: err.message,
+    errorObject:err,
     stack: err.stack || null,
-    ...extraData
+    data: extraData, // 👈 always store here
   });
 }

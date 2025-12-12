@@ -1562,9 +1562,6 @@ export const getPosition = async (req, res,next) => {
 export const getAngelOneLTP = async (req, res,next) => {
     try {
 
-      console.log(req.body);
-      
-
        var data = JSON.stringify({
             "exchange":req.body.exchange,
             "tradingsymbol":req.body.tradingsymbol,
@@ -1590,9 +1587,6 @@ export const getAngelOneLTP = async (req, res,next) => {
     };
 
     let resData = await axios(config)
-
-    console.log(resData,'resData');
-    
 
      if(resData?.data?.status==true) {
 

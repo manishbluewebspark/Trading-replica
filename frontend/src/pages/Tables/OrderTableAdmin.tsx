@@ -560,7 +560,7 @@ useEffect(() => {
                    const live = o.symboltoken ? ltpByToken[o.symboltoken] : undefined;
                   return(
                   <tr key={o.orderid} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={td}>
+                    {/* <td style={td}>
                       <button
                         onClick={() => handleSellClick(o)}
                         disabled={o.transactiontype === "SELL"} // 👈 disable when SELL
@@ -578,7 +578,58 @@ useEffect(() => {
                       >
                         Sell
                       </button>
-                    </td>
+                    </td> */}
+
+                    <td style={td}>
+  <button
+  onClick={() => handleSellClick(o)}
+  disabled={o.transactiontype === "SELL"}
+  onMouseEnter={(e) => {
+    if (o.transactiontype !== "SELL") {
+      e.currentTarget.style.background =
+        "linear-gradient(to right, #b91c1c, #7f1d1d)";
+    }
+  }}
+  onMouseLeave={(e) => {
+    if (o.transactiontype !== "SELL") {
+      e.currentTarget.style.background =
+        "linear-gradient(to right, #ef4444, #dc2626)";
+    }
+  }}
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "4px 14px",
+    borderRadius: "16px",
+    fontSize: "12px",
+    fontWeight: 600,
+    letterSpacing: "0.5px",
+    border: "none",
+    color: "#fff",
+    background:
+      o.transactiontype === "SELL"
+        ? "#9ca3af"
+        : "linear-gradient(to right, #ef4444, #dc2626)", // 🔴 gradient
+    cursor:
+      o.transactiontype === "SELL"
+        ? "not-allowed"
+        : "pointer",
+    opacity: o.transactiontype === "SELL" ? 0.6 : 1,
+    transition: "all 0.2s ease-in-out",
+  }}
+  title={
+    o.transactiontype === "SELL"
+      ? "Already Sold"
+      : "Click to Sell"
+  }
+>
+  <span style={{ fontSize: "13px", lineHeight: 1 }}>⬇</span>
+  SELL
+</button>
+
+</td>
+
                     
                      
                       <td style={td} title={o.userNameId}><strong>{o.userNameId}</strong></td>  

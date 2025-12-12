@@ -52,7 +52,7 @@ export const shoonyaLoginWithTotp = async (req, res) => {
       digits: 6,
     });
 
-    console.log("Generated Shoonya TOTP:", factor2);
+
 
     // 3️⃣ Compute SHA-256 hashed password (Shoonya requirement)
     const pwdHash = createHash("sha256").update(password).digest("hex");
@@ -77,8 +77,6 @@ export const shoonyaLoginWithTotp = async (req, res) => {
       appkey,
     };
 
-    console.log("Shoonya Login Payload:", loginPayload);
-
     // 6️⃣ POST request to Shoonya QuickAuth
     const jData = `jData=${JSON.stringify(loginPayload)}`;
 
@@ -90,7 +88,6 @@ export const shoonyaLoginWithTotp = async (req, res) => {
 
     const data = response.data;
 
-    console.log("Shoonya Login Response:", data);
 
     // 7️⃣ Handle errors
     if (data.stat !== "Ok") {
@@ -111,9 +108,6 @@ export const shoonyaLoginWithTotp = async (req, res) => {
        },
       { where: { id: req.userId} }
     );
-
-    console.log(updateUser,'updateUser');
-    
 
     return res.json({
       status: true,
@@ -273,14 +267,28 @@ export const getShoonyaFunds = async (req, res) => {
       });
     }
 
-    let cashFund = {
-          availablecash:data.cash
-    }
+
+    console.log(data,'fund');
+    
+
+    // let cashFund = {
+    //       availablecash:data.payin
+    // }
+
+    const availableCash =
+  Number(data.payin || 0) - Number(data.marginused || 0);
+
+  let cashFund = {
+  availablecash: Number(availableCash.toFixed(2)), // ₹497.97
+  
+};
+
 
     return res.json({
       status: true,
       message: "Funds (Limits) fetched successfully",
-      data: cashFund,
+      // data: cashFund,
+      data:cashFund
     });
   } catch (error) {
     console.error("Shoonya Funds Error:", error?.response?.data || error);
@@ -446,7 +454,10 @@ export const getShoonyaFunds1 = async (req, res) => {
 // -------------------------------
 export const getShoonyaOrders = async (req, res) => {
   try {
-    const { uid, susertoken } = req.body;
+
+    const uid = 'FN169676'
+     const susertoken = 'd7d4506729c2047f388462011699f5d2c1c12968458f6ff6c6902a5273a33f0c'
+
 
     if (!uid || !susertoken) {
       return res.status(400).json({
@@ -536,6 +547,107 @@ export const getShoonyaOrders = async (req, res) => {
 // POST Trades CONTROLLER
 // -------------------------------
 export const getShoonyaTrades = async (req, res) => {
+  try {
+    // 🔹 Now expecting actid also
+   
+    const uid = 'FN169676'
+     const susertoken = 'd7d4506729c2047f388462011699f5d2c1c12968458f6ff6c6902a5273a33f0c'
+
+     let actid = uid
+
+    if (!uid || !actid || !susertoken) {
+      return res.status(400).json({
+        status: false,
+        message: "uid, actid and susertoken are required",
+      });
+    }
+
+   
+
+    const url = `${SHOONYA_BASE_URL}/TradeBook`;
+
+    // jData MUST have uid + actid
+    const jData = {
+      uid,   // e.g. "FN169676"
+      actid, // e.g. "FN169676"
+    
+    };
+
+    // raw x-www-form-urlencoded (Shoonya style)
+    const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+
+    console.log("Shoonya /TradeBook body =>", body);
+
+    const response = await axios.post(url, body, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const data = response?.data;
+    console.log("Finvasia trades raw:", data);
+
+    if (!data) {
+      return res.status(400).json({
+        status: false,
+        message: "No response from Shoonya TradeBook",
+      });
+    }
+
+    // 🔹 Case A: "no data" → no trades
+    if (
+      !Array.isArray(data) &&
+      data.stat === "Not_Ok" &&
+      typeof data.emsg === "string" &&
+      data.emsg.toLowerCase().includes("no data")
+    ) {
+      return res.json({
+        status: true,
+        message: "No trades found",
+        count: 0,
+        trades: [],
+        raw: data,
+      });
+    }
+
+    // 🔹 Case B: some other Shoonya error
+    if (!Array.isArray(data) && data.stat && data.stat !== "Ok") {
+      return res.status(400).json({
+        status: false,
+        message: data?.emsg || "Unable to fetch trades",
+        raw: data,
+      });
+    }
+
+    // 🔹 Case C: success – usually an array of trades
+    let trades = [];
+
+    if (Array.isArray(data)) {
+      trades = data;
+    } else if (Array.isArray(data?.trades)) {
+      trades = data.trades;
+    }
+
+    return res.json({
+      status: true,
+      message: "Trades fetched successfully",
+      count: trades.length,
+      trades,
+      raw: data,
+    });
+  } catch (error) {
+    console.error("Shoonya Trades Error:", error?.response?.data || error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Shoonya trades fetch failed",
+      error: error?.response?.data || error.message,
+    });
+  }
+};
+
+
+export const getShoonyaTrades2 = async (req, res) => {
   try {
     // 🔹 Now expecting actid also
     const { uid, susertoken } = req.body;
@@ -631,6 +743,93 @@ export const getShoonyaTrades = async (req, res) => {
     return res.status(500).json({
       status: false,
       message: "Shoonya trades fetch failed",
+      error: error?.response?.data || error.message,
+    });
+  }
+};
+
+export const getShoonyaOrders2 = async (req, res) => {
+  try {
+    const { uid, susertoken } = req.body;
+
+    if (!uid || !susertoken) {
+      return res.status(400).json({
+        status: false,
+        message: "uid and susertoken are required",
+      });
+    }
+
+    const url = `${SHOONYA_BASE_URL}/OrderBook`;
+
+    const jData = { uid };
+
+    const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+
+    console.log("Shoonya /OrderBook body =>", body);
+
+    const response = await axios.post(url, body, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const data = response?.data;
+    console.log("Finvasia orders raw:", data);
+
+    if (!data) {
+      return res.status(400).json({
+        status: false,
+        message: "No response from Shoonya OrderBook",
+      });
+    }
+
+    // 🔹 Case A: "no data" → treat as success with empty orders
+    if (
+      !Array.isArray(data) &&
+      data.stat === "Not_Ok" &&
+      typeof data.emsg === "string" &&
+      data.emsg.toLowerCase().includes("no data")
+    ) {
+      return res.json({
+        status: true,
+        message: "No orders found",
+        count: 0,
+        orders: [],
+        raw: data,
+      });
+    }
+
+    // 🔹 Case B: other errors from Shoonya
+    if (!Array.isArray(data) && data.stat && data.stat !== "Ok") {
+      return res.status(400).json({
+        status: false,
+        message: data?.emsg || "Unable to fetch orders",
+        raw: data,
+      });
+    }
+
+    // 🔹 Case C: Success – data is array or wrapped
+    let orders = [];
+
+    if (Array.isArray(data)) {
+      orders = data;
+    } else if (Array.isArray(data?.orders)) {
+      orders = data.orders;
+    }
+
+    return res.json({
+      status: true,
+      message: "Orders fetched successfully",
+      count: orders.length,
+      orders,
+      raw: data,
+    });
+  } catch (error) {
+    console.error("Shoonya Orders Error:", error?.response?.data || error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Shoonya orders fetch failed",
       error: error?.response?.data || error.message,
     });
   }
