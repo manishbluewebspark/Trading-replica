@@ -89,6 +89,10 @@ export const shoonyaLoginWithTotp = async (req, res) => {
     const data = response.data;
 
 
+    console.log(data);
+    
+
+
     // 7️⃣ Handle errors
     if (data.stat !== "Ok") {
       return res.status(400).json({
@@ -267,22 +271,14 @@ export const getShoonyaFunds = async (req, res) => {
       });
     }
 
-
-    console.log(data,'fund');
-    
-
-    // let cashFund = {
-    //       availablecash:data.payin
-    // }
-
-    const availableCash =
-  Number(data.payin || 0) - Number(data.marginused || 0);
+  const availableBalance =
+  Number(data.mr_eqt_a || 0) +
+  Number(data.mr_der_a || 0);
+    console.log(availableBalance)
 
   let cashFund = {
-  availablecash: Number(availableCash.toFixed(2)), // ₹497.97
-  
+  availablecash:   availableBalance  
 };
-
 
     return res.json({
       status: true,
