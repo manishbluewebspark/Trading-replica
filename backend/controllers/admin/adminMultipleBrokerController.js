@@ -24,9 +24,10 @@ export const getTokenStatusSummary = async (req, res) => {
         where: {
           angelLoginUser: true,
            role: "user", // ✅ update only real users, not admin or clone-user
-          angelLoginExpiry: {
-            [Op.lt]: now, // expiry < current time → expired
-          },
+           [Op.or]: [
+            { angelLoginExpiry: null },
+            { angelLoginExpiry: { [Op.lt]: now } },   // yesterday / older / earlier today
+          ],
         },
       }
     );

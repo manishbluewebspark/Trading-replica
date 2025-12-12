@@ -177,7 +177,6 @@ export const placeAngelOrder = async (user, reqInput, startOfDay, endOfDay) => {
       variety:detailsData.variety,
       ordertype:detailsData.ordertype,
       duration:detailsData.duration,
-      squareoff:detailsData.squareoff,
       orderstatuslocaldb: finalStatus
      });
 

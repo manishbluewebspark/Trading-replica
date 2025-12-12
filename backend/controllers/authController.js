@@ -500,9 +500,6 @@ const password = (req.body.password || "").trim();
 
     if (!user) {
 
-     
-      
-
       return res.json({
             status: false,
             statusCode:401,
@@ -576,6 +573,7 @@ const password = (req.body.password || "").trim();
       const activeAngelUser = await User.findOne({
         where: {
           angelLoginUser: true,
+          brokerName:"angelone",
           updatedAt: {
             [Op.between]: [startOfDay, endOfDay],
           },

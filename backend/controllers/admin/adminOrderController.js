@@ -2171,7 +2171,7 @@ export const refreshAngelFundsForAllUsers = async (req, res) => {
           if (broker === "angelone"&&user.role==='user') {
             const response = await handleAngelOneUser(user, existingFund);
              
-            results.push(response,'angelone');
+            results.push(response);
             continue;
           }
 
