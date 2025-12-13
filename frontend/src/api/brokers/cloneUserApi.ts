@@ -18,7 +18,7 @@ export const cloneUserOneApi = {
 
       return data;
     } catch (error: any) {
-      console.error("AngelOne Token Error:", error?.response?.data);
+      console.error("clone Token Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },
@@ -35,7 +35,7 @@ export const cloneUserOneApi = {
         },
       });
     } catch (error: any) {
-      console.error("AngelOne Fund Error:", error?.response?.data);
+      console.error("clone Fund Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },
@@ -52,7 +52,21 @@ export const cloneUserOneApi = {
         },
       });
     } catch (error: any) {
-      console.error("AngelOne Trade Error:", error?.response?.data);
+      console.error("clone Trade Error:", error?.response?.data);
+      throw error?.response?.data || error;
+    }
+  },
+
+   getTodayOrder: async () => {
+    try {
+      return await http.get("/admin/getuserclonetrade/todayorderdata", {
+        headers: {
+          ...authHeaders(),
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("clone Trade Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },

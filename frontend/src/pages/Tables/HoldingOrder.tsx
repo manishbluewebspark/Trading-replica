@@ -1592,6 +1592,10 @@ export default function HoldingOrder() {
   const [paginationPageSize, setPaginationPageSize] = useState(10);
 
 
+  console.log(profitAndLossData);
+  
+
+
 
   
 
@@ -1629,11 +1633,9 @@ export default function HoldingOrder() {
           },
         });
 
-        console.log("RAW holding response:", data);
-
         if (data.status === true) {
           const raw = data.data || [];
-          console.log("RAW data.data:", raw);
+         
 
           // Normalize shape:
           const normalized: Order[] = (raw as any[]).map((item: any) => {
@@ -1649,7 +1651,6 @@ export default function HoldingOrder() {
             return item;
           });
 
-          console.log("NORMALIZED orders:", normalized);
           setOrders(normalized);
         } else if (data.status === false && data.message === "Unauthorized") {
           toast.error("Unauthorized User");
@@ -1660,7 +1661,7 @@ export default function HoldingOrder() {
           localStorage.removeItem("refresh_token");
         } else {
           setError("Something went wrong");
-          toast.error("Login In Demat Account");
+          // toast.error("Login In Demat Account");
         }
       } catch (err: any) {
         console.log(err);

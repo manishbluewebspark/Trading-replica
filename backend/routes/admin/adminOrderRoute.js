@@ -9,8 +9,9 @@ import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, upda
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import { adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import {  adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
+import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 
 
 
@@ -18,58 +19,66 @@ const router = express.Router();
 
 
 
-router.get('/tokenstatussummary',authMiddleware,getTokenStatusSummary)
+router.get('/tokenstatussummary',AdminAuthMiddleware,getTokenStatusSummary)
 
-router.post('/multiple/place/order',authMiddleware,adminPlaceMultiBrokerOrder)
-router.get('/sequareoff',authMiddleware,adminMultipleSquareOff)
-router.post("/single/squareoff", authMiddleware, adminSingleSquareOff);
+router.post('/multiple/place/order',AdminAuthMiddleware,adminPlaceMultiBrokerOrder)
+router.get('/sequareoff',AdminAuthMiddleware,adminMultipleSquareOff)
+router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 
 
-router.get('/login/users',AdminLoginMultipleUser)
-router.get('/store/session',storeTokens)
-router.get('/get/session',getTokens)
-router.get('/get/totalusers',AdminGetTotalUsers)
+
+router.get('/fetchorderdetails',adminFetchBuyOrdersAndUpdateManual)
+router.get('/fetchsellorderdetails',adminFetchSellOrdersAndUpdateManual)
+
+router.post("/getusers/pnldata", getUsersPnlData);
+
+
+
+
+
+
+router.get('/get/totalusers',AdminAuthMiddleware,AdminGetTotalUsers)
 router.get('/getuser/profile',AdminAuthMiddleware,adminGetUserAngelToken );
-router.get('/get/table/order',authMiddleware,adminGetOrderInTables);
+router.get('/get/table/order',AdminAuthMiddleware,adminGetOrderInTables);
 router.get('/login/totp/angelone',AdminAuthMiddleware, adminloginWithTOTPInAngelOne);   // our code 
 
 
 
-router.post('/datefilter/order',authMiddleware,adminGetOrderWithDate);
+router.post('/datefilter/order',AdminAuthMiddleware,adminGetOrderWithDate);
 router.post('/search/order',adminSearchOrders);
-router.get('/get/table/trade',authMiddleware,adminGetTradeInTables); // check
+router.get('/get/table/trade',AdminAuthMiddleware,adminGetTradeInTables); // check
 // 
-router.get("/angel/funds/refresh",authMiddleware,refreshAngelFundsForAllUsers);
+router.get("/angel/funds/refresh",AdminAuthMiddleware,refreshAngelFundsForAllUsers);
 
 
 // strategies routes 
-router.get("/strategies",authMiddleware, getAllStrategies);          // findAll
-router.get("/strategies/:id",authMiddleware, getStrategyById);       // findOne
-router.post("/strategies",authMiddleware, createStrategy);           // create
-router.put("/strategies",authMiddleware, updateStrategy);        // update
-router.delete("/strategies/:id",authMiddleware, deleteStrategy);     // deleteOne
+router.get("/strategies",AdminAuthMiddleware, getAllStrategies);          // findAll
+router.get("/strategies/:id",AdminAuthMiddleware, getStrategyById);       // findOne
+router.post("/strategies",AdminAuthMiddleware, createStrategy);           // create
+router.put("/strategies",AdminAuthMiddleware, updateStrategy);        // update
+router.delete("/strategies/:id",AdminAuthMiddleware, deleteStrategy);     // deleteOne
 
 // brokers routes
 router.get("/broker",authMiddleware, getAllBrokers);
-router.get("/broker/:id",authMiddleware, getBrokerById);
-router.post("/broker", authMiddleware,createBroker);
-router.put("/broker",authMiddleware, updateBroker);
-router.delete("/broker/:id", authMiddleware,deleteBroker);
+router.get("/broker/:id",AdminAuthMiddleware, getBrokerById);
+router.post("/broker", AdminAuthMiddleware,createBroker);
+router.put("/broker",AdminAuthMiddleware, updateBroker);
+router.delete("/broker/:id", AdminAuthMiddleware,deleteBroker);
 
 
 // clone user admin routes 
-router.get("/clone-users",authMiddleware, getCloneAllUsers);
-router.post("/clone-users", authMiddleware,createCloneUser);
-router.delete("/clone-users/:id",authMiddleware, deleteCloneUser);
-router.put("/clone-users/:id",authMiddleware, updateCloneUser);
+router.get("/clone-users",AdminAuthMiddleware, getCloneAllUsers);
+router.post("/clone-users", AdminAuthMiddleware,createCloneUser);
+router.delete("/clone-users/:id",AdminAuthMiddleware, deleteCloneUser);
+router.put("/clone-users/:id",AdminAuthMiddleware, updateCloneUser);
 router.post(
   "/clone-users/upload-excel",
-  authMiddleware,
+  AdminAuthMiddleware,
   upload.single("file"),
   uploadOrderExcel
 );
 router.post("/manual/create",
-  authMiddleware, 
+  AdminAuthMiddleware, 
   async (req, res, next) => {
     try {
       const { buyPrice, sellPrice, buyTime, sellTime } = req.body;
@@ -103,33 +112,29 @@ router.post("/manual/create",
 
 
 //  clone user routes
-router.post('/search/order',adminSearchOrders);
-
-router.get("/getuserclone/fund",authMiddleware,getCloneUserFund);
-router.get("/getuserclonetrade", authMiddleware,getCloneUserTrade);
-router.get("/getuserclonedematlogin", loginCloneUserDemat);
 
 
+router.get("/getuserclone/fund",AdminAuthMiddleware,getCloneUserFund);
+router.get("/getuserclonetrade", AdminAuthMiddleware,getCloneUserTrade);
+router.get("/getuserclonedematlogin",AdminAuthMiddleware, loginCloneUserDemat);
 
 
-router.get("/chartadmin", fetchGooglFromSerpApi);
-router.get("/get/recent/order", adminGetRecentOrder);
+router.get("/chartadmin",AdminAuthMiddleware, fetchGooglFromSerpApi);
+router.get("/get/recent/order",AdminAuthMiddleware, adminGetRecentOrder);
+
 
 // Holding Data in AngelOne
-router.get('/get/holdingdata',
-
-    authMiddleware, adminGetCloneUserHolding
- 
-)
+router.get('/get/holdingdata',AdminAuthMiddleware, adminGetCloneUserHolding)
+router.get('/getall/holdingdata',AdminAuthMiddleware, AdminGetHoldingMultiple)
 
 
-router.get('/getall/holdingdata',
-
-    authMiddleware, AdminGetHoldingMultiple
- 
-)
+router.get('/fetch/borker/order',AdminAuthMiddleware,adminFetchOrderHolding)
 
 
-router.get('/fetch/borker/order',adminFetchOrderHolding)
+
+router.get('/login/users',AdminLoginMultipleUser)
+router.get('/store/session',storeTokens)
+router.get('/get/session',getTokens)
+router.post('/search/order',adminSearchOrders);
 
 export default router;

@@ -374,7 +374,7 @@ export const getKiteFunds1 = async (req, res) => {
   }
 };
 
-export const getKiteFunds = async (req, res) => {
+export const getKiteFunds_holding_api = async (req, res) => {
   try {
     const token = req.headers.angelonetoken;
 
@@ -459,12 +459,56 @@ export const getKiteFunds = async (req, res) => {
   }
 };
 
+export const getKiteFunds = async (req, res) => {
+  try {
+
+    const token = req.headers.angelonetoken;
+
+
+    if (!token) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Kite access token missing in header (angelonetoken)",
+        error: null,
+      });
+    }
+
+    // 🔹 Get Kite client for funds only (orders will come from Local DB)
+    const kite = await getKiteClientForUserId(req.userId);
+
+    // -------------------------------
+    // 1️⃣ GET FUNDS FROM KITE API
+    // -------------------------------
+    const funds = await kite.getMargins();
+    const availableCash = funds?.equity?.net || 0;
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "Funds & Local Orders retrieved successfully",
+      data: {
+        raw: funds,
+        availablecash: availableCash,
+      },
+     
+    });
+  } catch (error) {
+    console.log("Local Kite Orders Fetch Error:", error);
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Error fetching funds & local kite orders",
+      error: error.message,
+    });
+  }
+};
+
 // ===================== DASHBOARD P&L =====================
 
-export const getTradeDataForUserPosition = async function (req, res, next) {
+export const getKiteTradesDataUserPosition = async function (req, res, next) {
   try {
-    let totalBuyLength = 0;
-    let newPnl = 0;
 
     const kiteToken = req.headers.angelonetoken;
 
@@ -472,7 +516,7 @@ export const getTradeDataForUserPosition = async function (req, res, next) {
       return res.json({
         status: false,
         statusCode: 401,
-        message: "Login in Broker Account (AngelOne or Kite)",
+        message: "Login in Broker Account",
         error: null,
       });
     }
@@ -482,13 +526,11 @@ export const getTradeDataForUserPosition = async function (req, res, next) {
     // 1️⃣ Get live trades from Kite
     const trades = await kite.getTrades();
 
-    console.log(trades, "kite trades");
-
     if (!Array.isArray(trades) || trades.length === 0) {
       return res.json({
         status: true,
         statusCode: 200,
-        message: "No Kite trades found",
+        message: "No Trade in User Position",
         data: [],
         pnl: 0,
         totalTraded: 0,
@@ -520,106 +562,24 @@ export const getTradeDataForUserPosition = async function (req, res, next) {
       (t) => !existingIdsSet.has(String(t.order_id))
     );
 
-    console.log(newTrades, "newTrades (not in local DB)");
 
     if (!newTrades.length) {
+
       return res.json({
         status: true,
         statusCode: 200,
-        message: "No NEW trades to process (all already in local DB)",
-        data: [],
-        pnl: 0,
-        totalTraded: 0,
-        totalOpen: await Order.count({
-          where: { userId: req.userId, orderstatuslocaldb: "OPEN" },
-        }),
+        message: "Trade in User Position",
+        onlineTrades: [], // Raw trades not yet saved locall
       });
     }
 
-    const toMoney = (n) => Math.round(n * 100) / 100;
-
-    // 5️⃣ PnL calculation on *newTrades* only
-    function calculatePnL(orders) {
-      const grouped = {};
-
-      for (const t of orders) {
-        if (!grouped[t.tradingsymbol]) grouped[t.tradingsymbol] = [];
-        grouped[t.tradingsymbol].push(t);
-      }
-
-      const results = [];
-
-      for (const [symbol, list] of Object.entries(grouped)) {
-        const buys = list.filter((o) => o.transaction_type === "BUY");
-        const sells = list.filter((o) => o.transaction_type === "SELL");
-
-        let totalBuyQty = 0,
-          totalBuyValue = 0;
-        buys.forEach((b) => {
-          totalBuyQty += b.quantity;
-          totalBuyValue += b.quantity * b.average_price;
-        });
-
-        let totalSellQty = 0,
-          totalSellValue = 0;
-        sells.forEach((s) => {
-          totalSellQty += s.quantity;
-          totalSellValue += s.quantity * s.average_price;
-        });
-
-        if (totalBuyQty > 0 && totalSellQty > 0) {
-          const matchedQty = Math.min(totalBuyQty, totalSellQty);
-          const buyAvg = totalBuyValue / totalBuyQty;
-          const sellAvg = totalSellValue / totalSellQty;
-          const pnl = (sellAvg - buyAvg) * matchedQty;
-          newPnl = newPnl + pnl;
-
-          results.push({
-            label: symbol,
-            win: toMoney(buyAvg),
-            loss: toMoney(sellAvg),
-            quantity: matchedQty,
-            pnl: toMoney(pnl),
-          });
-        }
-      }
-
-      return results;
-    }
-
-    const pnlData = calculatePnL(newTrades);
-
-    let totalBuy = 0,
-      totalSell = 0;
-
-    newTrades.forEach((t) => {
-      if (t.transaction_type === "BUY") {
-        totalBuy += t.quantity * t.average_price;
-        totalBuyLength++;
-      } else if (t.transaction_type === "SELL") {
-        totalSell += t.quantity * t.average_price;
-      }
-    });
-
-    const openCount = await Order.count({
-      where: {
-        userId: req.userId,
-        orderstatuslocaldb: "OPEN",
-      },
-    });
-
-    console.log(pnlData, "pnlData (new trades only)");
-
+  
     return res.json({
       status: true,
       statusCode: 200,
-      broker: "Kite",
-      message: "Kite NEW trades fetched (not in local DB)",
-      data: pnlData,          // PnL grouped by symbol, only for new trades
+      message: "User Position Trades",
       onlineTrades: newTrades, // Raw trades not yet saved locally
-      pnl: newPnl,
-      totalTraded: totalBuyLength,
-      totalOpen: openCount,
+     
     });
   } catch (error) {
     console.error("Dashboard error:", error);
@@ -631,8 +591,6 @@ export const getTradeDataForUserPosition = async function (req, res, next) {
     });
   }
 };
-
-
 
 
 export const getTradeDataForKiteDeshboard2 = async function (req, res) {
@@ -938,7 +896,9 @@ function calculateFIFO(trades) {
   }
 };
 
-export const getTradeDataForKiteDeshboard = async function (req, res) {
+
+
+export const getTradeDataForKiteDeshboard_Holding_API = async function (req, res) {
   try {
     // ✅ Today range (UTC based on ISO)
     const startOfDay = new Date();
@@ -956,7 +916,6 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
     let trades = await Order.findAll({
       where: {
         userId,
-        broker: "kite",
         orderstatuslocaldb: "COMPLETE",
         filltime: { [Op.between]: [startISO, endISO] },
       },
@@ -967,7 +926,6 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
     const TotalTrades = await Order.count({
       where: {
         userId,
-        broker: "kite",
         orderstatuslocaldb: "COMPLETE",
         transactiontype: "BUY",
         filltime: { [Op.between]: [startISO, endISO] },
@@ -978,7 +936,6 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
     const openOrders = await Order.count({
       where: {
         userId,
-        broker: "kite",
         orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
       },
     });
@@ -987,7 +944,6 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
       return res.json({
         status: true,
         statusCode: 200,
-        broker: "Kite",
         message: "No trades found",
         data: [],
         onlineTrades: [],
@@ -1102,8 +1058,7 @@ export const getTradeDataForKiteDeshboard = async function (req, res) {
     return res.json({
       status: true,
       statusCode: 200,
-      broker: "Kite",
-      message: "Kite tradebook fetched",
+      message: " tradebook fetched",
       data: pnlData,
       onlineTrades: trades,
       pnl: totalPnL,
@@ -1419,7 +1374,7 @@ export const getKiteHolding1 = async (req, res) => {
 
 
 
-export const getKiteHolding = async (req, res) => {
+export const getKiteHolding2 = async (req, res) => {
   try {
     const token = req.headers.angelonetoken;
 
@@ -1512,7 +1467,60 @@ export const getKiteHolding = async (req, res) => {
     });
   }
 };
+export const getKiteHolding = async (req, res) => {
+  try {
 
+    // 2️⃣ Compute start of TODAY in IST, convert to UTC ISO for string comparison
+    const nowUtc = new Date();
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30
+
+    // Convert current UTC -> IST
+    const istNow = new Date(nowUtc.getTime() + IST_OFFSET_MS);
+    istNow.setHours(0, 0, 0, 0); // start of day in IST (00:00:00)
+
+    // Convert IST start-of-day back to UTC
+    const startOfTodayUtc = new Date(istNow.getTime() - IST_OFFSET_MS);
+    const startOfTodayIso = startOfTodayUtc.toISOString(); // e.g. "2025-12-10T00:00:00.000Z"
+
+    console.log("🕒 startOfTodayUtc ISO:", startOfTodayIso);
+
+    // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
+    const localOldOrders = await Order.findAll({
+      where: {
+        userId: req.userId,
+        orderstatuslocaldb: "OPEN",
+        filltime: {
+          [Op.lt]: startOfTodayIso,  // only yesterday & older
+        },
+       
+      },
+       raw:true
+    });
+
+  
+
+   
+    
+    
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: localOldOrders,
+      message:
+        "Successfully fetched holdings matching local COMPLETE orders (excluding today's filltime)",
+    });
+  } catch (error) {
+    console.error("❌ getKiteHolding error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
 
 
 export const getKiteTrades = async (req, res) => {

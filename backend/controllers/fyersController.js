@@ -369,3 +369,36 @@ export const getTradeDataForFyersDashboard = async (req, res) => {
 };
 
 
+
+
+export const getFyersUserHolding = async (req, res) => {
+  try {
+    const token = req.headers.angelonetoken;
+
+    if (!token) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Kite access token missing in header (angelonetoken)",
+        error: null,
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: [], // ✅ only yesterday+old positions
+      message: "No Holding Found",
+    });
+
+  } catch (error) {
+    console.error("❌ getKiteHolding error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};

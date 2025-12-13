@@ -21,7 +21,7 @@ export const upStoxApi = {
 
       return data;
     } catch (error: any) {
-      console.error("AngelOne Token Error:", error?.response?.data);
+      console.error("upstox Token Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },
@@ -38,7 +38,7 @@ export const upStoxApi = {
         },
       });
     } catch (error: any) {
-      console.error("AngelOne Fund Error:", error?.response?.data);
+      console.error("upstox Fund Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },
@@ -55,11 +55,27 @@ export const upStoxApi = {
         },
       });
     } catch (error: any) {
-      console.error("AngelOne Trade Error:", error?.response?.data);
+      console.error("upstox Trade Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },
 
+
+   getTodayOrder: async () => {
+    try {
+
+      return await http.get("/upstox/deshbaord/todayorderdata", {
+        headers: {
+          ...authHeaders(),
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+
+    } catch (error: any) {
+      console.error("upstox TodayTrade Error:", error?.response?.data);
+      throw error?.response?.data || error;
+    }
+  },
 
   
 };

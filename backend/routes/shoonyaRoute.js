@@ -1,10 +1,19 @@
 import express from 'express';
 import {  finvasiaAppCredential, getShoonyaFunds, getShoonyaOrders, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
 
 
 const router = express.Router();
+
+// deshboard
+router.get('/finvasia/deshbaord/todaytrade',authMiddleware, getTradeDataForCommonDeshboardUpdate);
+router.get('/finvasia/fund',authMiddleware, getShoonyaFunds);
+router.get('/finvasia/deshbaord/todayorderdata',authMiddleware, getDeshboardOrdersUpdate);
+
+
+
 
 router.post('/finvasia/login', authMiddleware,shoonyaLogin);
 router.post('/finavasia/appcredential/create', authMiddleware,finvasiaAppCredential);
@@ -16,7 +25,9 @@ router.post('/finavasia/appcredential/create', authMiddleware,finvasiaAppCredent
 router.get('/finavasia/logintotp',authMiddleware,shoonyaLoginWithTotp );
 
 
-router.get('/finvasia/fund',authMiddleware, getShoonyaFunds);
+
+
+
 
 
 

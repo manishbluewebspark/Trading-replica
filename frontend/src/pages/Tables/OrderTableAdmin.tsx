@@ -7,7 +7,6 @@ import { toast } from "react-toastify";
 import { getSocket } from "../../socket/Socket";
 import { useNavigate } from "react-router";
 
-
 type Tick = {
   mode: 1 | 2 | 3;
   exchangeType: number;
@@ -282,6 +281,47 @@ const handleSellClick = async (item: any) => {
 };
 
 
+ async function fetchOnlineOrdersDetails() {
+
+  try {
+
+       // 🔥 Your backend API call
+    const res = await axios.get(
+      `${apiUrl}/admin/fetchorderdetails`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (res.data.status) {
+
+      
+
+    } else if(res.data.status==false&&res.data.message=='Unauthorized'){
+
+       localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("termsAccepted");
+        localStorage.removeItem("feed_token");
+        localStorage.removeItem("refresh_token");
+
+        toast.error('Unauthorized User');
+
+       navigate("/");
+
+    }else {
+
+      toast.error(res.data.message || "Failed to square off");
+
+    }
+  } catch (error) {
+    
+  }
+     
+}
+
 
 
       // ✅ Handle Update Form Submit
@@ -439,21 +479,38 @@ useEffect(() => {
       <h2 style={{ marginBottom: 12 }}>Current Position</h2>
 
       <div
-  style={{
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "wrap",
-    marginBottom: 12,
-  }}
->
-  
+    style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
 
-  
+      <div>
+        <button
+          onClick={handleSquareButton}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#3b82f6", // Blue-500
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: 14,
+            transition: "background-color 0.2s",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")} // Blue-600 on hover
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#3b82f6")}
+        >
+          Square Off
+        </button>
+      </div>
 
 <div>
    <button
-    onClick={handleSquareButton}
+    onClick={fetchOnlineOrdersDetails}
     style={{
       padding: "10px 16px",
       backgroundColor: "#3b82f6", // Blue-500
@@ -467,14 +524,10 @@ useEffect(() => {
     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")} // Blue-600 on hover
     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#3b82f6")}
   >
-    Square Off
+  Refresh
   </button>
 </div>
  
-
-
-      
-  
 </div>
     
 

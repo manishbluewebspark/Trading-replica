@@ -3,9 +3,12 @@ import express from 'express';
 import { getOrderWithDate, getOrderInTables, getTradeWithDate, userGetTradeInTables, searchOrders} from '../controllers/placeOrderController.js';
 import { authMiddleware} from '../middleware/authMiddleware.js';
 import { getTradeBookInTable } from '../controllers/tradeController.js';
-import { getKiteAllOrders, getKiteHolding, getTradeDataForKiteDeshboard, getTradeDataForUserPosition } from '../controllers/kiteController.js';
-import { getCloneUserTrade } from '../controllers/admin/cloneUserController.js';
-import { getAngelUserHolding, getTradeDataForDeshboard, getTradeDataUserPostion } from '../controllers/angelController.js';
+import {  getKiteHolding, getKiteTradesDataUserPosition } from '../controllers/kiteController.js';
+import { getCloneUserHolding, getCloneUserTradeDataUserPostion } from '../controllers/admin/cloneUserController.js';
+import { getAngelUserHolding, getAngelOneTradeDataUserPostion } from '../controllers/angelController.js';
+import { getShoonyaUserHolding } from '../controllers/shoonyaController.js';
+import { getFyersUserHolding } from '../controllers/fyersController.js';
+import { getUpstoxUserHolding } from '../controllers/upStockController.js';
 
 
 const router = express.Router();
@@ -26,81 +29,75 @@ router.get('/get/table/tradebook',authMiddleware,getTradeBookInTable)
 
 
 router.get('/userposition/common/todaytrade',authMiddleware,
-    async (req, res,next) => {
-  try {
+  async (req, res,next) => {
+    try {
 
-    const { role, borker:brokername } = req;
+      const { role, borker:brokername } = req;
 
-      if (role === "user" && brokername === "kite") {
+        if (role === "user" && brokername === "kite") {
 
-       return getTradeDataForUserPosition(req, res,next);
-       
-      }else if(role === "user" && brokername === "angelone") {
-
-        return getTradeDataUserPostion(req, res,next)
-      }else {
-      
-        return getCloneUserTrade(req,res,next)
+        return getKiteTradesDataUserPosition(req, res,next);
         
+        }else if(role === "user" && brokername === "angelone") {
 
-      }
+          return getAngelOneTradeDataUserPostion(req, res,next)
+        }else {
+        
+          return getCloneUserTradeDataUserPostion(req,res,next)
+        
+        }
 
-  } catch (error) {
-    console.error("ControllerPicker Error:", error);
-    return res.status(500).json({ status: false, message: "Server error" });
+    } catch (error) {
+    
+      return res.status(500).json({ status: false, message: "Server error" });
+    }
   }
-}
-
-
-
 
 )
-
 
 router.get('/user/common/holding',authMiddleware,
-    async (req, res,next) => {
-  try {
+async (req, res,next) => {
+    try {
 
-    const { role, borker:brokername } = req;
+      const { role, borker:brokername } = req;
 
-      if (role === "user" && brokername === "kite") {
+        if (role === "user" && brokername === "kite") {
 
-       return getKiteHolding(req, res,next);
-       
-      }else if(role === "user" && brokername === "angelone") {
-
-        return getAngelUserHolding(req,res,next)
-
-       
-      }else  if(role === "user" && brokername === "finavasia"){
-      
-       
+        return getKiteHolding(req, res,next);
         
+        }else if(role === "user" && brokername === "angelone") {
 
-      }else  if(role === "user" && brokername === "fyers"){
-      
-      
+          return getAngelUserHolding(req,res,next)
+
         
+        }else  if(role === "user" && brokername === "finavasia"){
 
-      }else  if(role === "user" && brokername === "upstox"){
-      
-     
+          return getShoonyaUserHolding(req,res,next)
         
+        }else  if(role === "user" && brokername === "fyers"){
+        
+          return getFyersUserHolding(req,res,next)
+          
 
-      }
-      else{
-
-      }
-
-  } catch (error) {
-    console.error("ControllerPicker Error:", error);
-    return res.status(500).json({ status: false, message: "Server error" });
-  }
+        }else  if(role === "user" && brokername === "upstox"){
+        
+          return getUpstoxUserHolding(req,res,next)
+          
+        }
+        else {
+          return  getCloneUserHolding(req,res,next)
+        }
+    } catch (error) {
+      
+      return res.status(500).json({ status: false, message: "Server error" });
+    }
 }
 
 
 
 
 )
+
+
 
 export default router;

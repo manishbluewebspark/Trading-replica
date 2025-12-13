@@ -1,6 +1,8 @@
 import express from 'express';
 
 import { callbackFyers, fyersFunds, fyersLogin, fyersProfile, getTradeDataForFyersDashboard, updateFyersToken } from '../controllers/fyersController.js';
+import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 
 
@@ -11,7 +13,14 @@ router.get('/fyers/callback', callbackFyers);
 router.post('/fyers/updatefyerstoken', updateFyersToken);
 
 router.get('/fyers/profile', fyersProfile);
-router.get('/fyers/fund', fyersFunds);
-router.get('/fyers/deshbaord/todaytrade', getTradeDataForFyersDashboard);
+
+
+
+
+// deshbaord
+router.get('/kite/deshbaord/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
+router.get('/fyers/deshbaord/todaytrade',authMiddleware, getTradeDataForCommonDeshboardUpdate);
+router.get('/fyers/fund',authMiddleware, fyersFunds);
+
 
 export default router;

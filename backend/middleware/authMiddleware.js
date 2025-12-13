@@ -1,7 +1,4 @@
-
 import jwt from 'jsonwebtoken';
-import logger from "../common/logger.js";
-
 
 const authMiddleware = (req, res, next) => {
 
@@ -25,20 +22,6 @@ const token = req.headers.authorization?.split(' ')[1];
     req.userId = decoded.id;
     req.borker = decoded.borker;
 
-    
-    
-
-     if(req.role==='clone-user'&&req.url==='kite/get/holdingdata') {
-
-      return res.json({
-      status: true,
-      statusCode: 200,
-      data: [], // ✅ only yesterday+old positions
-      message:
-        "No Holding Data Found",
-    });  
-}
-    
     next();
 
   } catch (err) {
@@ -57,9 +40,7 @@ const token = req.headers.authorization?.split(' ')[1];
 
 const AdminAuthMiddleware = (req, res, next) => {
   
-  const token = req.headers.authorization?.split(' ')[1];
-
-  const userid = req.headers?.userid
+const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
      return res.json({
@@ -70,23 +51,26 @@ const AdminAuthMiddleware = (req, res, next) => {
         });
   }
 
-   if (!userid) {
-     return res.json({
-            status: false,
-            statusCode:401,
-            message: 'Please Again Login',
-            error: null,
-        });
-  }
-
   try {
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.userId = userid
-    req.AdminId = decoded.id
+     if(decoded.role==='admin') {
 
-    next();
+      req.AdminId = decoded.id
 
+      next();
+
+     }else{
+
+      return res.json({
+            status: false,
+            statusCode:401,
+            message:'Only Admin Access This Routes',
+            error: null,
+        });
+
+     }
   } catch (err) {
     return res.json({
             status: false,

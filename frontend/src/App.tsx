@@ -64,6 +64,7 @@ import UserManual from "./pages/Tables/UserManual";
 import KiteCrendential from "./pages/Forms/KiteCredential";
 import Userposition from "./pages/Tables/UserPosition";
 import FinavasiaCrendetial from "./pages/Forms/FinavasiaCredential";
+import UserPnlAdmin from "./pages/Tables/UserPnlAdmin";
 
 export default function App() {
 
@@ -159,9 +160,15 @@ export default function App() {
             {/*===================== admin ============================= */}
 
 
+
+
+
           <Route path="/admin/instrument" element={<ProtectedRoute><InstrumentFormAdmin /></ProtectedRoute>} />
            {/* <Route path="/admin/order" element={<ProtectedRoute><OrderTables /></ProtectedRoute>} /> */}
             <Route path="/admin/trades" element={<ProtectedRoute><TradeAdmin /></ProtectedRoute>} />
+
+
+ <Route path="/admin/check/userpnl" element={<ProtectedRoute><UserPnlAdmin /></ProtectedRoute>} />
 
 
             <Route path="/all-users" element={<ProtectedRoute><AllUser /></ProtectedRoute>} />

@@ -6,7 +6,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import dayjs from "dayjs";
 import Order from '../models/orderModel.js';
-
+import { Op } from "sequelize";
 
 
 // Step 1: Redirect to AngelOne login
@@ -177,7 +177,7 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 }
 
 
-export const getAngelOneProfileFund = async function (req,res,next) {
+export const getAngelOneProfileFund1 = async function (req,res,next) {
     try {
 
      
@@ -260,6 +260,62 @@ export const getAngelOneProfileFund = async function (req,res,next) {
           });
   }
 }
+
+
+export const getAngelOneProfileFund = async function (req,res,next) {
+    try {
+ 
+      var config = {
+      method: 'get',
+      url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getRMS',
+
+      headers : {
+        // 'Authorization': `Bearer ${auth_token}`,
+         'Authorization': `Bearer ${req.headers.angelonetoken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      }
+    };
+
+    let {data} = await axios(config);
+
+
+     if(data.status==true) {
+
+         return res.json({
+              status: true,
+              statusCode:200,
+              data: data.data,
+             
+          });
+
+
+     }else{
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:data.errorCode,
+              message:data.message
+          });
+     }
+
+  } catch (error) {
+
+    return res.json({
+              status: false,
+              data:null,
+              statusCode:401,
+              message:error.message
+          });
+  }
+}
+
 
 
 export const getAngelOneOrder = async (req, res,next) => {
@@ -1038,9 +1094,252 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
     }
 }
 
-export const getTradeDataUserPostion = async function (req, res, next) {
+
+
+export const getTradeDataForCommonDeshboardUpdate = async function (req, res) {
   try {
-    let totalBuyLength = 0;
+
+
+    console.log('trade req');
+    
+
+    // ✅ Today range (UTC based on ISO)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const userId = req.userId;
+
+    // ✅ Fetch today's completed trades from DB
+    let trades = await Order.findAll({
+      where: {
+        userId,
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+      raw: true,
+    });
+
+    // ✅ Total BUY trades count (your requirement)
+    const TotalTrades = await Order.count({
+      where: {
+        userId,
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "BUY",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // ✅ Open orders count (OPEN + PENDING)
+    const openOrders = await Order.count({
+      where: {
+        userId,
+        orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+      },
+    });
+
+    if (!trades.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No trades found",
+        data: [],
+        onlineTrades: [],
+        pnl: 0,
+        totalTraded: TotalTrades,
+        totalOpen: openOrders,
+      });
+    }
+
+    trades.sort((a, b) => {
+      const ta = new Date(a.filltime).getTime();
+      const tb = new Date(b.filltime).getTime();
+
+      if (ta !== tb) return ta - tb;
+
+      // BUY before SELL for same timestamp
+      if (a.transactiontype !== b.transactiontype) {
+        return a.transactiontype === "BUY" ? -1 : 1;
+      }
+
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+
+    // ------------------------------
+    // ✅ FIFO PnL CALCULATION
+    // ------------------------------
+    function calculateFIFO(sortedTrades) {
+      const grouped = {};
+      const output = [];
+      let totalPnL = 0;
+
+      for (const t of sortedTrades) {
+        const symbol = t.tradingsymbol;
+
+        if (!grouped[symbol]) {
+          grouped[symbol] = {
+            buys: [], // FIFO queue
+            totalBuyValue: 0,
+            totalBuyQty: 0,
+            totalSellValue: 0,
+            totalSellQty: 0,
+            pnl: 0,
+          };
+        }
+
+        const g = grouped[symbol];
+
+        const qty = Number(t.fillsize || t.quantity || 0);
+        const price = Number(t.fillprice || t.averageprice || t.price || 0);
+
+        if (!qty || !price) continue;
+
+        // BUY
+        if (t.transactiontype === "BUY") {
+          g.buys.push({ qty, price });
+          g.totalBuyQty += qty;
+          g.totalBuyValue += qty * price;
+        }
+
+        // SELL
+        if (t.transactiontype === "SELL") {
+          g.totalSellQty += qty;
+          g.totalSellValue += qty * price;
+
+          let remaining = qty;
+
+          while (remaining > 0 && g.buys.length) {
+            const buy = g.buys[0];
+            const matched = Math.min(buy.qty, remaining);
+
+            const pnl = (price - buy.price) * matched;
+            g.pnl += pnl;
+            totalPnL += pnl;
+
+            buy.qty -= matched;
+            remaining -= matched;
+
+            if (buy.qty === 0) g.buys.shift();
+          }
+        }
+      }
+
+      // Output per symbol
+      for (const [symbol, g] of Object.entries(grouped)) {
+        if (g.totalBuyQty > 0 && g.totalSellQty > 0) {
+          const buyAvg = g.totalBuyValue / g.totalBuyQty;
+          const sellAvg = g.totalSellValue / g.totalSellQty;
+          const matchedQty = Math.min(g.totalBuyQty, g.totalSellQty);
+
+          output.push({
+            label: symbol,
+            win: Number(buyAvg.toFixed(2)),   // avg buy
+            loss: Number(sellAvg.toFixed(2)), // avg sell
+            quantity: matchedQty,
+            pnl: Number(g.pnl.toFixed(2)),
+          });
+        }
+      }
+
+      return {
+        pnlData: output,
+        totalPnL: Number(totalPnL.toFixed(2)),
+      };
+    }
+
+    const { pnlData, totalPnL } = calculateFIFO(trades);
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+     
+      message: "tradebook fetched",
+      data: pnlData,
+      onlineTrades: trades,
+      pnl: totalPnL,
+      totalTraded: TotalTrades,
+      totalOpen: openOrders,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+export const getDeshboardOrdersUpdate = async (req, res) => {
+  try {
+
+       console.log('order req');
+   
+    // 1️⃣ Set date range (today by default)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    // 2️⃣ Fetch completed orders from local DB
+    const orders = await Order.findAll({
+      where: {
+        userId: req.userId,
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+      order: [["createdAt", "DESC"]], // Latest first
+      raw: true,
+    });
+
+    // 3️⃣ Map orders to frontend format
+    const mappedOrders = orders.map((o) => ({
+      tradingsymbol: o.tradingsymbol,
+      orderid: o.orderid,
+      transactiontype: o.transactiontype,
+      lotsize: Number(o.quantity),
+      averageprice: Number(o.fillprice || o.averageprice || 0),
+      orderstatus: o.orderstatuslocaldb,
+      ordertime: o.filltime || o.createdAt,
+    }));
+
+    // 4️⃣ Take last 5 orders for dashboard
+    const recentFiveOrders = mappedOrders.slice(0, 5);
+
+    return res.json({
+      status: true,
+      message: " orders retrieved successfully",
+      data: {
+        totalOrders: mappedOrders,
+        recentOrders: recentFiveOrders,
+      },
+    });
+  } catch (error) {
+    console.error(" Orders Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Error fetching  orders",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
+  try {
+  
 
     const angelToken = req.headers.angelonetoken;
 
@@ -1075,11 +1374,8 @@ export const getTradeDataUserPostion = async function (req, res, next) {
       return res.json({
         status: false,
         statusCode: 203,
-        message: "AngelOne API error",
+        message: "No Trade in User Position",
         data: [],
-        pnl: 0,
-        totalTraded: 0,
-        totalOpen: 0,
         error: response.data?.message || null,
       });
     }
@@ -1091,13 +1387,8 @@ export const getTradeDataUserPostion = async function (req, res, next) {
       return res.json({
         status: true,
         statusCode: 203,
-        message: "No trades in AngelOne tradebook",
+        message: "No Trade in User Position",
         data: [],
-        pnl: 0,
-        totalTraded: 0,
-        totalOpen: await Order.count({
-          where: { userId: req.userId, orderstatuslocaldb: "OPEN" },
-        }),
         error: null,
       });
     }
@@ -1126,382 +1417,43 @@ export const getTradeDataUserPostion = async function (req, res, next) {
       (t) => !existingIdsSet.has(String(t.orderid))
     );
 
-    console.log(newTrades, "AngelOne newTrades (not in local DB)");
-
     if (!newTrades.length) {
       return res.json({
         status: true,
         statusCode: 203,
-        message: "No NEW AngelOne trades to process (all already in local DB)",
+        message: "No Trade in User Position",
         data: [],
-        pnl: 0,
-        totalTraded: 0,
-        totalOpen: await Order.count({
-          where: { userId: req.userId, orderstatuslocaldb: "OPEN" },
-        }),
+        onlineTrades: [], 
         error: null,
       });
     }
 
-    const toMoney = (n) => Math.round(n * 100) / 100;
-
-    // 4️⃣ PnL calculation on NEW trades only
-    function calculatePnL(orders) {
-      const grouped = {};
-      const results = [];
-      let grandPnl = 0;
-
-      // group by symbol
-      for (const o of orders) {
-        if (!grouped[o.tradingsymbol]) grouped[o.tradingsymbol] = [];
-        grouped[o.tradingsymbol].push(o);
-      }
-
-      for (const [symbol, list] of Object.entries(grouped)) {
-        const buys = list.filter(
-          (o) => String(o.transactiontype).toUpperCase() === "BUY"
-        );
-        const sells = list.filter(
-          (o) => String(o.transactiontype).toUpperCase() === "SELL"
-        );
-
-        let totalBuyQty = 0,
-          totalBuyValue = 0;
-        buys.forEach((b) => {
-          const qty = Number(b.fillsize) || 0;
-          const value = Number(b.tradevalue) || 0; // tradevalue = price * qty
-          totalBuyQty += qty;
-          totalBuyValue += value;
-        });
-
-        let totalSellQty = 0,
-          totalSellValue = 0;
-        sells.forEach((s) => {
-          const qty = Number(s.fillsize) || 0;
-          const value = Number(s.tradevalue) || 0;
-          totalSellQty += qty;
-          totalSellValue += value;
-        });
-
-        if (totalBuyQty > 0 && totalSellQty > 0) {
-          const matchedQty = Math.min(totalBuyQty, totalSellQty);
-          const buyAvg = totalBuyValue / totalBuyQty;
-          const sellAvg = totalSellValue / totalSellQty;
-          const pnl = (sellAvg - buyAvg) * matchedQty;
-
-          grandPnl += pnl;
-
-          results.push({
-            label: symbol,
-            win: toMoney(buyAvg),
-            loss: toMoney(sellAvg),
-            quantity: matchedQty,
-            pnl: toMoney(pnl),
-          });
-        }
-      }
-
-      return { pnlData: results, totalPnl: toMoney(grandPnl) };
-    }
-
-    const { pnlData, totalDataPnl } = calculatePnL(newTrades);
-
-    // 5️⃣ Buy/Sell totals for NEW trades only
-    let totalBuy = 0;
-    let totalSell = 0;
-
-    newTrades.forEach((trade) => {
-      const type = String(trade.transactiontype).toUpperCase();
-      const value = Number(trade.tradevalue) || 0;
-
-      if (type === "BUY") {
-        totalBuy += value;
-        totalBuyLength++;
-      } else if (type === "SELL") {
-        totalSell += value;
-      }
-    });
-
-    const openCount = await Order.count({
-      where: {
-        userId: req.userId,
-        orderstatuslocaldb: "OPEN",
-      },
-    });
-
     return res.json({
       status: true,
       statusCode: 203,
-      message: "AngelOne NEW trades fetched (not in local DB)",
-      data: pnlData,              // per-symbol PnL
-      pnl: totalDataPnl,              // PnL from new trades
-      totalTraded: totalBuyLength,
-      totalOpen: openCount,
+      message: "Trade in User Position",
       onlineTrades: newTrades,    // raw new trades if you want to sync
       error: null,
     });
   } catch (error) {
-    console.log(error?.message || error, "AngelOne userposition error");
-
+   
     return res.json({
       status: false,
       statusCode: 500,
       message: "Error getting AngelOne trade data",
       data: [],
-      pnl: 0,
-      totalTraded: 0,
-      totalOpen: 0,
+      onlineTrades: [], 
       error: error?.message || null,
     });
   }
 };
 
 
-export const getHoldingDataInAngelOne = async (req, res,next) => {
-    try {
-
-      // let token = req.headers.angelonetoken
-       let token = '3gGVlaapWvs14k1T7bOcurwtexholcmf'
-
-      var config = {
-        method: 'get',
-        url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/portfolio/v1/getAllHolding',
-        headers: { 
-             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json', 
-            'Accept': 'application/json', 
-            'X-UserType': 'USER', 
-            'X-SourceID': 'WEB', 
-            'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
-            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
-            'X-MACAddress': process.env.MAC_Address, 
-            'X-PrivateKey': process.env.PRIVATE_KEY, 
-        },
-       
-    };
-
-    let resData = await axios(config)
- 
-     if(resData?.data?.status==true&&resData?.data?.data?.holdings.length) {
-
-         return res.json({
-            status: true,
-            statusCode:200,
-            data: resData.data.data,
-            message:''
-        });
-     }else if (resData?.data?.status==true){
-
-     let resObj =   {
-          "holdings": [
-               {
-                    "tradingsymbol": "TATASTEE",
-                    "exchange": "NSE",
-                    "isin": "INE081A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 111.87,
-                    "ltp": 130.15,
-                    "symboltoken": "3499",
-                    "close": 129.6,
-                    "profitandloss": 37,
-                    "pnlpercentage": 16.34
-               },
-               {
-                    "tradingsymbol": "PARAGMILK",
-                    "exchange": "NSE",
-                    "isin": "INE883N01014",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 154.03,
-                    "ltp": 201,
-                    "symboltoken": "17130",
-                    "close": 192.1,
-                    "profitandloss": 94,
-                    "pnlpercentage": 30.49
-               },
-               {
-                    "tradingsymbol": "SBIN",
-                    "exchange": "NSE",
-                    "isin": "INE062A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 8,
-                    "quantity": 8,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 573.1,
-                    "ltp": 579.05,
-                    "symboltoken": "3045",
-                    "close": 570.5,
-                    "profitandloss": 48,
-                    "pnlpercentage": 1.04
-               },
-                {
-                    "tradingsymbol": "NIFTY 50",
-                    "exchange": "NSE",
-                    "isin": "INE062A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 8,
-                    "quantity": 8,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 573.1,
-                    "ltp": 579.05,
-                    "symboltoken": "3045",
-                    "close": 570.5,
-                    "profitandloss": 48,
-                    "pnlpercentage": 1.04
-               }
-          ],
-          "totalholding": {
-               "totalholdingvalue": 5294,
-               "totalinvvalue": 5116,
-               "totalprofitandloss": 178.14,
-               "totalpnlpercentage": 3.48
-          }
-     }
-
-       return res.json({
-            status: true,
-            statusCode:200,
-            data: resObj,
-            message:'Testing Data'
-        });
-
-     }else{
-       
-        return res.json({
-            status: false,
-            statusCode:401,
-            message: "Invalid symboltoken",
-            error: resData?.data?.message,
-        });
-
-     }
-
-    } catch (error) {
-   
-       return res.json({
-            status: false,
-            statusCode:500,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: error.message,
-        });
-    }
-};
 
 
 
-export const getCloneUserHolding = async (req, res) => {
-  try {
 
-    const userId = req.userId; // ensure middleware sets this
 
-      let resObj =   {
-          "holdings": [
-               {
-                    "tradingsymbol": "TATASTEEL-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE081A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 111.87,
-                    "ltp": 130.15,
-                    "symboltoken": "3499",
-                    "close": 129.6,
-                    "profitandloss": 37,
-                    "pnlpercentage": 16.34
-               },
-               {
-                    "tradingsymbol": "PARAGMILK-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE883N01014",
-                    "t1quantity": 0,
-                    "realisedquantity": 2,
-                    "quantity": 2,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 154.03,
-                    "ltp": 201,
-                    "symboltoken": "17130",
-                    "close": 192.1,
-                    "profitandloss": 94,
-                    "pnlpercentage": 30.49
-               },
-               {
-                    "tradingsymbol": "SBIN-EQ",
-                    "exchange": "NSE",
-                    "isin": "INE062A01020",
-                    "t1quantity": 0,
-                    "realisedquantity": 8,
-                    "quantity": 8,
-                    "authorisedquantity": 0,
-                    "product": "DELIVERY",
-                    "collateralquantity": null,
-                    "collateraltype": null,
-                    "haircut": 0,
-                    "averageprice": 573.1,
-                    "ltp": 579.05,
-                    "symboltoken": "3045",
-                    "close": 570.5,
-                    "profitandloss": 48,
-                    "pnlpercentage": 1.04
-               }
-          ],
-          "totalholding": {
-               "totalholdingvalue": 5294,
-               "totalinvvalue": 5116,
-               "totalprofitandloss": 178.14,
-               "totalpnlpercentage": 3.48
-          }
-     }
-
-       return res.json({
-            status: true,
-            statusCode:200,
-            data: resObj,
-            message:'Testing Data'
-        });
-
-   
-
-  } catch (error) {
-    console.error("getCloneUserTrade error:", error);
-    return res.status(500).json({
-      status: false,
-      message: "Something went wrong while fetching clone user trade data",
-      error: error.message,
-    });
-  }
-};
 
 export const getPosition = async (req, res,next) => {
     try {

@@ -48,7 +48,21 @@ export const angelOneApi = {
    */
   getTodayTrade: async () => {
     try {
-      return await http.get("/angelone/dummydatatrade", {
+      return await http.get("/angelone/deshbaord/tradedata", {
+        headers: {
+          ...authHeaders(),
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("AngelOne Trade Error:", error?.response?.data);
+      throw error?.response?.data || error;
+    }
+  },
+
+  getTodayOrder: async () => {
+    try {
+      return await http.get("/angelone/deshbaord/todayorderdata", {
         headers: {
           ...authHeaders(),
           AngelOneToken: localStorage.getItem("angel_token") || "",

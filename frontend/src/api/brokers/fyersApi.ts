@@ -56,7 +56,21 @@ export const fyersApi = {
       });
 
     } catch (error: any) {
-      console.error("Kite TodayTrade Error:", error?.response?.data);
+      console.error("fyers TodayTrade Error:", error?.response?.data);
+      throw error?.response?.data || error;
+    }
+  },
+
+   getTodayOrder: async () => {
+    try {
+      return await http.get("/fyers/deshbaord/todayorderdata", {
+        headers: {
+          ...authHeaders(),
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("fyers Trade Error:", error?.response?.data);
       throw error?.response?.data || error;
     }
   },

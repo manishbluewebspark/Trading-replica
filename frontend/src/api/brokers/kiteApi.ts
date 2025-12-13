@@ -60,6 +60,23 @@ export const kiteApi = {
       throw error?.response?.data || error;
     }
   },
+
+  getTodayOrder: async () => {
+    try {
+
+      return await http.get("/kite/deshbaord/todayorderdata", {
+        headers: {
+          ...authHeaders(),
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+
+    } catch (error: any) {
+      console.error("Kite TodayTrade Error:", error?.response?.data);
+      throw error?.response?.data || error;
+    }
+  },
+
 };
 
 

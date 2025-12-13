@@ -384,178 +384,6 @@ function generateFillId() {
   return Math.floor(1000000 + Math.random() * 9000000);
 }
 
-// export const uploadOrderExcel = async (req, res) => {
-
-//   const t = await sequelize.transaction();
-
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({
-//         status: false,
-//         message: "No file uploaded",
-//       });
-//     }
-
-//     const workbook = new ExcelJS.Workbook();
-//     await workbook.xlsx.readFile(req.file.path);
-
-//     const worksheet = workbook.worksheets[0];
-
-//     const jsonData = [];
-
-//     worksheet.eachRow((row, rowNumber) => {
-
-//       if (rowNumber === 1) return; // skip header
-
-//       let rowObj = {};
-
-//       row.eachCell((cell, colNumber) => {
-
-//         const header = worksheet.getRow(1).getCell(colNumber).value;
-
-//         const headerText =
-//           typeof header === "object" && header?.richText
-//             ? header.richText.map((r) => r.text).join("")
-//             : header;
-
-//         rowObj[headerText] = cell.value;
-//       });
-
-//       jsonData.push(rowObj);
-//     });
-
-//     // remove empty rows
-//     const rowsToInsert = jsonData.filter((row) =>
-//       Object.values(row).some((v) => v !== null && v !== "" && v !== undefined)
-//     );
-
-//     if (!rowsToInsert.length) {
-//       return res.status(400).json({
-//         status: false,
-//         message: "Excel file is empty or invalid",
-//       });
-//     }
-
-//     // -----------------------------------------
-//     // ADD UNIQUE KEYS TO EACH ROW
-//     // -----------------------------------------
-//     rowsToInsert.forEach((row) => {
-//       row.orderid = generateOrderId(); // 15 digit unique id
-//       row.uniqueorderid = generateUniqueOrderUUID(); // uuid
-//       row.fillid = generateFillId(); // numeric 7 digit code
-//     });
-
-//     const createdOrders = await Order.bulkCreate(rowsToInsert, {
-//       transaction: t,
-//       validate: true,
-//     });
-
-//     await t.commit();
-
-//     return res.json({
-//       status: true,
-//       message: "Orders imported & processed successfully",
-//       insertedCount: createdOrders.length,
-//     });
-//   } catch (err) {
-//     console.error("uploadOrderExcel error:", err);
-//     await t.rollback();
-
-//     return res.status(500).json({
-//       status: false,
-//       message: "Error processing Excel",
-//       error: err.message,
-//     });
-//   }
-// };
-
-
-// export const uploadOrderExcel = async (req, res) => {
-
-//   const t = await sequelize.transaction(); // ✅ transaction for safety
-
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({
-//         status: false,
-//         message: "No file uploaded",
-//       });
-//     }
-
-//     const workbook = new ExcelJS.Workbook();
-//     await workbook.xlsx.readFile(req.file.path);
-
-//     const worksheet = workbook.worksheets[0]; // first sheet
-
-//     const jsonData = [];
-
-//     worksheet.eachRow((row, rowNumber) => {
-//       if (rowNumber === 1) return; // skip header
-
-//       let rowObj = {};
-//       row.eachCell((cell, colNumber) => {
-
-//         const header = worksheet.getRow(1).getCell(colNumber).value;
-
-//         // ExcelJS sometimes returns { richText: [...] }
-//         const headerText =
-//           typeof header === "object" && header?.richText
-//             ? header.richText.map((r) => r.text).join("")
-//             : header;
-
-//         rowObj[headerText] = cell.value;
-//       });
-
-//       jsonData.push(rowObj);
-//     });
-
-//     // 🔍 Remove completely empty rows
-//     const rowsToInsert = jsonData.filter((row) =>
-//       Object.values(row).some((v) => v !== null && v !== "" && v !== undefined)
-//     );
-
-
-//      // Generate IDs
-//     let orderId = generateOrderId();
-//     let uniqueorderid = generateUniqueOrderUUID();
-//     let fillid = generateFillId();
-
-
-//     if (!rowsToInsert.length) {
-//       return res.status(400).json({
-//         status: false,
-//         message: "Excel file is empty or has no valid rows",
-//       });
-//     }
-
-//     // 🚀 BULK INSERT
-//     const createdOrders = await Order.bulkCreate(rowsToInsert, {
-//       transaction: t,
-//       validate: true,        // runs model validations
-//       // ignoreDuplicates: true, // optional if you have unique index and want to skip duplicates
-//     });
-
-//     await t.commit();
-
-//     return res.json({
-//       status: true,
-//       message: "Orders imported successfully",
-//       insertedCount: createdOrders.length,
-//       sampleRow: createdOrders[0], // optional
-//     });
-//   } catch (err) {
-
-//     console.error("uploadOrderExcel error:", err);
-//     await t.rollback();
-
-//     return res.status(500).json({
-//       status: false,
-//       message: "Something went wrong while processing Excel",
-//       error: err.message,
-//     });
-//   }
-// };
-
 
 export const uploadOrderExcel1 = async (req, res) => {
 
@@ -898,7 +726,6 @@ export const loginCloneUserDemat = async (req, res) => {
 };
 
 
-
 export const getCloneUserFund = async (req, res) => {
   try {
    
@@ -964,9 +791,6 @@ export const getCloneUserFund = async (req, res) => {
     });
   }
 };
-
-
-
 
 
 export const getCloneUserTrade1 = async (req, res) => {
@@ -1097,7 +921,6 @@ export const getCloneUserTrade1 = async (req, res) => {
     });
   }
 };
-
 
 
 export const getCloneUserTrade = async (req, res) => {
@@ -1264,5 +1087,63 @@ export const getCloneUserTrade = async (req, res) => {
   }
 };
 
+export const getCloneUserTradeDataUserPostion = async function (req, res, next) {
+  try {
+  
+
+     return res.json({
+        status: true,
+        statusCode: 203,
+        message: "No Trade in User Position",
+        data: [],
+        onlineTrades: [], 
+        error: null,
+      });
+
+  } catch (error) {
+   
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Error getting AngelOne trade data",
+      data: [],
+      onlineTrades: [], 
+      error: error?.message || null,
+    });
+  }
+};
+
+
+export const getCloneUserHolding = async (req, res) => {
+   try {
+    const token = req.headers.angelonetoken;
+
+    if (!token) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Kite access token missing in header (angelonetoken)",
+        error: null,
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: [], // ✅ only yesterday+old positions
+      message: "No Holding Found",
+    });
+
+  } catch (error) {
+    console.error("❌ getKiteHolding error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
 
 

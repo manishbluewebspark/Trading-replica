@@ -1,18 +1,27 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/authMiddleware.js';
-import { getKiteAllInstruments,getKiteFunds, kiteCallback, kiteLogin,getTradeDataForKiteDeshboard,
+import { getKiteAllInstruments,getKiteFunds, kiteCallback, kiteLogin,
     getKiteAllOrders,getKiteProfile,getKiteProfile2,getKiteTradesData,
     kiteAppCredential,
     getKiteTrades,
     getKiteOrders,
     getKiteHolding
  } from '../controllers/kiteController.js';
+import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
 
 
 
 
 const router = express.Router();
+
+// deshboard
+router.get('/kite/deshbaord/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
+router.get('/kite/deshbaord/todaytrade',authMiddleware,getTradeDataForCommonDeshboardUpdate)
+router.get('/kite/fund',authMiddleware,getKiteFunds)
+
+
+
 
 
 router.get('/kite',authMiddleware,kiteLogin); // Get login URL
@@ -24,8 +33,8 @@ router.get('/kite/instrument',authMiddleware,getKiteAllInstruments)
 
 
 // token required 
-router.get('/kite/fund',authMiddleware,getKiteFunds)
-router.get('/kite/deshbaord/todaytrade',authMiddleware,getTradeDataForKiteDeshboard)
+
+
 router.get('/kite/orders',authMiddleware,getKiteAllOrders)
 router.get('/kite/profile',authMiddleware,getKiteProfile)
 router.get('/kite/profile2',authMiddleware,getKiteProfile2)
