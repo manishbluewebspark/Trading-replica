@@ -263,6 +263,9 @@ export const getShoonyaFunds = async (req, res) => {
 
     const data = response?.data;
 
+    console.log(data);
+    
+
     if (!data || data.stat !== "Ok") {
       return res.status(400).json({
         status: false,
@@ -271,10 +274,12 @@ export const getShoonyaFunds = async (req, res) => {
       });
     }
 
-  const availableBalance =
-  Number(data.mr_eqt_a || 0) +
-  Number(data.mr_der_a || 0);
-    console.log(availableBalance)
+  // const availableBalance =
+  // Number(data.mr_eqt_a || 0) +
+  // Number(data.mr_der_a || 0);
+  //   console.log(availableBalance)
+
+  const availableBalance = Number(data?.cash || 0) + Number(data?.payin || 0)
 
   let cashFund = {
   availablecash:   availableBalance  

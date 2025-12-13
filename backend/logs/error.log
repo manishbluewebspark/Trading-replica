@@ -19,3 +19,8 @@
 {"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 18:21:41"}
 {"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 18:22:19"}
 {"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 18:23:33"}
+{"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 19:15:55"}
+{"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 19:16:13"}
+{"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 19:16:22"}
+{"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"message":"place order not fetch obj"},"message":"endOfToday is not defined","timestamp":"2025-12-12 19:17:04"}
+{"level":"error","url":"/api/admin/tokenstatussummary","method":"GET","status":false,"userId":1,"data":{"msg":"getTokenStatusSummary failed"},"message":"Dae is not defined","timestamp":"2025-12-13 11:16:02"}

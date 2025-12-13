@@ -1417,6 +1417,8 @@ export const getKiteHolding1 = async (req, res) => {
   }
 };
 
+
+
 export const getKiteHolding = async (req, res) => {
   try {
     const token = req.headers.angelonetoken;
@@ -1488,6 +1490,9 @@ export const getKiteHolding = async (req, res) => {
 
       };
     });
+
+    console.log(enrichedHoldings,'enrichedHoldings');
+    
 
     return res.json({
       status: true,
@@ -1565,11 +1570,11 @@ export const getKiteOrders = async (req, res) => {
   try {
 
   
-  const  kite  = await getKiteClientForUserId(13)
+  const  kite  = await getKiteClientForUserId(21)
 
   //  const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("1999389801488588800");
+    const orders = await kite.getOrderTrades("1999345550511841280");
     
 
     console.log(orders,'orders orders');

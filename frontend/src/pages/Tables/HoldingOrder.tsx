@@ -1577,6 +1577,7 @@ const TransactionBadge = ({ type }: { type: string }) => {
 };
 
 export default function HoldingOrder() {
+
   const apiUrl = import.meta.env.VITE_API_URL;
   const { api } = useBrokerApi();
   const [profitAndLossData, setProfitAndLossData] = useState<number>(0);
@@ -1591,7 +1592,7 @@ export default function HoldingOrder() {
   const [paginationPageSize, setPaginationPageSize] = useState(10);
 
 
-  console.log(profitAndLossData);
+
   
 
   useEffect(() => {
@@ -1621,7 +1622,7 @@ export default function HoldingOrder() {
 
     async function fetchOrders() {
       try {
-        const { data } = await axios.get(`${apiUrl}/kite/get/holdingdata`, {
+        const { data } = await axios.get(`${apiUrl}/order/user/common/holding`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -1659,7 +1660,7 @@ export default function HoldingOrder() {
           localStorage.removeItem("refresh_token");
         } else {
           setError("Something went wrong");
-          toast.error(data?.message || "Something went wrong");
+          toast.error("Login In Demat Account");
         }
       } catch (err: any) {
         console.log(err);

@@ -30,6 +30,8 @@ router.get('/kite/orders',authMiddleware,getKiteAllOrders)
 router.get('/kite/profile',authMiddleware,getKiteProfile)
 router.get('/kite/profile2',authMiddleware,getKiteProfile2)
 router.get('/kite/trade',authMiddleware,getKiteTradesData)
+
+
 router.get('/kite/get/holdingdata',authMiddleware,getKiteHolding)
 
 

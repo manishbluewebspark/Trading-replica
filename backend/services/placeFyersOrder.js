@@ -2,29 +2,12 @@
 
 import { setFyersAccessToken, fyers } from "../utils/fyersClient.js";
 import Order from "../models/orderModel.js";
-import { Op } from "sequelize";
+import { logSuccess, logError } from "../utils/loggerr.js";
 
 
-/**
- * Map your generic productType to Fyers productType
- * Fyers examples: "INTRADAY", "CNC", "MTF", etc.
- */
 
-// function getFyersProductCode(type) {
-//   if (!type) return "INTRADAY";
 
-//   switch (type.toUpperCase()) {
-//     case "INTRADAY":
-//       return "INTRADAY"; // as per your sample
-//     case "DELIVERY":
-//       return "CNC";      // delivery / cash-n-carry
-//     case "CNC":
-//     case "MTF":
-//       return type.toUpperCase();
-//     default:
-//       return type;
-//   }
-// }
+
 
 
 function getFyersProductCode(type) {
@@ -51,29 +34,6 @@ function getFyersProductCode(type) {
   }
 }
 
-/**
- * Map your orderType ("LIMIT", "MARKET", "SL", "SL-M") to Fyers numeric `type`
- * From Fyers docs:
- * 1 = LIMIT, 2 = MARKET, 3 = SL, 4 = SL-M
- */
-
-
-// function mapFyersOrderType(orderType) {
-//   if (!orderType) return 1;
-
-//   switch (orderType.toUpperCase()) {
-//     case "LIMIT":
-//       return 1;
-//     case "MARKET":
-//       return 2;
-//     case "SL":
-//       return 3;
-//     case "SL-M":
-//       return 4;
-//     default:
-//       return 1;
-//   }
-// }
 
 function mapFyersOrderType(orderType) {
   if (!orderType) return 1; // default LIMIT
@@ -100,8 +60,9 @@ function mapFyersOrderType(orderType) {
 
 
 // ==============update logger code ==============================
-export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay, req) => {
+export const placeFyersOrder = async (user, reqInput, req) => {
   try {
+
     logSuccess(req, { msg: "Fyers order flow started", userId: user?.id, reqInput });
 
     // 1️⃣ Set Fyers access token (per user)
@@ -245,6 +206,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay, req)
 
     // 5️⃣ HANDLE BUY / SELL LOGIC
     let finalStatus = "OPEN";
+     let buyOrderId = 'NA'
     let buyOrder = null;
 
     if (reqInput.transactiontype === "SELL") {
@@ -269,6 +231,7 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay, req)
       }
 
       finalStatus = "COMPLETE";
+      buyOrderId =  String(reqInput?.buyOrderId)
     }
 
     // 6️⃣ GET TRADEBOOK
@@ -362,16 +325,13 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay, req)
     // 8️⃣ UPDATE LOCAL ORDER
     await newOrder.update({
       uniqueorderid: detailsData.exchangeOrderNo || orderid,
-      exchorderupdatetime: detailsData.orderDateTime || null,
-      exchtime: detailsData.orderDateTime || null,
-      updatetime: detailsData.orderDateTime || null,
       text: placeRes.message || "",
       averageprice: tradedPrice || Number(reqInput.price || 0),
       lotsize: tradedQty || Number(reqInput.quantity || 0),
       symboltoken: reqInput.token,
       disclosedquantity: 0,
       triggerprice: Number(reqInput.triggerPrice || 0),
-      price: reqInput.price,
+      price: tradedPrice,
       duration: "DAY",
       producttype: detailsData.productType || fyersProductType,
       orderstatuslocaldb: finalStatus,
@@ -407,6 +367,14 @@ export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay, req)
     };
   }
 };
+
+
+
+
+
+
+
+
 
 
 // ===========old workig code =============================
