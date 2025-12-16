@@ -131,6 +131,7 @@ export const placeFyersOrder = async (user, reqInput, req) => {
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       broker: "fyers",
       buyOrderId: reqInput?.buyOrderId,
+       strategyName:reqInput.groupName
     };
 
     logSuccess(req, { msg: "Prepared local pending order object", orderData });
@@ -200,7 +201,7 @@ export const placeFyersOrder = async (user, reqInput, req) => {
     }
 
     const orderid = placeRes.id;
-    await newOrder.update({ orderid });
+    await newOrder.update({ orderid});
 
     logSuccess(req, { msg: "Saved Fyers orderid locally", orderid });
 

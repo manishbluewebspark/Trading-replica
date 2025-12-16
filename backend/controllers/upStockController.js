@@ -1,6 +1,91 @@
 import axios from "axios";
 import querystring from "querystring";
 import Order from "../models/orderModel.js";
+import zlib from "zlib";
+import redis from "../utils/redis.js";  // your redis client
+
+
+
+
+// Upstox Instruments JSON (gzipped) - as per official docs
+const UPSTOX_INSTRUMENT_URLS = {
+  COMPLETE: "https://assets.upstox.com/market-quote/instruments/exchange/complete.json.gz",
+  NSE: "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz",
+  BSE: "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz",
+  MCX: "https://assets.upstox.com/market-quote/instruments/exchange/MCX.json.gz",
+};
+
+const TEN_HOURS_IN_SECONDS = 36000;
+
+// helper: download + gunzip + parse json
+async function fetchUpstoxJsonGz(url) {
+  const res = await axios.get(url, {
+    responseType: "arraybuffer",
+    timeout: 180000,
+    headers: {
+      // some CDNs behave better with these
+      "Accept-Encoding": "gzip, deflate, br",
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0",
+    },
+  });
+
+  const gzBuffer = Buffer.from(res.data);
+  const jsonText = zlib.gunzipSync(gzBuffer).toString("utf-8");
+  return JSON.parse(jsonText);
+}
+
+export const getUpstoxInstruments = async (req, res) => {
+  const exch = String(req.query.exch || "NSE").toUpperCase();
+
+  if (!UPSTOX_INSTRUMENT_URLS[exch]) {
+    return res.status(400).json({
+      status: false,
+      message: `Invalid exch '${exch}'. Use COMPLETE, NSE, BSE, MCX`,
+    });
+  }
+
+  const REDIS_KEY = `upstox_instruments_${exch}`;
+
+  try {
+    // 1) cache
+    const cached = await redis.get(REDIS_KEY);
+    if (cached) {
+      return res.json({
+        status: true,
+        exch,
+        cache: true,
+        count: JSON.parse(cached)?.length || 0,
+        data: JSON.parse(cached),
+      });
+    }
+
+    // 2) fetch
+    const url = UPSTOX_INSTRUMENT_URLS[exch];
+    const data = await fetchUpstoxJsonGz(url);
+
+    // 3) cache
+    await redis.set(REDIS_KEY, JSON.stringify(data), "EX", TEN_HOURS_IN_SECONDS);
+
+    return res.json({
+      status: true,
+      exch,
+      cache: false,
+      count: Array.isArray(data) ? data.length : 0,
+      data,
+    });
+  } catch (err) {
+    console.error("Upstox instruments error:", err?.message, err?.response?.status);
+
+    return res.status(500).json({
+      status: false,
+      message: "Failed to fetch Upstox instruments",
+      error: err?.message,
+      statusCode: err?.response?.status,
+    });
+  }
+};
+
 
 
 export const generateUpstoxAuthUrl = (req, res) => {
@@ -334,3 +419,5 @@ export const getUpstoxUserHolding = async (req, res) => {
     });
   }
 };
+
+

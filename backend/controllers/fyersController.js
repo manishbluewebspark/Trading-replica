@@ -1,6 +1,157 @@
 import { fyersModel } from "fyers-api-v3";
 import Order from "../models/orderModel.js"; // update your model path
 import User from "../models/userModel.js"; // update your model path
+import redis from "../utils/redis.js";  // your redis client
+import axios from "axios";
+
+
+
+// FYERS Symbol Master CSV URLs (public)
+const FYERS_SYMBOL_MASTER_URLS = {
+  NSE_CM: "https://public.fyers.in/sym_details/NSE_CM.csv",
+  BSE_CM: "https://public.fyers.in/sym_details/BSE_CM.csv",
+  NSE_FO: "https://public.fyers.in/sym_details/NSE_FO.csv",
+  BSE_FO: "https://public.fyers.in/sym_details/BSE_FO.csv",
+  NSE_CD: "https://public.fyers.in/sym_details/NSE_CD.csv",
+  MCX_COM: "https://public.fyers.in/sym_details/MCX_COM.csv",
+};
+
+const TEN_HOURS_IN_SECONDS = 36000;
+
+/**
+ * Robust CSV split (handles quoted commas too)
+ */
+function splitCSVLine(line) {
+  const out = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (ch === "," && !inQuotes) {
+      out.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((x) => x.trim());
+}
+
+/**
+ * FYERS file may/may-not include a header.
+ * We'll parse each row and also expose "raw" for safety.
+ * We'll extract best-known fields using heuristics.
+ */
+function parseFyersCSV(text, segment) {
+  const lines = String(text)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return [];
+
+  // If header present
+  const first = lines[0].toLowerCase();
+  const hasHeader = first.includes("fytoken") || first.includes("symbol") || first.includes("exchange");
+
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+
+  return dataLines.map((line) => {
+    const cols = splitCSVLine(line);
+
+    // heuristics:
+    const fytoken = cols[0] ?? "";
+    const name = cols[1] ?? "";
+
+    // tick is often near index 4 in many rows (as per sample)
+    const tick_size = cols[4] !== undefined && cols[4] !== "" && !isNaN(cols[4]) ? Number(cols[4]) : null;
+
+    // isin often near index 5 for CM
+    const isin = cols[5] ?? "";
+
+    // symbol column contains "NSE:XXXX", "BSE:XXXX" etc - find first match
+    const symbolCol = cols.find((c) => typeof c === "string" && /^[A-Z]+:/.test(c)) || "";
+    const exchange = symbolCol.includes(":") ? symbolCol.split(":")[0] : "";
+
+    return {
+      segment,          // NSE_CM / NSE_FO etc
+      fytoken,          // FYERS token
+      name,             // company / contract name
+      symbol: symbolCol, // e.g. NSE:TATAMOTORS-EQ
+      exchange,         // NSE/BSE/MCX...
+      tick_size,        // number or null
+      isin,             // string (may be empty for FO)
+      raw: cols,        // keep full row always (format can differ by segment)
+    };
+  });
+}
+
+async function fetchFyersSegment(segment) {
+  const url = FYERS_SYMBOL_MASTER_URLS[segment];
+  if (!url) throw new Error(`Invalid segment '${segment}'. Use one of: ${Object.keys(FYERS_SYMBOL_MASTER_URLS).join(", ")}`);
+
+  const res = await axios.get(url, {
+    responseType: "text",
+    timeout: 180000,
+    headers: { Accept: "text/csv,*/*" },
+  });
+
+  return parseFyersCSV(res.data, segment);
+}
+
+export const getFyersInstruments = async (req, res) => {
+  const segment = String(req.query.segment || "NSE_CM").toUpperCase(); // NSE_CM / ALL
+  const REDIS_KEY = `fyers_instruments_${segment}`;
+
+  try {
+    // 1) cache
+    const cached = await redis.get(REDIS_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      return res.json({
+        status: true,
+        cache: true,
+        segment,
+        count: data.length,
+        data,
+      });
+    }
+
+    // 2) fetch
+    let data = [];
+    if (segment === "ALL") {
+      const results = await Promise.all(Object.keys(FYERS_SYMBOL_MASTER_URLS).map(fetchFyersSegment));
+      data = results.flat();
+    } else {
+      data = await fetchFyersSegment(segment);
+    }
+
+    // 3) cache
+    await redis.set(REDIS_KEY, JSON.stringify(data), "EX", TEN_HOURS_IN_SECONDS);
+
+    return res.json({
+      status: true,
+      cache: false,
+      segment,
+      count: data.length,
+      data,
+    });
+  } catch (err) {
+    console.error("FYERS instrument error:", err?.message);
+    return res.status(500).json({
+      status: false,
+      message: err?.message || "Failed to fetch FYERS instruments",
+    });
+  }
+};
 
 
 export const updateFyersToken = async (req, res) => {

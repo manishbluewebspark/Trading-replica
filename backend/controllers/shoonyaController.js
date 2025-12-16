@@ -6,7 +6,7 @@
 
 import { shoonyaPost } from "../utils/shoonyaPost.js";
 import User from "../models/userModel.js"
-
+import unzipper from "unzipper";
 import axios from 'axios'; 
 
 
@@ -491,7 +491,7 @@ export const getShoonyaOrders = async (req, res) => {
   try {
 
     const uid = 'FN169676'
-     const susertoken = 'd7d4506729c2047f388462011699f5d2c1c12968458f6ff6c6902a5273a33f0c'
+     const susertoken = "3d3814b84389bb2102b0a9a91959b9175b8e9f800d25a709b93d5560ba08c20d"
 
 
     if (!uid || !susertoken) {
@@ -516,7 +516,11 @@ export const getShoonyaOrders = async (req, res) => {
     });
 
     const data = response?.data;
-    console.log("Finvasia orders raw:", data);
+    
+
+     let orderDetails = data.find((o) => String(o.norenordno) === '25121500600217');
+
+     console.log("Finvasia orders raw:", orderDetails);
 
     if (!data) {
       return res.status(400).json({
@@ -866,6 +870,171 @@ export const getShoonyaOrders2 = async (req, res) => {
       status: false,
       message: "Shoonya orders fetch failed",
       error: error?.response?.data || error.message,
+    });
+  }
+};
+
+
+
+
+// const SYMBOL_MASTER_URLS = {
+//   NSE: "https://api.shoonya.com/NSE_symbols.txt",
+//   BSE: "https://api.shoonya.com/BSE_symbols.txt",
+//   NFO: "https://api.shoonya.com/NFO_symbols.txt",
+//   MCX: "https://api.shoonya.com/MCX_symbols.txt",
+// };
+
+// const cache = new Map();
+// const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+// function parseCSVToObjects(csv) {
+//   const lines = csv
+//     .split("\n")
+//     .map(l => l.trim())
+//     .filter(Boolean);
+
+//   const headers = lines.shift().split(",");
+
+//   return lines.map(line => {
+//     const values = line.split(",");
+
+//     const obj = {};
+//     headers.forEach((header, index) => {
+//       const key = header.trim();
+
+//       let value = values[index]?.trim() ?? "";
+
+//       // auto type conversion
+//       if (!isNaN(value) && value !== "") {
+//         value = Number(value);
+//       }
+
+//       obj[key] = value;
+//     });
+
+//     return obj;
+//   });
+// }
+
+// async function loadInstruments(exch) {
+//   const now = Date.now();
+//   const cached = cache.get(exch);
+//   if (cached && now - cached.at < CACHE_TTL_MS) return cached.data;
+
+//   const res = await axios.get(SYMBOL_MASTER_URLS[exch], {
+//     responseType: "text",
+//     timeout: 60000,
+//   });
+
+
+//   const data = parseCSVToObjects(res.data);
+//   // cache.set(exch, { at: now, data });
+//   return data;
+// }
+
+// export const getShoonyaInstrumentsFull = async (req, res) => {
+//   try {
+
+//     console.log("=============finavasia instrument");
+    
+//     const exch = String(req.query.exch || "NSE").toUpperCase();
+//     const instruments = await loadInstruments(exch);
+
+//     // ✅ PURE LIST RESPONSE
+//     return res.json(instruments);
+//   } catch (err) {
+//     return res.status(500).json({
+//       error: err?.message || "Failed to load Finvasia instruments",
+//     });
+//   }
+// };
+
+
+
+
+const SYMBOL_MASTER_URLS = {
+  NSE: "https://api.shoonya.com/NSE_symbols.txt.zip",
+  BSE: "https://api.shoonya.com/BSE_symbols.txt.zip",
+  NFO: "https://api.shoonya.com/NFO_symbols.txt.zip",
+  MCX: "https://api.shoonya.com/MCX_symbols.txt.zip",
+};
+
+function parseCSVToObjects(csv) {
+  const lines = csv
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const headers = lines.shift().split(",");
+
+  return lines.map(line => {
+    const values = line.split(",");
+
+    const obj = {};
+    headers.forEach((header, index) => {
+      const key = header.trim();
+
+      let value = values[index]?.trim() ?? "";
+
+      // auto type conversion
+      if (!isNaN(value) && value !== "") {
+        value = Number(value);
+      }
+
+      obj[key] = value;
+    });
+
+    return obj;
+  });
+}
+
+
+async function downloadAndUnzipText(url) {
+  // download zip as buffer
+  const zipRes = await axios.get(url, {
+    responseType: "arraybuffer",
+    timeout: 120000,
+  });
+
+  // unzip: take first file in archive
+  const directory = await unzipper.Open.buffer(Buffer.from(zipRes.data));
+  const file = directory.files.find((f) => !f.path.endsWith("/") && f.path.includes(".txt"));
+
+  if (!file) throw new Error(`No .txt found inside zip: ${url}`);
+
+  const content = await file.buffer();
+  return content.toString("utf-8");
+}
+
+async function loadInstruments(exch) {
+  const url = SYMBOL_MASTER_URLS[exch];
+  if (!url) throw new Error(`Unsupported exch '${exch}'. Use NSE/BSE/NFO/MCX`);
+
+  const txt = await downloadAndUnzipText(url);
+  return parseCSVToObjects(txt).map((row) => ({ exch, ...row }));
+}
+
+export const getShoonyaInstrumentsFull = async (req, res) => {
+  try {
+    const exch = req.query.exch ? String(req.query.exch).toUpperCase() : null;
+
+    // If exch provided -> single file
+    if (exch) {
+      const instruments = await loadInstruments(exch);
+      return res.json(instruments);
+    }
+
+    // Else -> all 4 files
+    const results = await Promise.all(
+      Object.keys(SYMBOL_MASTER_URLS).map((k) => loadInstruments(k))
+    );
+
+    return res.json(results.flat());
+  } catch (err) {
+    console.error("Finvasia instrument error:", err?.message);
+    return res.status(500).json({
+      status: false,
+      message: err?.message || "Failed to load Finvasia instruments",
     });
   }
 };

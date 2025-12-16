@@ -40,6 +40,7 @@
     "smartapi-javascript": "^1.0.27",
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
+    "unzipper": "^0.12.3",
     "uuid": "^13.0.0",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0",

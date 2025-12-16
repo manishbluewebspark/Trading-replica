@@ -212,6 +212,9 @@ export default function InstrumentFormAdmin() {
         },
       });
 
+      console.log(res?.data?.data);
+      
+
       if (res?.data?.status === true) {
         const rawData = res?.data?.data || [];
         const normalized = rawData.map((row: any) => mapAngelToCommon(row));

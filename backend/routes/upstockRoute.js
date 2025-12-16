@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateUpstoxAuthUrl, getTradeDataForUpstoxDashboard, getUpstoxFunds, upStoxCallback } from '../controllers/upStockController.js';
+import { generateUpstoxAuthUrl, getTradeDataForUpstoxDashboard, getUpstoxFunds, getUpstoxInstruments, upStoxCallback } from '../controllers/upStockController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { getDeshboardOrdersUpdate } from '../controllers/angelController.js';
 
@@ -17,6 +17,8 @@ router.get('/upstox/deshbaord/todayorderdata',authMiddleware,getDeshboardOrdersU
 router.get('/upstox/dummydatatrade', getTradeDataForUpstoxDashboard);
 router.get('/upstox/user/fund', getUpstoxFunds);
 
+
+router.get('/upstox/instruments', getUpstoxInstruments);
 
 
 

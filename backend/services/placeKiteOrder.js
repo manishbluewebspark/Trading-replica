@@ -126,6 +126,10 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
     const kiteVariety = useMappings ? mapVarietyToKite(reqInput.variety) : reqInput.variety;
     logSuccess(req, { msg: "Mapped order variety", input: reqInput.variety, kiteVariety });
 
+
+    console.log('req kite payload====================');
+    
+
     // 3) Local pending order
     const orderData = {
       symboltoken: reqInput.kiteToken || reqInput.token,
@@ -147,6 +151,7 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
       buyOrderId: reqInput?.buyOrderId || null,
+       strategyName:reqInput?.groupName||""
     };
 
     logSuccess(req, { msg: "Prepared local order object", orderData });
@@ -171,6 +176,9 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
     let placeRes;
     try {
       placeRes = await kite.placeOrder(orderData.variety, orderParams);
+
+      console.log("============kite place order =================");
+      
       logSuccess(req, { msg: "Kite order placed", placeRes });
     } catch (err) {
       logError(req, err, { msg: "Kite order placement failed" });
@@ -222,7 +230,7 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
           { orderstatuslocaldb: "COMPLETE" },
           { where: { id: buyOrder.id } }
         );
-        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id });
+        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id,findByObject:buyOrder });
       }
       finalStatus = "COMPLETE";
       buyOrderId = buyOrder?.orderid || 'NA'
@@ -283,6 +291,9 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
         });
       }
     } catch (e2) {
+
+        console.log(e2,"============kite place order error =================");
+
       logError(req, e2, { msg: "Failed to mark local order FAILED in catch" });
     }
     return { userId: user?.id, broker: "Kite", result: "ERROR", message: err?.message };

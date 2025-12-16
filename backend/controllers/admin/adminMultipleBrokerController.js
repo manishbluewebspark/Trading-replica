@@ -7,7 +7,8 @@ import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { logSuccess, logError } from "../../utils/loggerr.js";
 import { placeFinavasiaOrder } from "../../services/placeFinavasiaOrder.js";
-
+import AngelOneCredentialer from "../../models/angelOneCredential.js"
+import { raw } from "express";
 
 export const getTokenStatusSummary = async (req, res) => {
   try {
@@ -148,6 +149,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       msg: "Fetched users for strategy group",
       groupName: input.groupName,
       userCount: users.length,
+       users: users,
     });
 
     if (!users.length) {
@@ -185,12 +187,17 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
           brokerName: user.brokerName,
         });
 
+    
         try {
           if (user.brokerName.toLowerCase() === "angelone") {
             logSuccess(req, {
               msg: "Routing to AngelOne order",
               userId: user.id,
             });
+
+           
+            
+
             return await placeAngelOrder(user, input, req);
           }
 
@@ -199,7 +206,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
               msg: "Routing to Kite order",
               userId: user.id,
             });
-            return await placeKiteOrder(user, reqInput, req, true);
+            return await placeKiteOrder(user, input, req, true);
           }
 
           if (user.brokerName.toLowerCase() === "fyers") {
@@ -460,7 +467,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             angelOneToken: o?.angelOneToken || o.token,
             angelOneSymbol: o?.angelOneSymbol || o?.symbol,
             broker: o?.broker,
-            buyOrderId: o?.orderId,
+            buyOrderId: String(o.orderid),
           };
 
           logSuccess(req, {
@@ -530,7 +537,7 @@ export const adminMultipleSquareOff = async (req, res) => {
               userId: user.id,
             });
 
-            await placeFinavasiaOrder(user, reqInput, req, false);
+            await placeFinavasiaOrder(user, reqInput, req, true);
 
             logSuccess(req, {
               msg: "Finvasia square-off completed",
@@ -748,11 +755,14 @@ export const adminSingleSquareOff = async (req, res) => {
     // 5️⃣ Build reqInput for SELL leg
     const transactiontype = "SELL";
 
+    console.log(o,'==============0=============');
+    
+
     const reqInput = {
       variety: o.variety,
       symbol: o.tradingsymbol,
       instrumenttype: o.instrumenttype,
-      token: o.symboltoken,
+      token: o.symboltoken||o.angelOneToken,
       exch_seg: o.exchange,
       orderType: o.ordertype,
       quantity: o.quantity,
@@ -768,6 +778,7 @@ export const adminSingleSquareOff = async (req, res) => {
       angelOneSymbol: o?.angelOneSymbol || o?.symbol,
       broker: o?.broker,
       buyOrderId: String(orderId),
+       groupName:o?.strategyName||""
     };
 
     logSuccess(req, {
@@ -790,7 +801,7 @@ export const adminSingleSquareOff = async (req, res) => {
       logSuccess(req, { msg: "Calling placeAngelOrder for square-off", userId: user.id, orderId: String(orderId) });
 
       // ✅ keeping your existing call exactly (even if args look odd)
-      await placeAngelOrder(user, endOfDay, req);
+      await placeAngelOrder(user, reqInput, req);
 
       logSuccess(req, { msg: "AngelOne square-off call completed", userId: user.id, orderId: String(orderId) });
     } else if (broker === "kite" && user.role === "user") {
@@ -808,7 +819,7 @@ export const adminSingleSquareOff = async (req, res) => {
     } else if (broker === "finvasia" && user.role === "user") {
       logSuccess(req, { msg: "Calling placeFinavasiaOrder for square-off", userId: user.id, orderId: String(orderId) });
 
-      await placeFinavasiaOrder(user, reqInput, req, false);
+      await placeFinavasiaOrder(user, reqInput, req, true);
 
       logSuccess(req, { msg: "Finvasia square-off call completed", userId: user.id, orderId: String(orderId) });
     } else {

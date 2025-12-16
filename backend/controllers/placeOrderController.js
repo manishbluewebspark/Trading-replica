@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { getIO } from "../socket/index.js";
 import Order from '../models/orderModel.js';
-
+import { v4 as uuidv4 } from "uuid";
 import { getManyTokensFromSession } from '../utils/sessionUtils.js';
 import {emitOrderGet} from "../services/smartapiFeed.js"
 
@@ -16,27 +16,34 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 
+// 15 digit order ID
+function generateOrderId() {
+  return Date.now().toString() + Math.floor(1000 + Math.random() * 9000);
+}
 
+// UUID v4
+function generateUniqueOrderUUID() {
+  return uuidv4();
+}
 
- const saveOrderData = async function () {
+// 7 digit fill ID
+function generateFillId() {
+  return Math.floor(1000000 + Math.random() * 9000000);
+}
+
+const getSaveOrderData = async function () {
   try {
-    
-    const sourceUserId = 20; // copy FROM this user
-    const targetUserId = 22; // copy TO this user
-    const usernameId = "37665"
+    const userId = 22;
 
+    const startISO = "2025-12-15T04:24:00.000Z";
+    const endISO   = "2025-12-15T05:54:00.000Z";
 
-  const startOfRange = new Date("2025-12-01T05:14:00.000Z");
-  const endOfRange   = new Date("2025-12-11T05:14:00.000Z");
-
-    // 🔁 Since filltime is VARCHAR with ISO UTC string -> compare with ISO strings
-    const startISO = startOfRange.toISOString(); // e.g. "2025-12-03T18:30:00.000Z"
-    const endISO = endOfRange.toISOString();
-
-    // 🔍 Since filltime is VARCHAR (ISO strings), we compare as strings
+    // 1️⃣ Fetch SELL orders
     const sourceOrders = await Order.findAll({
       where: {
-        userId: sourceUserId,
+        userId,
+        transactiontype: "SELL",
+        orderstatuslocaldb: "COMPLETE",
         filltime: {
           [Op.between]: [startISO, endISO],
         },
@@ -44,33 +51,79 @@ dayjs.extend(timezone);
       raw: true,
     });
 
+    console.log("SELL orders:", sourceOrders.length);
 
- const ordersToInsert = sourceOrders.map((o) => {
-      const { id, createdAt, updatedAt, userId, ...rest } = o;
-      return {
-        ...rest,
-        userId: targetUserId,
-        userNameId:usernameId
+    if (!sourceOrders.length) {
+      console.log("No SELL orders found");
+      return;
+    }
+
+    // 2️⃣ Create BUY orders from SELL orders
+    const buyOrdersPayload = [];
+
+    for (const sell of sourceOrders) {
+      // 🛑 Safety check (avoid invalid BUY rows)
+      if (!sell.buyprice || !sell.buysize || !sell.buyvalue || !sell.buyTime) {
+        console.log("Skipping invalid SELL:", sell.id);
+        continue;
+      }
+
+      const buyOrder = {
+        ...sell,
+
+        // ❌ remove primary key
+        id: undefined,
+
+        // 🔁 Convert to BUY
+        transactiontype: "BUY",
+        ordertag: "AUTO_BUY_FROM_SELL",
+
+        // 🎯 Map buy → fill fields
+        tradedValue: Number(sell.buyvalue),
+        fillprice: Number(sell.buyprice),
+        fillsize: Number(sell.buysize),
+        filltime: sell.buyTime,
+        price: Number(sell.buyprice),
+
+        quantity: String(sell.buysize),
+        filledshares: String(sell.buysize),
+        unfilledshares: "0",
+
+        // 🔐 Auto-generate IDs
+        orderid: generateOrderId(),
+        uniqueorderid: generateUniqueOrderUUID(),
+        fillid: generateFillId(),
+
+        // 🔗 Optional reference
+        buyOrderId: sell.orderid,
+
+        // timestamps → let Sequelize handle
+        createdAt: undefined,
+        updatedAt: undefined,
       };
-    });
 
-     const inserted = await Order.bulkCreate(ordersToInsert);
-    console.log(`Copied ${inserted.length} orders from user ${sourceUserId} to ${targetUserId}`);
+      buyOrdersPayload.push(buyOrder);
+    }
 
+    if (!buyOrdersPayload.length) {
+      console.log("No valid BUY orders to insert");
+      return;
+    }
 
-    console.log(sourceOrders.length);
-    
+    // 3️⃣ Insert BUY orders
+    const created = await Order.bulkCreate(buyOrdersPayload);
 
-      
+    console.log("✅ BUY orders created:", created.length);
   } catch (error) {
-     console.log(error,'hhy');
-     
+    console.error("❌ getSaveOrderData error:", error);
   }
-       
-  } 
+};
 
 
-// saveOrderData()
+// getSaveOrderData()
+
+
+
 
 
 export const searchOrders = async (req, res) => {
@@ -161,9 +214,9 @@ export const searchOrders = async (req, res) => {
 export const getOrderPerticular = async (req, res,next) => {
     try {
 
-        let orderId = "7d87d261-7c7d-4e55-a8bd-67ce2e179634"
+        let orderId = "62f93049-821d-429a-a3b8-c833db45ef51"
 
-        let token ='eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkFSSk1BMTkyMSIsInJvbGVzIjowLCJ1c2VydHlwZSI6IlVTRVIiLCJ0b2tlbiI6ImV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNKOS5leUoxYzJWeVgzUjVjR1VpT2lKamJHbGxiblFpTENKMGIydGxibDkwZVhCbElqb2lkSEpoWkdWZllXTmpaWE56WDNSdmEyVnVJaXdpWjIxZmFXUWlPalFzSW5OdmRYSmpaU0k2SWpNaUxDSmtaWFpwWTJWZmFXUWlPaUl4WlROa04yWTVZUzAwTkRWaUxUTmtZelV0T1RFeFlTMDJOR1ZtT1RZNE5qQTFZbVFpTENKcmFXUWlPaUowY21Ga1pWOXJaWGxmZGpJaUxDSnZiVzVsYldGdVlXZGxjbWxrSWpvMExDSndjbTlrZFdOMGN5STZleUprWlcxaGRDSTZleUp6ZEdGMGRYTWlPaUpoWTNScGRtVWlmU3dpYldZaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lRVkpLVFVFeE9USXhJaXdpWlhod0lqb3hOell5TURRek5UazBMQ0p1WW1ZaU9qRTNOakU1TlRjd01UUXNJbWxoZENJNk1UYzJNVGsxTnpBeE5Dd2lhblJwSWpvaVlUSm1aREZsTmpBdFlqYzJZUzAwT0dVNExUZ3hOekV0WVRjeE1qZGpPVFF5T0dObElpd2lWRzlyWlc0aU9pSWlmUS5ybHFzLTk3QUVoZ2NwMDhhOWtRM2VMdkhNMmVaREVMRERlMzNCTXFUT1dFN2dIRDFvUktHcVZ2a1hkSnBIc1ZmLVphaWxIZ3JKcU5CejA2Zm00NDg5XzBGN0hCVEN3QU1US25IN3YxNFF6aDlkVFdfTVZPckx2VEtxckNiVTBFRFNhQ05JUm5IX2pqdmxkWXJWb2Y0ZElId0xFNU0wcktJbWY1eFhVVnRpZm8iLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjE5NTcxOTQsImV4cCI6MTc2MjAyMTgwMH0.EHrnDiNaQEmlkvpexlJC04iz3yazrlaq84f6EQlkLpnh2Ae-2Bmj7W5a5O8Cm_UezeC_5YfSBO6YgTVC1X1Wbg'
+        let token ='eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTlRnM01UZ3dPU3dpYm1KbUlqb3hOelkxTnpnMU1qSTVMQ0pwWVhRaU9qRTNOalUzT0RVeU1qa3NJbXAwYVNJNklqUXdZV0l3WWpsbUxUTTJZMk10TkdKbU5pMDRaRFZoTFRNMFpHSmhaVEEwWldFNVppSXNJbFJ2YTJWdUlqb2lJbjAuam4yZ01lUEZVWW1RTWU2SHpVdU5JR2szN3g1NjRKMldQMDM0SjBPc3ZVRmdMNlBfdnJub05KN2Z6bFVELXRUWUdGWGhRTldyc3BuaUxPdmZmcWZMR0FkcWNTdTdrMGM4MGR2SnJlNW9PUUVFTzV2YXhnRHBBVFlxd1dvbldoOWl0c2c4NXhUVVJxMHlpZjVxZ1lTdkJ6bnRySERRd29sQVB6LWZaVWFNMkRrIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY1Nzg1NDA5LCJleHAiOjE3NjU4MjM0MDB9.zm6MAnyDQBTtdmEPawSaT84pfFxZXZvoOXcYKpmvxGiWcTCKqE7QAGv7L1w4rZHOO4Rks4Uq8AdrIG5fVAqslA'
        
         var config = {
         method: 'get',
@@ -184,11 +237,11 @@ export const getOrderPerticular = async (req, res,next) => {
         let {data} = await axios(config)
 
       
-        
+            
 
         if(data.status==true) {
   
-            return res.json({
+            return res.json({ 
             status: true,
             statusCode:200,
            data: data?.data ?? [],

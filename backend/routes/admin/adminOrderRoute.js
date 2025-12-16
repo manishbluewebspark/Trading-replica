@@ -12,6 +12,7 @@ import { upload } from '../../middleware/upload.js';
 import {  adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
+import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
 
 
 
@@ -111,11 +112,12 @@ router.post("/manual/create",
 );
 
 
-//  clone user routes
+//  clone user routes and not change authMiddleware
+router.get('/getuserclonetrade/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
+router.get("/getuserclone/fund",authMiddleware,getCloneUserFund);
+router.get("/getuserclonetrade", authMiddleware,getCloneUserTrade);
 
 
-router.get("/getuserclone/fund",AdminAuthMiddleware,getCloneUserFund);
-router.get("/getuserclonetrade", AdminAuthMiddleware,getCloneUserTrade);
 router.get("/getuserclonedematlogin",AdminAuthMiddleware, loginCloneUserDemat);
 
 

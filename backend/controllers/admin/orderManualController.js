@@ -3,6 +3,7 @@
 import Order from "../../models/orderModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
+import sequelize from "../../config/db.js";
 import dayjs from "dayjs";
 import {emitOrderGet} from "../../services/smartapiFeed.js"
 
@@ -175,9 +176,137 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
 };
 
 
-
-
 export const createManualOrder = async (req, res) => {
+  
+  const t = await sequelize.transaction();
+  try {
+    let data = { ...req.body };
+
+    // -------- Basic Validations --------
+    if (!data.tradingsymbol)
+      return res.status(400).json({ status: false, message: "Tradingsymbol required" });
+
+    if (!data.exchange)
+      return res.status(400).json({ status: false, message: "Exchange required" });
+
+    if (!data.lotSize)
+      return res.status(400).json({ status: false, message: "lotSize required" });
+
+    if (data.buyPrice == null || data.sellPrice == null)
+      return res.status(400).json({ status: false, message: "buyPrice and sellPrice required" });
+
+    if (!data.buyTime || !data.sellTime)
+      return res.status(400).json({ status: false, message: "buyTime and sellTime required" });
+
+    const fillsize = Number(data.lotSize) || 0;
+
+    // Convert to UTC ISO (works correctly ONLY if input includes timezone like +05:30)
+    const utcBuyTime = new Date(data.buyTime).toISOString();
+    const utcSellTime = new Date(data.sellTime).toISOString();
+
+    // Common defaults
+    const common = {
+      ...data,
+      userNameId: data.username,
+      text: data.text || "",
+      status: "COMPLETE",
+      orderstatus: "COMPLETE",
+      orderstatuslocaldb: "COMPLETE",
+      parentorderid: data.parentorderid || "",
+      strikeprice: data.strikeprice || 0,
+      optiontype: data.optiontype || "",
+      expirydate: data.expirydate || "",
+      cancelsize: data.cancelsize || "0",
+      averageprice: data.averageprice || 0,
+      filledshares: data.filledshares || "0",
+      unfilledshares: data.unfilledshares || "0",
+      quantity: fillsize,
+      fillsize,
+      buysize: fillsize,
+    };
+
+    // =========================
+    // 1️⃣ CREATE BUY ORDER FIRST
+    // =========================
+    const buyOrderData = {
+      ...common,
+      orderid: generateOrderId(),
+      uniqueorderid: generateUniqueOrderUUID(),
+      fillid: generateFillId(),
+
+      transactiontype: "BUY",
+      ordertag: "AUTO_BUY_FROM_MANUAL",
+
+      // BUY-side mapping
+      filltime: utcBuyTime,
+      buyTime: utcBuyTime,
+
+      price: Number(data.buyPrice),
+      fillprice: Number(data.buyPrice),
+
+      // optional store buyprice too (keeps your schema consistent)
+      buyprice: Number(data.buyPrice),
+
+      tradedValue: fillsize * Number(data.buyPrice),
+      buyvalue: fillsize * Number(data.buyPrice),
+
+      pnl: 0, // pnl usually computed after sell
+    };
+
+    const buyOrder = await Order.create(buyOrderData, { transaction: t });
+
+    // =========================
+    // 2️⃣ CREATE SELL ORDER AFTER
+    // =========================
+    const sellOrderData = {
+      ...common,
+      orderid: generateOrderId(),
+      uniqueorderid: generateUniqueOrderUUID(),
+      fillid: generateFillId(),
+
+      transactiontype: "SELL",
+      ordertag: data.ordertag || "MANUAL_ORDER",
+
+      // Link sell to buy (choose one)
+      parentorderid: buyOrder.orderid, // ✅ strong link
+      buyOrderId: buyOrder.orderid,    // ✅ if you already use this column
+
+      // SELL-side mapping
+      filltime: utcSellTime,
+      buyTime: utcBuyTime, // keep stored as well
+
+      price: Number(data.sellPrice),
+      fillprice: Number(data.sellPrice),
+
+      buyprice: Number(data.buyPrice),
+      buyvalue: fillsize * Number(data.buyPrice),
+
+      tradedValue: fillsize * Number(data.sellPrice),
+      pnl: (fillsize * Number(data.sellPrice)) - (fillsize * Number(data.buyPrice)),
+    };
+
+    const sellOrder = await Order.create(sellOrderData, { transaction: t });
+
+    await t.commit();
+
+    return res.status(201).json({
+      status: true,
+      message: "BUY created first, then SELL created successfully",
+      data: { buyOrder, sellOrder },
+    });
+  } catch (err) {
+    await t.rollback();
+    console.log("Create Order Error:", err);
+    return res.status(500).json({
+      status: false,
+      message: err.message || "Internal Server Error",
+    });
+  }
+};
+
+
+
+export const createManualOrder1 = async (req, res) => {
   try {
 
     let data = req.body;

@@ -1,5 +1,5 @@
 import express from 'express';
-import {  finvasiaAppCredential, getShoonyaFunds, getShoonyaOrders, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
+import {  finvasiaAppCredential, getShoonyaFunds, getShoonyaInstrumentsFull, getShoonyaOrders, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
@@ -40,7 +40,7 @@ router.post('/finvasia/orders', getShoonyaOrders);
 router.post('/finvasia/trades', getShoonyaTrades);
 
 
-
+router.get("/finvasia/instruments/full", getShoonyaInstrumentsFull);
 
 
 

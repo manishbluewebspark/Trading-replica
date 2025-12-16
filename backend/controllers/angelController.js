@@ -1100,9 +1100,6 @@ export const getTradeDataForCommonDeshboardUpdate = async function (req, res) {
   try {
 
 
-    console.log('trade req');
-    
-
     // ✅ Today range (UTC based on ISO)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -1279,7 +1276,7 @@ export const getTradeDataForCommonDeshboardUpdate = async function (req, res) {
 export const getDeshboardOrdersUpdate = async (req, res) => {
   try {
 
-       console.log('order req');
+      
    
     // 1️⃣ Set date range (today by default)
     const startOfDay = new Date();

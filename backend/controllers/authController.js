@@ -574,12 +574,16 @@ const password = (req.body.password || "").trim();
         where: {
           angelLoginUser: true,
           brokerName:"angelone",
-          updatedAt: {
-            [Op.between]: [startOfDay, endOfDay],
-          },
+          // updatedAt: {
+          //   [Op.between]: [startOfDay, endOfDay],
+          // },
         },
         raw:true
       });
+
+
+      console.log(activeAngelUser,'activeAngelUser===========');
+      
       
     const token = jwt.sign({ id: user.id,role:user.role,borker:user.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' })
 
@@ -785,6 +789,7 @@ export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
         feedToken: data.data.feedToken,
         refreshToken: data.data.refreshToken,
         angelLoginUser:true,
+        angelLoginExpiry: new Date(Date.now() + 10 * 60 * 60 * 1000), // 10 hours
       },
       {
         where: { id: req.headers.userid },

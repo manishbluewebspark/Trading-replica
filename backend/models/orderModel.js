@@ -223,6 +223,10 @@ const Order = sequelize.define(
     type: DataTypes.STRING,
     allowNull: true,
    },
+    strategyName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "orders",

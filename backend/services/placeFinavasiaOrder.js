@@ -1,8 +1,10 @@
 import axios from "axios";
 import Order from "../models/orderModel.js";
+import { logSuccess, logError } from "../utils/loggerr.js";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import utc from "dayjs/plugin/utc.js";
+import { text } from "express";
 
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
@@ -67,6 +69,10 @@ const maskToken = (t) => (t ? `${String(t).slice(0, 6)}****${String(t).slice(-6)
 export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = true) => {
   try {
 
+
+    console.log('=============Finvasia====================');
+    
+
     logSuccess(req, {
       msg: 'Finvasia order flow started',
       userId: user?.id,
@@ -115,6 +121,7 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
+      strategyName:reqInput?.groupName||""
     };
 
     logSuccess(req, { msg: "Prepared local pending order", orderData });
@@ -153,6 +160,10 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       placeRes = resp.data;
       logSuccess(req, { msg: "Shoonya PlaceOrder response", placeRes });
 
+
+      console.log('===============placeRes===========',placeRes);
+      
+
       if (!placeRes || placeRes.stat !== "Ok") {
         const msg = placeRes?.emsg || "Shoonya order placement failed";
         await newOrder.update({
@@ -171,11 +182,13 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
         };
       }
     } catch (err) {
+
+      console.log('===============placeRes error ===========',err?.response?.data.emsg); 
       logError(req, err, { msg: "Shoonya PlaceOrder API error", raw: err?.response?.data });
       await newOrder.update({
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
-        text: err?.message || "Shoonya PlaceOrder error",
+        text: err?.response?.data?.emsg||err?.message || "Shoonya PlaceOrder error",
         buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
       });
       logSuccess(req, { msg: "Local DB updated FAILED (exception)", localOrderId: newOrder.id });
@@ -200,9 +213,29 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       const obData = obResp.data;
-      logSuccess(req, { msg: "OrderBook response", isArray: Array.isArray(obData), size: obData?.length });
+      logSuccess(req, { msg: " Shoonya OrderBook response", isArray: Array.isArray(obData), size: obData?.length });
       if (Array.isArray(obData)) {
+
         orderDetails = obData.find((o) => String(o.norenordno) === String(orderid));
+
+         if(orderDetails.status==='REJECTED') {
+
+          return await newOrder.update({ status:"REJECTED",orderstatuslocaldb:"REJECTED",text:orderDetails?.rejreason||"" });
+
+         }else if(orderDetails.status==='CANCELLED') {
+
+          return  await newOrder.update({ status:"REJECTED",orderstatuslocaldb:"REJECTED",text:orderDetails?.rejreason||"" });
+
+         }else{
+          
+      logSuccess(req, {
+        msg: "shoonya order with check response",
+        details: orderDetails,
+      }); 
+
+         }
+
+
       }
       logSuccess(req, { msg: "OrderBook matched orderDetails", orderDetails });
     } catch (e) {
@@ -246,7 +279,7 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       uniqueorderid: orderDetails?.exchordid || null,
       averageprice: avgPrice,
       lotsize: filledQty,
-      symboltoken: reqInput.kiteToken || reqInput.token,
+      symboltoken: reqInput.token||reqInput.kiteToken ,
       price: avgPrice,
       orderstatuslocaldb: finalStatus,
       status: orderDetails?.status ? String(orderDetails.status).toUpperCase() : null,

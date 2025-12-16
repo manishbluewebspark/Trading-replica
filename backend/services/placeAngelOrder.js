@@ -21,15 +21,19 @@ const ANGEL_ONE_TRADE_BOOK_URL =
 // -----------------------
 // HEADERS
 // -----------------------
+
+
+
 const angelHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
   "Content-Type": "application/json",
-  Accept: "application/json",
+  "Accept": "application/json",
   "X-UserType": "USER",
   "X-SourceID": "WEB",
-  "X-ClientLocalIP": "127.0.0.1",
-  "X-ClientPublicIP": "127.0.0.1",
-  "X-MACAddress": "00:00:00:00:00:00",
+  'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+  'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+  'X-MACAddress': process.env.MAC_Address, 
+  'X-PrivateKey': process.env.PRIVATE_KEY, 
 });
 
 const safeErr = (e) => ({
@@ -45,6 +49,7 @@ const safeErr = (e) => ({
 
 // =======================logger code =========================
 export const placeAngelOrder = async (user, reqInput, req) => {
+  
   let newOrder = null;
 
   try {
@@ -56,7 +61,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
 
     // 1️⃣ Prepare local order
     const orderData = {
-      variety: reqInput.variety,
+      variety: reqInput.variety||'NORMAL',
       tradingsymbol: reqInput.symbol,
       instrumenttype: reqInput.instrumenttype,
       symboltoken: reqInput.token,
@@ -78,7 +83,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       buyOrderId: reqInput?.buyOrderId || null,
+      strategyName:reqInput?.groupName||""
     };
+
+    
+    
 
     logSuccess(req, { msg: "Prepared local AngelOne order", orderData });
 
@@ -89,15 +98,36 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     // 3️⃣ Place AngelOne Order
     let placeRes;
     try {
-      placeRes = await axios.post(ANGEL_ONE_PLACE_URL, orderData, {
+
+      const brokerPayload = {
+          variety: (reqInput.variety || "NORMAL").toUpperCase(),
+          tradingsymbol: reqInput.symbol,   // try "YESBANK-EQ" if needed
+          symboltoken: String(reqInput.token),
+          transactiontype: (reqInput.transactiontype || "").toUpperCase(),
+          exchange: reqInput.exch_seg,               // "NSE" / "BSE" / "NFO"
+          ordertype: (reqInput.orderType || "").toUpperCase(),   // "MARKET"
+          producttype: (reqInput.productType || "").toUpperCase(), // "INTRADAY"
+          duration: "DAY",                           // ✅ MUST NOT be empty :contentReference[oaicite:2]{index=2}
+          price: 0,                                  // MARKET => 0
+          squareoff: 0,
+          stoploss: 0,
+          quantity: Number(reqInput.quantity),       // ✅ send number
+        };
+      
+      
+      placeRes = await axios.post(ANGEL_ONE_PLACE_URL, brokerPayload, {
         headers: angelHeaders(user.authToken),
       });
 
       logSuccess(req, {
         msg: "AngelOne placeOrder response received",
         response: placeRes.data,
+        brokerPayload:brokerPayload
       });
     } catch (err) {
+
+      console.log('===============angelone=================',err.message);
+      
       logError(req, err, { msg: "AngelOne placeOrder API failed" });
 
       await newOrder.update({
@@ -140,7 +170,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     const orderid = placeRes.data.data.orderid;
     const uniqueOrderId = placeRes.data.data.uniqueorderid;
 
-    await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
+    await newOrder.update({ orderid, uniqueorderid: uniqueOrderId, });
 
     logSuccess(req, {
       msg: "AngelOne order placed successfully",
@@ -155,14 +185,44 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         headers: angelHeaders(user.authToken),
       });
 
+      console.log(det.data,'================del================');
+      
+
       logSuccess(req, {
         msg: "AngelOne order details response",
         details: det.data,
       });
 
-      if (det.data?.status === true) {
+      // 
+      if (det.data?.status === true&&det.data.data.status==='completed') {
+         
         detailsData = det.data.data;
       }
+      
+      else if(det.data.status===true&&det.data.data.status==='rejected') {
+
+        return await newOrder.update({
+           status:"REJECTED",
+           orderstatus:"REJECTED",
+           orderstatuslocaldb:"REJECTED",
+           });
+
+      }else if(det.data.status===true&&det.data.data.status==='cancelled'){
+
+        return await newOrder.update({ 
+          status:"CANCELLED",
+          orderstatuslocaldb:"CANCELLED",
+          orderstatus:"CANCELLED",
+         });
+        
+      }else{
+
+      logSuccess(req, {
+        msg: "AngelOne order with check response",
+        details: det.data,
+      }); 
+      }
+
     } catch (err) {
       logError(req, err, { msg: "AngelOne order details fetch failed" });
     }
@@ -188,6 +248,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       logSuccess(req, {
         msg: "SELL pairing lookup",
         buyOrderFound: !!buyOrder,
+        buyOrder:buyOrder
       });
 
       if (buyOrder) {
@@ -204,19 +265,19 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       finalStatus = "COMPLETE";
     }
 
+     console.log(detailsData,'================detailsData================');
+
     // 7️⃣ Update details in DB
     if (detailsData) {
       await newOrder.update({
         status: detailsData.status,
+        price:detailsData.price,
+        quantity:detailsData.quantity,
         orderstatus: detailsData.orderstatus,
-        filledshares: detailsData.filledshares,
-        unfilledshares: detailsData.unfilledshares,
-        symboltoken: detailsData.symboltoken,
         variety: detailsData.variety,
         ordertype: detailsData.ordertype,
         producttype: detailsData.producttype,
         exchange: detailsData.exchange,
-        orderstatuslocaldb: finalStatus,
       });
 
       logSuccess(req, { msg: "Order updated with AngelOne details" });
@@ -228,9 +289,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         headers: angelHeaders(user.authToken),
       });
 
+       console.log(tradeRes.data,'================tradeRes================');
+
       logSuccess(req, {
         msg: "AngelOne tradebook response",
-        count: tradeRes.data?.data?.length,
+        count: tradeRes.data?.data,
       });
 
       const matched = tradeRes.data?.data?.find(
@@ -260,6 +323,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           buysize: buyQty,
           buyvalue: buyValue,
           status: "COMPLETE",
+          orderstatuslocaldb:finalStatus
+
         });
 
         logSuccess(req, {

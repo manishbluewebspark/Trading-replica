@@ -1580,12 +1580,12 @@ export const getKiteOrders = async (req, res) => {
   
   const  kite  = await getKiteClientForUserId(21)
 
-  //  const orders = await kite.getOrders();
+   const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("1999345550511841280");
+    // const orders = await kite.getOrderTrades("1999345550511841280");
     
 
-    console.log(orders,'orders orders');
+    // console.log(orders,'orders orders');
     
 
     // const ordersWithTrades = await Promise.all(

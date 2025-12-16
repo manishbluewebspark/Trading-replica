@@ -7,6 +7,7 @@ import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAng
     reGenerateTokenWithAngelOne } from '../controllers/angelController.js';
 import { createAngelOneCredential, getAngelOneCredential } from '../controllers/angelOneCrendential.js';
 import {   getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
+import { getOrderPerticular } from '../controllers/placeOrderController.js';
 
 
 
@@ -62,7 +63,7 @@ router.get('/angelone/get/order',getAngelOneOrder);
 router.get('/angelone/get/trade/book',getTradeBook)
 router.get('/perticular/trade/book',getPerticularTradeBook)
 
-
+router.get('/angeloneorderbyoriderid',getOrderPerticular);
 
 
 // ===================== Angelone Apis  =====================
