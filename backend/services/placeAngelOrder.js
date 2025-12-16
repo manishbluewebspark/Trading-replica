@@ -194,7 +194,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       });
 
       // 
-      if (det.data?.status === true&&det.data.data.status==='completed') {
+      if (det.data?.status === true&&det.data.data.status==='complete') {
          
         detailsData = det.data.data;
       }
@@ -296,28 +296,51 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         count: tradeRes.data?.data,
       });
 
+       console.log( tradeRes.data?.data?.find(
+        (t) => String(t.orderid) === String(orderid)
+      ),String(orderid),'================matched 1================');
+
       const matched = tradeRes.data?.data?.find(
         (t) => String(t.orderid) === String(orderid)
       );
 
+        console.log(matched,'================matched================');
+
+
       if (matched) {
+
+        console.log('hhhy 1');
+        
         const buyPrice = Number(buyOrder?.fillprice || 0);
         const buyQty = Number(buyOrder?.fillsize || 0);
         const buyValue = Number(buyOrder?.tradedValue || 0);
+
+          const buyTime = buyOrder?.filltime || 'NA'
+
+           console.log('hhhy 2');
 
         let pnl =
           matched.transaction_type === "BUY"
             ? 0
             : matched.fillprice * matched.fillsize - buyPrice * buyQty;
 
-        await newOrder.update({
+             const createdAtDate = new Date(newOrder.createdAt);
+
+            const [h, m, s] = matched.filltime.split(":");
+            createdAtDate.setHours(h, m, s, 0);
+
+            const fillTimeISO = createdAtDate.toISOString();
+
+       let update2Final =  await newOrder.update({
           tradedValue: matched.tradevalue,
           price: matched.fillprice,
           fillprice: matched.fillprice,
           fillsize: matched.fillsize,
-          filltime: new Date(matched.filltime).toISOString(),
+          // filltime: new Date(matched.filltime).toISOString(),
+           filltime: fillTimeISO,
           fillid: matched.fillid,
           pnl,
+          buyTime:buyTime,
           buyOrderId,
           buyprice: buyPrice,
           buysize: buyQty,
@@ -333,6 +356,9 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         });
       }
     } catch (err) {
+
+      console.log(err,'=============final error=============');
+      
       logError(req, err, { msg: "AngelOne tradebook fetch failed" });
     }
 
