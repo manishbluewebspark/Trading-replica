@@ -29,7 +29,8 @@ router.get('/kite/callback', kiteCallback); // Handle callback (no auth needed)
 
 
 router.post('/kite/appcredential/create',authMiddleware, kiteAppCredential);
-router.get('/kite/instrument',authMiddleware,getKiteAllInstruments)
+// router.get('/kite/instrument',authMiddleware,getKiteAllInstruments)
+router.get('/kite/instrument',getKiteAllInstruments)
 
 
 // token required 

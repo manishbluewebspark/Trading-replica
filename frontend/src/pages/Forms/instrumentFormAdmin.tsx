@@ -15,7 +15,7 @@ import { MdOutlineCancel } from "react-icons/md";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
-import { log } from "node:console";
+
 
 
 // 🔹 Type + Exchange options (Angel share same codes)
@@ -206,7 +206,7 @@ export default function InstrumentFormAdmin() {
     setError("");
 
     try {
-      const res = await axios.get(`${apiUrl}/agnelone/instrument`, {
+      const res = await axios.get(`${apiUrl}/agnelone/instrumentnew`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -433,7 +433,7 @@ export default function InstrumentFormAdmin() {
       finavasiaToken: selectedScriptRow.finvasiaToken,
       finavasiaSymbol: selectedScriptRow.finvasiaSymbol,
       fyersToken: selectedScriptRow.fyersToken,
-      FyersSymbol: selectedScriptRow.fyersSymbol,
+      fyersSymbol: selectedScriptRow.fyersSymbol,
       upstoxToken: selectedScriptRow.upstoxToken,
       upstoxSymbol: selectedScriptRow.upstoxSymbol,
       growToken: "",

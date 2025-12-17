@@ -1,6 +1,7 @@
 
 
 import Order from "../../models/orderModel.js";
+import User from "../../models/userModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import sequelize from "../../config/db.js";
@@ -102,7 +103,15 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.quantity = data.lotSize;
     data.strategyUniqueId = strategyUniqueId||""
 
+    data.angelOneSymbol =  data.tradingsymbol,
+    data.angelOneToken =  data.symboltoken,
+
+
+
     console.log(now,'now');
+
+
+
     
 
     // ------------------------------------------------------
@@ -117,7 +126,14 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
 
     let buyOrder = null;
 
+    let pnlData = 0
+
     if (data.transactiontype === "SELL") {
+
+    pnlData =   (data.fillsize * data.price) - 
+          (buyOrder.fillsize * buyOrder.fillprice);
+
+
       buyOrder = await Order.findOne({
         where: {
           userId: data.userId,
@@ -159,6 +175,19 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
 
     // -------- Save Final Order --------
     const order = await Order.create(data);
+
+     if(data.transactiontype === "SELL") {
+
+       await User.increment(
+        { DematFund: pnlData },                 // 👈 add pnl
+        {
+          where: { username: data.username }
+        }
+      );
+
+     }
+
+    
 
     emitOrderGet()
 
@@ -251,6 +280,8 @@ export const createManualOrder = async (req, res) => {
 
       price: Number(data.buyPrice),
       fillprice: Number(data.buyPrice),
+      angelOneSymbol :  data.tradingsymbol,
+      angelOneToken :  data.symboltoken,
 
       // optional store buyprice too (keeps your schema consistent)
       buyprice: Number(data.buyPrice),
@@ -265,6 +296,9 @@ export const createManualOrder = async (req, res) => {
     // =========================
     // 2️⃣ CREATE SELL ORDER AFTER
     // =========================
+
+    let pnlData  = (fillsize * Number(data.sellPrice)) - (fillsize * Number(data.buyPrice))
+
     const sellOrderData = {
       ...common,
       orderid: generateOrderId(),
@@ -277,6 +311,9 @@ export const createManualOrder = async (req, res) => {
       // Link sell to buy (choose one)
       parentorderid: buyOrder.orderid, // ✅ strong link
       buyOrderId: buyOrder.orderid,    // ✅ if you already use this column
+
+       angelOneSymbol :  data.tradingsymbol,
+       angelOneToken :  data.symboltoken,
 
       // SELL-side mapping
       filltime: utcSellTime,
@@ -294,6 +331,12 @@ export const createManualOrder = async (req, res) => {
 
     const sellOrder = await Order.create(sellOrderData, { transaction: t });
 
+      await User.increment(
+        { DematFund: pnlData },                 // 👈 add pnl
+        {
+          where: { username: data.username }
+        }
+      );
     await t.commit();
 
     return res.status(201).json({

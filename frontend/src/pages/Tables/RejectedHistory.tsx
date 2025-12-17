@@ -286,34 +286,34 @@ export default function RejectedHistory () {
     );
   };
 
-const pnlCellRenderer = (params: any) => {
-  const pnl = params.value;
-  const numericPnl = Number(pnl);
-  const isPositive = numericPnl > 0;
-  const isNegative = numericPnl < 0;
+// const pnlCellRenderer = (params: any) => {
+//   const pnl = params.value;
+//   const numericPnl = Number(pnl);
+//   const isPositive = numericPnl > 0;
+//   const isNegative = numericPnl < 0;
 
-  // Text color logic
-  const colorClass = isPositive
-    ? "text-green-700"
-    : isNegative
-    ? "text-red-700"
-    : "text-gray-800";
+//   // Text color logic
+//   const colorClass = isPositive
+//     ? "text-green-700"
+//     : isNegative
+//     ? "text-red-700"
+//     : "text-gray-800";
 
-  // Background color logic
-  const bgClass = isPositive
-    ? "bg-green-100"
-    : isNegative
-    ? "bg-red-100"
-    : "bg-gray-200";
+//   // Background color logic
+//   const bgClass = isPositive
+//     ? "bg-green-100"
+//     : isNegative
+//     ? "bg-red-100"
+//     : "bg-gray-200";
 
-  return (
-    <span
-      className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}
-    >
-      {numericPnl > 0 ? `+${numericPnl.toFixed(2)}` : numericPnl.toFixed(2)}
-    </span>
-  );
-};
+//   return (
+//     <span
+//       className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}
+//     >
+//       {numericPnl > 0 ? `+${numericPnl.toFixed(2)}` : numericPnl.toFixed(2)}
+//     </span>
+//   );
+// };
 
 
   const quantityCellRenderer = (params: any) => {
@@ -394,13 +394,14 @@ const pnlCellRenderer = (params: any) => {
       cellRenderer: quantityCellRenderer,
        width: 150,
         minWidth: 150,
+          cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
     {
       headerName: "Order ID",
       field: "orderid",
       filter: true,
       sortable: true,
-        width: 140,
+        width: 200,
       minWidth: 180,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
@@ -420,10 +421,21 @@ const pnlCellRenderer = (params: any) => {
       filter: true,
       sortable: true,
       cellRenderer: textCellRenderer,
-      width: 470,
-      minWidth: 350,
+      width: 570,
+      minWidth: 450,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+
+     {
+      headerName: "Created Time",
+      field: "filltime",
+      filter: true,
+      sortable: true,
+        width: 280,
+      minWidth: 260,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
+
   ], []);
 
   const getRowStyle = () => {

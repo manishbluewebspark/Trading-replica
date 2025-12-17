@@ -189,6 +189,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     // 5️⃣ Fetch order details
     let detailsData = null;
     try {
+
       const det = await axios.get(ANGEL_ONE_DETAILS_URL(uniqueOrderId), {
         headers: angelHeaders(user.authToken),
       });
@@ -229,7 +230,23 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           text:det?.data?.data?.text||""
          });
         
-      }else{
+      }else if(det.data.status===true&&det.data.data.status==='open') {
+
+         logSuccess(req, {
+        msg: "AngelOne Price Manual Update When Order is Place",
+        details: det.data,
+      }); 
+
+         return await newOrder.update({ 
+          status:"OPEN",
+          orderstatuslocaldb:"OPEN",
+          orderstatus:"OPEN",
+            buyTime: nowISOError,
+           filltime: nowISOError,
+          text:det?.data?.data?.text
+         });
+
+      } else{
 
       logSuccess(req, {
         msg: "AngelOne order with check response",
@@ -323,15 +340,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
 
       if (matched) {
 
-        console.log('hhhy 1');
-        
         const buyPrice = Number(buyOrder?.fillprice || 0);
         const buyQty = Number(buyOrder?.fillsize || 0);
         const buyValue = Number(buyOrder?.tradedValue || 0);
 
           const buyTime = buyOrder?.filltime || 'NA'
-
-           console.log('hhhy 2');
 
         let pnl =
           matched.transaction_type === "BUY"
@@ -368,6 +381,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           msg: "Trade matched & order finalized",
           pnl,
         });
+      }else {
+         
+          console.log('trade data not getting');
+          
+
       }
     } catch (err) {
 

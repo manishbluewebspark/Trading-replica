@@ -63,6 +63,8 @@ function mapFyersOrderType(orderType) {
 export const placeFyersOrder = async (user, reqInput, req) => {
   try {
 
+    const nowISOError = new Date().toISOString();
+
     logSuccess(req, { msg: "Fyers order flow started", userId: user?.id, reqInput });
 
     // 1️⃣ Set Fyers access token (per user)
@@ -106,14 +108,14 @@ export const placeFyersOrder = async (user, reqInput, req) => {
     });
 
     // Build Fyers symbol: "NSE:SBIN-EQ"
-    const fyersSymbol = `${reqInput.exch_seg}:${reqInput.symbol}`;
-    logSuccess(req, { msg: "Built fyersSymbol", fyersSymbol });
+    const fyersSymbol = reqInput.fyersSymbol ||reqInput.symbol
+    logSuccess(req, { msg: "Built fyersSymbol",fyersSymbol  });
 
     // 2️⃣ CREATE LOCAL PENDING ORDER
     const orderData = {
       symboltoken: reqInput.fyersToken ||reqInput.token,
       variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput.FyersSymbol ||reqInput.symbol,
+      tradingsymbol: reqInput.fyersSymbol ||reqInput.symbol,
       duration: reqInput?.duration,
       instrumenttype: reqInput.instrumenttype,
       transactiontype: reqInput.transactiontype,
@@ -131,8 +133,8 @@ export const placeFyersOrder = async (user, reqInput, req) => {
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       broker: "fyers",
       buyOrderId: reqInput?.buyOrderId,
-       strategyName:reqInput.groupName,
-        strategyUniqueId:reqInput?.strategyUniqueId||""
+      strategyName:reqInput.groupName,
+      strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
     logSuccess(req, { msg: "Prepared local pending order object", orderData });
@@ -142,7 +144,7 @@ export const placeFyersOrder = async (user, reqInput, req) => {
 
     // 3️⃣ FYERS ORDER PAYLOAD
     const fyersReqBody = {
-      symbol: fyersSymbol,
+      symbol: reqInput.fyersSymbol ||reqInput.symbol,
       qty: Number(reqInput.quantity),
       type: fyersOrderType,
       side: reqInput.transactiontype === "BUY" ? 1 : -1,
@@ -171,7 +173,8 @@ export const placeFyersOrder = async (user, reqInput, req) => {
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: err?.message || "Fyers place_order failed",
-        buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+        buyTime: nowISOError,
+        filltime: nowISOError,
       });
 
       return {
@@ -190,7 +193,8 @@ export const placeFyersOrder = async (user, reqInput, req) => {
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: msg,
-        buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+        buyTime: nowISOError,
+        filltime: nowISOError,
       });
 
       return {
@@ -258,9 +262,26 @@ export const placeFyersOrder = async (user, reqInput, req) => {
           tradeForThisOrder = tradesForOrder[tradesForOrder.length - 1];
           logSuccess(req, { msg: "Selected last trade entry", tradeForThisOrder });
         }
+      }else{
+
+         logSuccess(req, { msg: "fyers with trade data not found", tradeForThisOrder });
+
+           // 8️⃣ UPDATE LOCAL ORDER
+          await newOrder.update({
+            orderstatuslocaldb: "OPEN",
+            status: "OPEN",
+            text:"Your Order is Pending or Open"
+          }); 
       }
     } catch (err) {
+
       logError(req, err, { msg: "Fyers get_tradebook failed (non-fatal)" });
+
+          await newOrder.update({
+            orderstatuslocaldb: "OPEN",
+            status: "OPEN",
+            text:"Trade Data Getting TIme error"+"" +err?.message
+          }); 
     }
 
     // Defaults (if no trade yet)
@@ -328,17 +349,15 @@ export const placeFyersOrder = async (user, reqInput, req) => {
     await newOrder.update({
       uniqueorderid: detailsData.exchangeOrderNo || orderid,
       text: placeRes.message || "",
-      averageprice: tradedPrice || Number(reqInput.price || 0),
+      averageprice: tradedPrice  || 0,
       lotsize: tradedQty || Number(reqInput.quantity || 0),
-      symboltoken: reqInput.token,
       disclosedquantity: 0,
-      triggerprice: Number(reqInput.triggerPrice || 0),
+      triggerprice: 0,
       price: tradedPrice,
       duration: "DAY",
-      producttype: detailsData.productType || fyersProductType,
+      producttype: fyersProductType,
       orderstatuslocaldb: finalStatus,
       status: "COMPLETE",
-
       tradedValue,
       fillprice: tradedPrice,
       fillsize: tradedQty,
@@ -348,6 +367,7 @@ export const placeFyersOrder = async (user, reqInput, req) => {
       buyprice: buyPrice,
       buysize: buySize,
       buyvalue: buyValue,
+      buyOrderId:buyOrderId
     });
 
     logSuccess(req, { msg: "Final local DB update done", orderid, finalStatus });

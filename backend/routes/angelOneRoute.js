@@ -8,7 +8,7 @@ import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAng
 import { createAngelOneCredential, getAngelOneCredential } from '../controllers/angelOneCrendential.js';
 import {   getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
 import { getOrderPerticular } from '../controllers/placeOrderController.js';
-import { getMergedInstrumentsNew } from '../controllers/instrumentMultipleDematController.js';
+import {  getMergedInstrumentsNew } from '../controllers/instrumentMultipleDematController.js';
 
 
 
@@ -72,9 +72,12 @@ router.get('/angelone/online/trade/books',authMiddleware,getAngelTradeBooks)
 
 
 // working code 
-// router.get('/agnelone/instrument',getMergedInstruments ) 
+router.get('/agnelone/instrument',getMergedInstruments ) 
 
-router.get('/agnelone/instrument',getMergedInstrumentsNew )
+router.get('/agnelone/instrumentnew',getMergedInstrumentsNew )
+
+
+
 
 
 export default router;

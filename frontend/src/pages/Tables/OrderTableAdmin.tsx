@@ -1721,6 +1721,9 @@
 
 
 
+
+
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import "antd/dist/reset.css";
@@ -2506,12 +2509,12 @@ export default function OrderTableAdmin() {
     if (!gridApiRef.current) return;
 
     if (!q) {
-      gridApiRef.current.setQuickFilter("");
+      (gridApiRef.current as any)?.setQuickFilter("");
       return;
     }
     if (q.length < 3) return;
 
-    gridApiRef.current.setQuickFilter(q);
+    (gridApiRef.current as any).setQuickFilter(q);
   }, []);
 
   const getRowId = useCallback((params: any) => {

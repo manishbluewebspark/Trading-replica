@@ -13,6 +13,7 @@ import {  adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrde
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
+import { clearMergedInstrumentsCache, getMergedInstrumentsCacheTTL } from '../../controllers/instrumentMultipleDematController.js';
 
 
 
@@ -150,5 +151,18 @@ router.get('/login/users',AdminLoginMultipleUser)
 router.get('/store/session',storeTokens)
 router.get('/get/session',getTokens)
 router.post('/search/order',adminSearchOrders);
+
+
+
+// 🔍 Check cache remaining time
+// /admin/cache/merged/ttl?type=new
+// /admin/cache/merged/ttl?type=angelone
+router.get("/cache/merged/ttl", getMergedInstrumentsCacheTTL);
+
+// 🧹 Clear cache
+// /admin/cache/merged/clear?type=new
+// /admin/cache/merged/clear?type=angelone
+router.get("/cache/merged/clear", clearMergedInstrumentsCache);
+
 
 export default router;

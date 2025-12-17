@@ -104,9 +104,9 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
 
     // 2) CREATE LOCAL PENDING ORDER
     const orderData = {
-      symboltoken: reqInput.token || reqInput.finavasiaToken,
+      symboltoken:  reqInput.finavasiaToken || reqInput.token ,
       variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput?.symbol ||reqInput?.finavasiaSymbol,
+      tradingsymbol: reqInput?.finavasiaSymbol||reqInput?.symbol,
       instrumenttype: reqInput.instrumenttype,
       transactiontype: transactionType,
       exchange: reqInput.exch_seg,
@@ -140,7 +140,7 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       uid: String(uid),
       actid: String(uid),
       exch: String(reqInput.exch_seg),
-      tsym: String(reqInput.symbol),
+      tsym: String(reqInput?.finavasiaSymbol||reqInput?.symbol),
       qty: String(reqInput.quantity),
       prc: String(reqInput.orderType === "MARKET" ? 0 : reqInput.price),
       prd:shoonyaProductType,
@@ -225,35 +225,91 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
 
         orderDetails = obData.find((o) => String(o.norenordno) === String(orderid));
 
-         if(orderDetails.status==='REJECTED') {
 
-          return await newOrder.update({ 
-            status:"REJECTED",
-            orderstatuslocaldb:"REJECTED",
-            text:orderDetails?.rejreason||"",
+        //  new code start 
+        const rawStatus = orderDetails?.status ?? "";
+        const statusNorm = String(rawStatus).trim().toUpperCase(); // normalize
+
+
+        if (["REJECTED", "REJECT"].includes(statusNorm)) {
+          return await newOrder.update({
+            status: "REJECTED",
+            orderstatuslocaldb: "REJECTED",
+            text: orderDetails?.rejreason || "",
             buyTime: nowISOError,
             filltime: nowISOError,
+          });
+        }
 
-           });
+        if (["CANCELLED", "CANCELED"].includes(statusNorm)) {
+          return await newOrder.update({
+            status: "REJECTED",
+            orderstatuslocaldb: "REJECTED",
+            text: orderDetails?.rejreason || "",
+            buyTime: nowISOError,
+            filltime: nowISOError,
+          });
+        }
 
-         }else if(orderDetails.status==='CANCELLED') {
+        if (["OPEN"].includes(statusNorm)) {
+          return await newOrder.update({
+            status: "OPEN",
+            orderstatuslocaldb: "OPEN",
+            text: orderDetails?.rejreason || "",
+            buyTime: nowISOError,
+            filltime: nowISOError,
+          });
+        }else{
+                  
+              logSuccess(req, {
+                msg: "shoonya order with check response",
+                details: orderDetails,
+              }); 
 
-          return  await newOrder.update({
-             status:"REJECTED",
-             orderstatuslocaldb:"REJECTED",
-             text:orderDetails?.rejreason||"",
-               buyTime: nowISOError,
-            filltime: nowISOError, 
-            });
+          }
 
-         }else{
+           //  new code end 
+
+
+    //      if(orderDetails.status==='REJECTED') {
+
+    //       return await newOrder.update({ 
+    //         status:"REJECTED",
+    //         orderstatuslocaldb:"REJECTED",
+    //         text:orderDetails?.rejreason||"",
+    //         buyTime: nowISOError,
+    //         filltime: nowISOError,
+
+    //        });
+
+    //      }else if(orderDetails.status==='CANCELLED') {
+
+    //       return  await newOrder.update({
+    //          status:"REJECTED",
+    //          orderstatuslocaldb:"REJECTED",
+    //          text:orderDetails?.rejreason||"",
+    //            buyTime: nowISOError,
+    //         filltime: nowISOError, 
+    //         });
+
+    //      }else if(orderDetails.status==='Open'){
+
+    //        return  await newOrder.update({
+    //          status:"OPEN",
+    //          orderstatuslocaldb:"OPEN",
+    //          text:orderDetails?.rejreason||"",
+    //         buyTime: nowISOError,
+    //         filltime: nowISOError, 
+    //         });
+
+    //      }else{
           
-      logSuccess(req, {
-        msg: "shoonya order with check response",
-        details: orderDetails,
-      }); 
+    //       logSuccess(req, {
+    //         msg: "shoonya order with check response",
+    //         details: orderDetails,
+    //       }); 
 
-         }
+    // }
 
 
       }
@@ -299,7 +355,6 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       uniqueorderid: orderDetails?.exchordid || null,
       averageprice: avgPrice,
       lotsize: filledQty,
-      symboltoken: reqInput.token||reqInput.kiteToken ,
       price: avgPrice,
       orderstatuslocaldb: finalStatus,
       status: orderDetails?.status ? String(orderDetails.status).toUpperCase() : null,

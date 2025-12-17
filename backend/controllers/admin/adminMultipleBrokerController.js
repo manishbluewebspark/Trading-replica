@@ -345,7 +345,6 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
 export const adminMultipleSquareOff = async (req, res) => {
   try {
 
-
     // ✅ Entry log
     logSuccess(req, { msg: "Admin multiple square-off started" });
 
@@ -509,7 +508,13 @@ export const adminMultipleSquareOff = async (req, res) => {
             broker: o?.broker,
             buyOrderId: String(o.orderid),
             groupName:o?.strategyName||"",
-            strategyUniqueId:afterUnderscore
+            strategyUniqueId:afterUnderscore,
+            kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
+            kiteToken: o.symboltoken || o.angelOneToken,
+            finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,
+            finavasiaToken : o?.symboltoken||o?.angelOneToken,
+            FyersSymbol: o.tradingsymbol || o.angelOneSymbol,
+            fyersToken: o.symboltoken || o.angelOneToken,
 
           };
 
@@ -678,6 +683,7 @@ export const adminMultipleSquareOff = async (req, res) => {
     });
   }
 };
+
 
 export const adminGroupSquareOff = async (req, res) => {
   try {
@@ -854,7 +860,14 @@ export const adminGroupSquareOff = async (req, res) => {
             broker: o?.broker,
             buyOrderId: String(o.orderid),
             groupName:o?.strategyName||"",
-            strategyUniqueId:strategyUniqueId
+            strategyUniqueId:strategyUniqueId,
+
+            kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
+            kiteToken: o.symboltoken || o.angelOneToken,
+            finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,
+            finavasiaToken : o?.symboltoken||o?.angelOneToken,
+            fyersSymbol: o.tradingsymbol || o.angelOneSymbol,
+            fyersToken: o.symboltoken || o.angelOneToken,
 
           };
 
@@ -1184,7 +1197,14 @@ logSuccess(req, {
       broker: o?.broker,
       buyOrderId: String(orderId),
        groupName:o?.strategyName||"",
-       strategyUniqueId:strategyUniqueId
+       strategyUniqueId:strategyUniqueId,
+       kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
+       kiteToken: o.symboltoken || o.angelOneToken,
+       finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,
+       finavasiaToken : o?.symboltoken||o?.angelOneToken,
+       fyersSymbol: o.tradingsymbol || o.angelOneSymbol,
+       fyersToken: o.symboltoken || o.angelOneToken,
+
     };
 
     logSuccess(req, {

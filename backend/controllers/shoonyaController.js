@@ -222,8 +222,6 @@ export const finvasiaAppCredential = async (req, res) => {
 export const getShoonyaFunds = async (req, res) => {
   try {
 
-        console.log('fund req');
-
     let susertoken = req.headers.angelonetoken;
 
     // 1️⃣ Fetch user from database

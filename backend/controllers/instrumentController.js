@@ -473,7 +473,7 @@ export const getMergedInstruments1 = async (req, res) => {
 // };
 
 
-
+// =========== node corn used ===============
 
 export const getMergedInstruments = async (req, res) => {
 
@@ -483,7 +483,7 @@ export const getMergedInstruments = async (req, res) => {
 
     // await redis.del(MERGED_REDIS_KEY)
 
-    console.log('delete redis cache data');
+    // console.log('delete redis cache data');
     
 
   try {
@@ -591,6 +591,8 @@ const mergedData = angeloneData.map((angelRecord) => {
   }
 
 };
+
+
 
 export const getInstrumentPostgre = async (req, res) => {
 

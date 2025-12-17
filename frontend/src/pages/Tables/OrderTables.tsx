@@ -438,6 +438,7 @@ const pnlCellRenderer = (params: any) => {
       cellRenderer: quantityCellRenderer,
        width: 150,
         minWidth: 150,
+         cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
     {
       headerName: "PNL",
