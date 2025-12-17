@@ -68,6 +68,12 @@ const navItems: NavItem[] = [
     path: "/admin/trades",
     roles: ["admin", "user"],
   },
+    {
+    icon: <History size={20} />,
+   name: "Rejected History",
+    path: "/admin/rejected/history",
+    roles: ["admin", "user"],
+  },
   {
     icon: <UsersIcon size={20} />,
     name: "Users",

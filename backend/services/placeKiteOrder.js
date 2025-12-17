@@ -112,6 +112,8 @@ function calculateWeightedAveragePrice(trades) {
 // ======================================================================
 export const placeKiteOrder = async (user, reqInput, req, useMappings = true) => {
   let newOrder = null;
+  const nowISOError = new Date().toISOString();
+
   try {
     logSuccess(req, { msg: "Kite order flow started", userId: user?.id, reqInput });
 
@@ -151,7 +153,8 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
       buyOrderId: reqInput?.buyOrderId || null,
-       strategyName:reqInput?.groupName||""
+       strategyName:reqInput?.groupName||"",
+        strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
     logSuccess(req, { msg: "Prepared local order object", orderData });
@@ -186,7 +189,8 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: err?.message || "Kite order placement failed",
-        buyTime: new Date().toISOString(),
+        buyTime: nowISOError,
+        filltime: nowISOError,
       });
       return { userId: user.id, broker: "Kite", result: "BROKER_REJECTED", message: err?.message };
     }
@@ -287,7 +291,8 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
           orderstatuslocaldb: "FAILED",
           status: "FAILED",
           text: err?.message || "Unexpected error",
-          buyTime: new Date().toISOString(),
+         buyTime: nowISOError,
+        filltime: nowISOError,
         });
       }
     } catch (e2) {

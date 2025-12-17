@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { getOrderWithDate, getOrderInTables, getTradeWithDate, userGetTradeInTables, searchOrders} from '../controllers/placeOrderController.js';
+import { getOrderWithDate, getOrderInTables, getTradeWithDate, userGetTradeInTables, searchOrders, getRejectsOrdersTable} from '../controllers/placeOrderController.js';
 import { authMiddleware} from '../middleware/authMiddleware.js';
 import { getTradeBookInTable } from '../controllers/tradeController.js';
 import {  getKiteHolding, getKiteTradesDataUserPosition } from '../controllers/kiteController.js';
@@ -14,7 +14,11 @@ import { getUpstoxUserHolding } from '../controllers/upStockController.js';
 const router = express.Router();
 
 //  update routes
+// router.get('/get/table/order',authMiddleware,getOrderInTables); 
 router.get('/get/table/order',authMiddleware,getOrderInTables); 
+
+
+
 router.post('/datefilter/order',authMiddleware,getOrderWithDate)
 router.get('/search',authMiddleware,searchOrders); 
 router.get('/get/tabletradebook',authMiddleware,userGetTradeInTables)
@@ -99,5 +103,8 @@ async (req, res,next) => {
 )
 
 
+
+//  new routes
+router.post('/get/tablerejects/order',authMiddleware,getRejectsOrdersTable); 
 
 export default router;

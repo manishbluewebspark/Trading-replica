@@ -111,9 +111,9 @@ export const placeFyersOrder = async (user, reqInput, req) => {
 
     // 2️⃣ CREATE LOCAL PENDING ORDER
     const orderData = {
-      symboltoken: reqInput.token,
+      symboltoken: reqInput.fyersToken ||reqInput.token,
       variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput.symbol,
+      tradingsymbol: reqInput.FyersSymbol ||reqInput.symbol,
       duration: reqInput?.duration,
       instrumenttype: reqInput.instrumenttype,
       transactiontype: reqInput.transactiontype,
@@ -131,7 +131,8 @@ export const placeFyersOrder = async (user, reqInput, req) => {
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       broker: "fyers",
       buyOrderId: reqInput?.buyOrderId,
-       strategyName:reqInput.groupName
+       strategyName:reqInput.groupName,
+        strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
     logSuccess(req, { msg: "Prepared local pending order object", orderData });

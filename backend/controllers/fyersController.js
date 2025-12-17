@@ -22,6 +22,7 @@ const TEN_HOURS_IN_SECONDS = 36000;
  * Robust CSV split (handles quoted commas too)
  */
 function splitCSVLine(line) {
+  
   const out = [];
   let cur = "";
   let inQuotes = false;
@@ -108,6 +109,7 @@ async function fetchFyersSegment(segment) {
 }
 
 export const getFyersInstruments = async (req, res) => {
+
   const segment = String(req.query.segment || "NSE_CM").toUpperCase(); // NSE_CM / ALL
   const REDIS_KEY = `fyers_instruments_${segment}`;
 

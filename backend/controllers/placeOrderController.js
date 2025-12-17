@@ -6,11 +6,14 @@ import { v4 as uuidv4 } from "uuid";
 import { getManyTokensFromSession } from '../utils/sessionUtils.js';
 import {emitOrderGet} from "../services/smartapiFeed.js"
 
-import { Sequelize, Op } from "sequelize";
+import { Sequelize } from "sequelize";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { formatUTCToIST } from '../utils/dateUtils.js';
+import { Op, fn, col, literal } from "sequelize";
+
+
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -914,12 +917,6 @@ export const getOrderInTables = async (req, res, next) => {
 
         [Op.or]: [
           // 1️⃣ FAILED + REJECTED → BUY + SELL both
-          {
-            orderstatuslocaldb: {
-              [Op.in]: ["FAILED", "REJECTED"],
-            },
-          },
-
           // 2️⃣ COMPLETE → only SELL + fillid present
           {
             orderstatuslocaldb: "COMPLETE",
@@ -981,7 +978,7 @@ export const getOrderInTables = async (req, res, next) => {
 
 
 
-export const adminGetOrderInTables = async (req, res,next) => {
+export const adminGetOrderInTables1 = async (req, res,next) => {
     try {
 
     const startOfDay = new Date();
@@ -1046,8 +1043,93 @@ export const adminGetOrderInTables = async (req, res,next) => {
     }
 };
 
+export const adminGetOrderInTables = async (req, res, next) => {
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
 
-export const adminGetTradeInTables = async (req, res,next) => {
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const orderData = await Order.findAll({
+            where: {
+                transactiontype: "BUY",
+                orderstatuslocaldb: {
+                    [Op.in]: ["OPEN"],
+                },
+                createdAt: {
+                    [Op.between]: [startOfDay, endOfDay],
+                },
+            },
+            order: [['createdAt', 'DESC']],
+            raw: true,
+        });
+
+        const buyCount = await Order.count({
+            where: {
+                transactiontype: "BUY",
+                createdAt: {
+                    [Op.between]: [startOfDay, endOfDay],
+                },
+            },
+        });
+
+        // Format times
+        const formatted = orderData.map(o => ({
+            ...o,
+            createdAt: dayjs(o.createdAt).format("DD MMMM YYYY [at] hh:mm a"),
+            updatedAt: dayjs(o.updatedAt).format("DD MMMM YYYY [at] hh:mm a"),
+        }));
+
+          // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+    const groups = {};
+    formatted.forEach((item) => {
+      const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of formatted) {
+      const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      const key = `${uniqueKey}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Add client_data field with all matching objects
+      unique.push({
+        ...o,
+        client_data: groups[uniqueKey] || [],
+      });
+    }
+
+
+        return res.json({
+            status: true,
+            statusCode: 200,
+            data: unique,
+            buydata: buyCount,
+            message: 'get data'
+        });
+
+    } catch (error) {
+        return res.json({
+            status: false,
+            statusCode: 500,
+            message: "Unexpected error occurred. Please try again.",
+            data: null,
+            error: error.message,
+        });
+    }
+};
+
+
+// working code
+export const adminGetTradeInTables2 = async (req, res,next) => {
     try {
 
     const startOfDay = new Date();
@@ -1135,6 +1217,393 @@ export const adminGetTradeInTables = async (req, res,next) => {
             error: error.message,
         });
     }
+};
+
+export const adminGetTradeInTables1 = async (req, res,next) => {
+    try {
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 🔁 Since filltime is VARCHAR with ISO UTC string -> compare with ISO strings
+    const startISO = startOfDay.toISOString(); // e.g. "2025-12-03T18:30:00.000Z"
+    const endISO = endOfDay.toISOString();
+
+  const orderData = await Order.findAll({
+  where: {
+  
+
+    
+    filltime: {
+          [Op.between]: [startISO, endISO],
+        },
+
+    [Op.or]: [
+      // 1️⃣ FAILED + REJECTED → BUY + SELL dono aayenge
+      {
+        orderstatuslocaldb: {
+          [Op.in]: ["FAILED", "REJECTED"],
+        },
+      },
+
+      // 2️⃣ COMPLETE → sirf SELL + fillid present
+      {
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+        fillid: {
+          [Op.and]: [
+            { [Op.ne]: null },
+            { [Op.ne]: "" },
+          ],
+        },
+      },
+    ],
+  },
+
+  order: [["filltime", "DESC"]],
+  raw: true,
+});
+
+    const buyCount = await Order.count({
+        where: {
+          // userId: req.userId,
+          transactiontype: "SELL",
+          status:"COMPLETE",
+         filltime: {
+          [Op.between]: [startISO, endISO],
+        },
+        },
+      });
+
+      const formatted = orderData.map(o => ({
+  ...o,
+
+    createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+
+  
+}));
+    
+     return res.json({
+          status: true,
+          statusCode:200,
+          data:formatted,
+           buydata:buyCount,
+          message:'get data'
+      });
+    
+    } catch (error) {
+
+       return res.json({
+            status: false,
+            statusCode:500,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: error.message,
+        });
+    }
+};
+
+export const adminGetTradeInTables21 = async (req, res, next) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const orderData = await Order.findAll({
+      where: {
+        filltime: { [Op.between]: [startISO, endISO] },
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+      },
+      order: [["filltime", "DESC"]], // ✅ latest first
+      raw: true,
+    });
+
+    const buyCount = await Order.count({
+      where: {
+        transactiontype: "SELL",
+        status: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // ✅ format times (same as you did)
+    const formatted = orderData.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    // ✅ dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of formatted) {
+      const key = `${o.strategyUniqueId || "null"}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(o);
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: unique, // ✅ same object shape, only unique
+      buydata: buyCount,
+      message: "get data",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+//  final working code
+export const adminGetTradeInTables1234 = async (req, res, next) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const orderData = await Order.findAll({
+      where: {
+        filltime: { [Op.between]: [startISO, endISO] },
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+      },
+      order: [["filltime", "DESC"]], // Latest first
+      raw: true,
+    });
+
+
+    console.log(orderData,'sdscscsdcsdsd');
+    
+
+    const buyCount = await Order.count({
+      where: {
+        transactiontype: "SELL",
+        status: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // Format times
+    const formatted = orderData.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    // Group all objects by strategyUniqueId
+    const groups = {};
+    formatted.forEach((item) => {
+      const key = item.strategyUniqueId;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of formatted) {
+      const key = `${o.strategyUniqueId || "null"}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Add client_data field with all matching objects
+      unique.push({
+        ...o,
+        client_data: groups[o.strategyUniqueId] || [],
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: unique, // Unique objects with client_data field
+      buydata: buyCount,
+      message: "get data",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+export const adminGetTradeInTables = async (req, res, next) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const orderData = await Order.findAll({
+      where: {
+        filltime: { [Op.between]: [startISO, endISO] },
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+      },
+      order: [["filltime", "DESC"]], // Latest first
+      raw: true,
+    });
+
+    const buyCount = await Order.count({
+      where: {
+        transactiontype: "SELL",
+        status: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // Format times
+    const formatted = orderData.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+    const groups = {};
+    formatted.forEach((item) => {
+      const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of formatted) {
+      const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      const key = `${uniqueKey}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Add client_data field with all matching objects
+      unique.push({
+        ...o,
+        client_data: groups[uniqueKey] || [],
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: unique, // Unique objects with client_data field
+      buydata: buyCount,
+      message: "get data",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+
+
+export const adminGetTradesByStrategyUniqueId = async (req, res) => {
+  try {
+    const { strategyUniqueId } = req.params;
+
+    // optional date range from query
+    const { from, to } = req.query;
+
+    let startISO, endISO;
+
+    if (from && to) {
+      startISO = new Date(from).toISOString();
+      endISO = new Date(to).toISOString();
+    } else {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      startISO = startOfDay.toISOString();
+      endISO = endOfDay.toISOString();
+    }
+
+    const rows = await Order.findAll({
+      where: {
+        strategyUniqueId,
+        filltime: { [Op.between]: [startISO, endISO] },
+
+        // same filters you use in table
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+        fillid: {
+          [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }],
+        },
+      },
+      order: [["filltime", "DESC"]],
+      raw: true,
+    });
+
+    const formatted = rows.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: formatted,
+      message: "strategy orders",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: error.message,
+    });
+  }
 };
 
 
@@ -1364,6 +1833,83 @@ export const adminSearchOrders = async (req, res) => {
 
 
 
+
+
+export const getRejectsOrdersTable = async (req, res) => {
+  try {
+    // ---------------------------------------------------
+    // 1) Decide date range
+    // ---------------------------------------------------
+    let startISO, endISO;
+
+    const hasBodyRange =
+      Array.isArray(req.body) &&
+      req.body.length >= 2 &&
+      req.body[0] &&
+      req.body[1];
+
+    if (hasBodyRange) {
+      const [fromRaw, toRaw] = req.body;
+      startISO = dayjs(fromRaw).startOf("day").toISOString();
+      endISO = dayjs(toRaw).endOf("day").toISOString();
+    } else {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      startISO = startOfDay.toISOString();
+      endISO = endOfDay.toISOString();
+    }
+
+    // ---------------------------------------------------
+    // 2) ONLY rejected / cancelled / failed
+    // ---------------------------------------------------
+    const badStatuses = ["FAILED", "REJECTED", "CANCELLED"];
+
+    const orderData = await Order.findAll({
+      where: {
+        filltime: { [Op.between]: [startISO, endISO] },
+
+        [Op.or]: [
+          { orderstatuslocaldb: { [Op.in]: badStatuses } },
+          { status: { [Op.in]: badStatuses } },
+        ],
+      },
+      order: [["filltime", "DESC"]],
+      raw: true,
+    });
+
+    // ---------------------------------------------------
+    // 3) Format dates
+    // ---------------------------------------------------
+    const formatted = orderData.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: formatted,
+      message: hasBodyRange
+        ? "Rejected / Cancelled orders (range)"
+        : "Rejected / Cancelled orders (today)",
+    });
+  } catch (error) {
+    console.error("getRejectsOrdersTable error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      error: error.message,
+    });
+  }
+};
 
 
 

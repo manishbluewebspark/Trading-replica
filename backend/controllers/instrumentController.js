@@ -80,6 +80,7 @@ async function loadAllFinvasiaInstruments() {
 // ✅ MAIN CONTROLLER: Merged Instruments with Redis Caching
 // =======================================================
 export const getMergedInstruments1 = async (req, res) => {
+  
   const MERGED_REDIS_KEY = "merged_instruments";
   const TEN_HOURS_IN_SECONDS = 36000;
 
@@ -97,23 +98,24 @@ export const getMergedInstruments1 = async (req, res) => {
     // ===========================================
     // 1️⃣ Check Redis Cache First
     // ===========================================
-    const cachedData = await redis.get(MERGED_REDIS_KEY);
-    const ttl = await redis.ttl(MERGED_REDIS_KEY);
-    console.log("Redis key TTL (seconds):", ttl);
 
-    if (cachedData) {
-      console.log("📦 Merged instruments served from Redis cache");
-      const endTime = Date.now();
-      console.log(`✅ Cache hit. Data served in ${(endTime - startTime) / 1000}s`);
+    // const cachedData = await redis.get(MERGED_REDIS_KEY);
+    // const ttl = await redis.ttl(MERGED_REDIS_KEY);
+    // console.log("Redis key TTL (seconds):", ttl);
 
-      return res.json({
-        status: true,
-        statusCode: 200,
-        data: JSON.parse(cachedData),
-        cache: true,
-        message: "Merged instruments fetched from Redis cache",
-      });
-    }
+    // if (cachedData) {
+    //   console.log("📦 Merged instruments served from Redis cache");
+    //   const endTime = Date.now();
+    //   console.log(`✅ Cache hit. Data served in ${(endTime - startTime) / 1000}s`);
+
+    //   return res.json({
+    //     status: true,
+    //     statusCode: 200,
+    //     data: JSON.parse(cachedData),
+    //     cache: true,
+    //     message: "Merged instruments fetched from Redis cache",
+    //   });
+    // }
 
     // ===========================================
     // 2️⃣ Fetch fresh data from all sources
@@ -217,12 +219,13 @@ export const getMergedInstruments1 = async (req, res) => {
     // ===========================================
     // 6️⃣ Cache merged data in Redis
     // ===========================================
-    await redis.set(
-      MERGED_REDIS_KEY,
-      JSON.stringify(finalMerged),
-      "EX",
-      TEN_HOURS_IN_SECONDS
-    );
+
+    // await redis.set(
+    //   MERGED_REDIS_KEY,
+    //   JSON.stringify(finalMerged),
+    //   "EX",
+    //   TEN_HOURS_IN_SECONDS
+    // );
 
     const endTime = Date.now();
     console.log(`✅ Final merged data fetched and cached in ${(endTime - startTime) / 1000}s`);

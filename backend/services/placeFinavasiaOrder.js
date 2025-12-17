@@ -69,6 +69,7 @@ const maskToken = (t) => (t ? `${String(t).slice(0, 6)}****${String(t).slice(-6)
 export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = true) => {
   try {
 
+  const nowISOError = new Date().toISOString();
 
     console.log('=============Finvasia====================');
     
@@ -103,9 +104,9 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
 
     // 2) CREATE LOCAL PENDING ORDER
     const orderData = {
-      symboltoken: reqInput.kiteToken || reqInput.token,
+      symboltoken: reqInput.token || reqInput.finavasiaToken,
       variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+      tradingsymbol: reqInput?.symbol ||reqInput?.finavasiaSymbol,
       instrumenttype: reqInput.instrumenttype,
       transactiontype: transactionType,
       exchange: reqInput.exch_seg,
@@ -121,7 +122,8 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       userNameId: user.username,
-      strategyName:reqInput?.groupName||""
+      strategyName:reqInput?.groupName||"",
+      strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
     logSuccess(req, { msg: "Prepared local pending order", orderData });
@@ -147,6 +149,9 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
       ret: "DAY",
     };
 
+    console.log(jData,'jData=====================');
+    
+
     logSuccess(req, { msg: "Prepared Shoonya jData", jData });
     const body = `jData=${JSON.stringify(jData)}&jKey=${susertoken}`;
     logSuccess(req, { msg: "Prepared Shoonya PlaceOrder body", bodyPreview: body.slice(0, 200) + "..." });
@@ -170,7 +175,8 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
           orderstatuslocaldb: "FAILED",
           status: "FAILED",
           text: msg,
-          buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+          buyTime: nowISOError,
+        filltime: nowISOError,
         });
         logSuccess(req, { msg: "Local DB updated FAILED", localOrderId: newOrder.id, reason: msg });
         return {
@@ -189,7 +195,8 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: err?.response?.data?.emsg||err?.message || "Shoonya PlaceOrder error",
-        buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
+          buyTime: nowISOError,
+        filltime: nowISOError,
       });
       logSuccess(req, { msg: "Local DB updated FAILED (exception)", localOrderId: newOrder.id });
       return {
@@ -220,11 +227,24 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
 
          if(orderDetails.status==='REJECTED') {
 
-          return await newOrder.update({ status:"REJECTED",orderstatuslocaldb:"REJECTED",text:orderDetails?.rejreason||"" });
+          return await newOrder.update({ 
+            status:"REJECTED",
+            orderstatuslocaldb:"REJECTED",
+            text:orderDetails?.rejreason||"",
+            buyTime: nowISOError,
+            filltime: nowISOError,
+
+           });
 
          }else if(orderDetails.status==='CANCELLED') {
 
-          return  await newOrder.update({ status:"REJECTED",orderstatuslocaldb:"REJECTED",text:orderDetails?.rejreason||"" });
+          return  await newOrder.update({
+             status:"REJECTED",
+             orderstatuslocaldb:"REJECTED",
+             text:orderDetails?.rejreason||"",
+               buyTime: nowISOError,
+            filltime: nowISOError, 
+            });
 
          }else{
           

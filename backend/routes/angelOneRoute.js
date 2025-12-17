@@ -8,6 +8,7 @@ import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAng
 import { createAngelOneCredential, getAngelOneCredential } from '../controllers/angelOneCrendential.js';
 import {   getMergedInstruments, searchInstrumentPostgre } from '../controllers/instrumentController.js';
 import { getOrderPerticular } from '../controllers/placeOrderController.js';
+import { getMergedInstrumentsNew } from '../controllers/instrumentMultipleDematController.js';
 
 
 
@@ -32,8 +33,6 @@ router.get('/angelone/dummydatatrade',authMiddleware,getTradeDataForDeshboard)
 
 
 router.post('/agnelone/instrument/ltp',authMiddleware,getAngelOneLTP)
-
-router.get('/agnelone/instrument',getMergedInstruments )
 router.get('/agnelone/instrument/search/:id',authMiddleware,searchInstrumentPostgre)
 
 
@@ -56,6 +55,7 @@ router.get('/angelone/position',authMiddleware,getPosition)
 
  
 
+
 // not used Routes
 
 router.get('/angelone/cancel/order',cancelOrder)
@@ -68,6 +68,13 @@ router.get('/angeloneorderbyoriderid',getOrderPerticular);
 
 // ===================== Angelone Apis  =====================
 router.get('/angelone/online/trade/books',authMiddleware,getAngelTradeBooks)
+
+
+
+// working code 
+// router.get('/agnelone/instrument',getMergedInstruments ) 
+
+router.get('/agnelone/instrument',getMergedInstrumentsNew )
 
 
 export default router;

@@ -65,6 +65,7 @@ import KiteCrendential from "./pages/Forms/KiteCredential";
 import Userposition from "./pages/Tables/UserPosition";
 import FinavasiaCrendetial from "./pages/Forms/FinavasiaCredential";
 import UserPnlAdmin from "./pages/Tables/UserPnlAdmin";
+import RejectedHistory from "./pages/Tables/RejectedHistory";
 
 export default function App() {
 
@@ -154,6 +155,8 @@ export default function App() {
             <Route path="/admin/holding/order" element={<ProtectedRoute><HoldingOrderAdmin /></ProtectedRoute>} />
 
 
+
+                <Route path="/admin/rejected/history" element={<ProtectedRoute><RejectedHistory /></ProtectedRoute>} />
 
 
 

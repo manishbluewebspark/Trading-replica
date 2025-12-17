@@ -3,13 +3,13 @@ import { adminFetchOrder, adminFetchOrderHolding, adminGetCloneUserHolding, Admi
 import { getTokens, storeTokens } from '../../controllers/testController.js';
 import {AdminAuthMiddleware, authMiddleware} from '../../middleware/authMiddleware.js';
 import { adminGetUserAngelToken } from '../../controllers/userController.js';
-import { adminGetOrderInTables, adminGetOrderWithDate, adminGetTradeInTables, adminSearchOrders, getOrderWithDate } from '../../controllers/placeOrderController.js';
+import { adminGetOrderInTables, adminGetOrderWithDate, adminGetTradeInTables, adminGetTradesByStrategyUniqueId, adminSearchOrders, getOrderWithDate } from '../../controllers/placeOrderController.js';
 import { adminloginWithTOTPInAngelOne, fetchGooglFromSerpApi } from '../../controllers/authController.js';
 import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, updateStrategy } from '../../controllers/userStrategy.js';
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import {  adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import {  adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
@@ -24,6 +24,7 @@ router.get('/tokenstatussummary',AdminAuthMiddleware,getTokenStatusSummary)
 
 router.post('/multiple/place/order',AdminAuthMiddleware,adminPlaceMultiBrokerOrder)
 router.get('/sequareoff',AdminAuthMiddleware,adminMultipleSquareOff)
+router.post('/group/squareoff',AdminAuthMiddleware,adminGroupSquareOff)
 router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 
 
@@ -40,14 +41,23 @@ router.post("/getusers/pnldata", getUsersPnlData);
 
 router.get('/get/totalusers',AdminAuthMiddleware,AdminGetTotalUsers)
 router.get('/getuser/profile',AdminAuthMiddleware,adminGetUserAngelToken );
+
+
+// router.get('/get/table/order',AdminAuthMiddleware,adminGetOrderInTables);
+
 router.get('/get/table/order',AdminAuthMiddleware,adminGetOrderInTables);
+
 router.get('/login/totp/angelone',AdminAuthMiddleware, adminloginWithTOTPInAngelOne);   // our code 
 
 
 
 router.post('/datefilter/order',AdminAuthMiddleware,adminGetOrderWithDate);
 router.post('/search/order',adminSearchOrders);
+
+
 router.get('/get/table/trade',AdminAuthMiddleware,adminGetTradeInTables); // check
+router.get("/trades/strategy/:strategyUniqueId", adminGetTradesByStrategyUniqueId);
+
 // 
 router.get("/angel/funds/refresh",AdminAuthMiddleware,refreshAngelFundsForAllUsers);
 
@@ -78,6 +88,8 @@ router.post(
   upload.single("file"),
   uploadOrderExcel
 );
+
+
 router.post("/manual/create",
   AdminAuthMiddleware, 
   async (req, res, next) => {

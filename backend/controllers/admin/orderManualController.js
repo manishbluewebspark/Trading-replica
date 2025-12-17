@@ -6,7 +6,7 @@ import { Op } from "sequelize";
 import sequelize from "../../config/db.js";
 import dayjs from "dayjs";
 import {emitOrderGet} from "../../services/smartapiFeed.js"
-
+import { generateStrategyUniqueId } from "../../utils/randomWords.js";
 
 
 const input = "2025-12-03 04:12:29.272+00";
@@ -41,6 +41,8 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
   try {
 
     let data = req.body;
+
+     let strategyUniqueId = await generateStrategyUniqueId("clone-user")
   
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -98,7 +100,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.unfilledshares = data.unfilledshares || "0";
 
     data.quantity = data.lotSize;
-
+    data.strategyUniqueId = strategyUniqueId||""
 
     console.log(now,'now');
     
@@ -204,6 +206,8 @@ export const createManualOrder = async (req, res) => {
     const utcBuyTime = new Date(data.buyTime).toISOString();
     const utcSellTime = new Date(data.sellTime).toISOString();
 
+    let strategyUniqueId = await generateStrategyUniqueId("clone-user")
+
     // Common defaults
     const common = {
       ...data,
@@ -223,11 +227,15 @@ export const createManualOrder = async (req, res) => {
       quantity: fillsize,
       fillsize,
       buysize: fillsize,
+      strategyUniqueId:strategyUniqueId
     };
 
     // =========================
     // 1️⃣ CREATE BUY ORDER FIRST
     // =========================
+
+     let strategyUniqueIdBuy = await generateStrategyUniqueId("clone-user")
+
     const buyOrderData = {
       ...common,
       orderid: generateOrderId(),
@@ -246,10 +254,9 @@ export const createManualOrder = async (req, res) => {
 
       // optional store buyprice too (keeps your schema consistent)
       buyprice: Number(data.buyPrice),
-
       tradedValue: fillsize * Number(data.buyPrice),
       buyvalue: fillsize * Number(data.buyPrice),
-
+      strategyUniqueId:strategyUniqueIdBuy,
       pnl: 0, // pnl usually computed after sell
     };
 

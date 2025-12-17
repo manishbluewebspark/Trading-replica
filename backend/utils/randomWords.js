@@ -8,3 +8,16 @@ export function generateRandomNumbers(length) {
   return digits;
 }
 
+
+
+export function generateStrategyUniqueId(strategyName) {
+  if (!strategyName) return null;
+
+  const shortId = crypto.randomUUID().split("-")[0]; // fa26ee6969f
+  const cleanName = strategyName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+
+  return `${shortId}_${cleanName}`;
+}

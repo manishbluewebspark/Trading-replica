@@ -52,6 +52,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
   
   let newOrder = null;
 
+   const nowISOError = new Date().toISOString();
+
   try {
     logSuccess(req, {
       msg: "AngelOne order flow started",
@@ -83,7 +85,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       buyOrderId: reqInput?.buyOrderId || null,
-      strategyName:reqInput?.groupName||""
+      strategyName:reqInput?.groupName||"",
+      strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
     
@@ -130,11 +133,15 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       
       logError(req, err, { msg: "AngelOne placeOrder API failed" });
 
+     
+
       await newOrder.update({
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: err?.message || "AngelOne order placement failed",
-        buyTime: new Date().toISOString(),
+        buyTime: nowISOError,
+        filltime: nowISOError,
+
       });
 
       return {
@@ -155,7 +162,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: placeRes.data?.message || "Order rejected",
-        buyTime: new Date().toISOString(),
+        buyTime: nowISOError,
+        filltime: nowISOError,
       });
 
       return {
@@ -205,6 +213,9 @@ export const placeAngelOrder = async (user, reqInput, req) => {
            status:"REJECTED",
            orderstatus:"REJECTED",
            orderstatuslocaldb:"REJECTED",
+           buyTime: nowISOError,
+           filltime: nowISOError,
+           text:det?.data?.data?.text||""
            });
 
       }else if(det.data.status===true&&det.data.data.status==='cancelled'){
@@ -213,6 +224,9 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           status:"CANCELLED",
           orderstatuslocaldb:"CANCELLED",
           orderstatus:"CANCELLED",
+            buyTime: nowISOError,
+           filltime: nowISOError,
+          text:det?.data?.data?.text||""
          });
         
       }else{
@@ -378,7 +392,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         text: err?.message || "Unexpected error",
-        buyTime: new Date().toISOString(),
+         buyTime: nowISOError,
+        filltime: nowISOError,
       });
     }
 

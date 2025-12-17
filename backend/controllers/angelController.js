@@ -1455,11 +1455,16 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
 export const getPosition = async (req, res,next) => {
     try {
 
+
+      // let token = req.headers.angelonetoken
+
+       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTlRrME5qSTBNeXdpYm1KbUlqb3hOelkxT0RVNU5qWXpMQ0pwWVhRaU9qRTNOalU0TlRrMk5qTXNJbXAwYVNJNkltWTVaREJpTXpsbUxURmpNalF0TkRka1pTMDVZV05pTFRneE16UXpNV1UyTjJJNU9DSXNJbFJ2YTJWdUlqb2lJbjAuR0RFc0ZSNHpqOVhMNzRJUkFRQjltOXV1aGpPQzdyQkk1RFUyR0hPbWNxSGhQNlN6UTdEZDg2MzM1Q3hBT0J1dlowTU94dlU1WW14Qmx5SkJ5WmtkSmZKX1pTb0tfMlV2VjVzdzYwOEh5eXdNSnd5OTAwb3UtYmVXVHpvVS1odjhfYnZQNnhKYlV5RmxSMnpnUDdEVGZ6cnk0Q1JwWkcyZXZsSnA1dVEtRF93IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY1ODU5ODQzLCJleHAiOjE3NjU5MDk4MDB9.PxI5lVkEJBgdJqfIV5uVHWDDGxM0vGc-GGBW6rEOfYjpjbKSnOVA7DoWGes9tvDveNE4WYb6SzOPndNbQOiefg"
+
       var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition',
         headers: { 
-              'Authorization': `Bearer ${req.headers.angelonetoken}`,
+              'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json', 
             'Accept': 'application/json', 
             'X-UserType': 'USER', 

@@ -15,6 +15,7 @@ import { MdOutlineCancel } from "react-icons/md";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
+import { log } from "node:console";
 
 
 // 🔹 Type + Exchange options (Angel share same codes)
@@ -323,7 +324,29 @@ export default function InstrumentFormAdmin() {
       },
       {
         headerName: "Kite Symbol",
-        field: "kite_tradingsymbol",
+        field: "kiteSymbol",
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
+      {
+        headerName: "Finavasia Symbol",
+        field: "finvasiaSymbol",
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
+       {
+        headerName: "Fyers Symbol",
+        field: "fyersSymbol",
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
+
+       {
+        headerName: "upStox Symbol",
+        field: "upstoxSymbol",
         minWidth: 120,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
@@ -378,6 +401,9 @@ export default function InstrumentFormAdmin() {
   // ---------- Save / Place Order ----------
   const handleScriptSave = async () => {
 
+    console.log(selectedScriptRow,'=================selectedScriptRow===============');
+    
+
     if (!selectedScriptRow) {
       toast.error("No scrip selected!");
       return;
@@ -401,11 +427,26 @@ export default function InstrumentFormAdmin() {
       angelOneToken: selectedScriptRow.angelToken,
       angelOneSymbol: selectedScriptRow.angelSymbol,
       kiteToken: selectedScriptRow.token,
-      kiteSymbol: selectedScriptRow.kite_tradingsymbol,
+      kiteSymbol: selectedScriptRow.kiteSymbol,
+
+      // update cde
+      finavasiaToken: selectedScriptRow.finvasiaToken,
+      finavasiaSymbol: selectedScriptRow.finvasiaSymbol,
+      fyersToken: selectedScriptRow.fyersToken,
+      FyersSymbol: selectedScriptRow.fyersSymbol,
+      upstoxToken: selectedScriptRow.upstoxToken,
+      upstoxSymbol: selectedScriptRow.upstoxSymbol,
+      growToken: "",
+      growSymbol: "",
+
 
     };
 
     try {
+
+
+      console.log(payload,'==================payload================');
+      
       const res = await axios.post(
         `${apiUrl}/admin/multiple/place/order`,
         payload,
