@@ -14,6 +14,7 @@ import { createManualOrder, createManualOrderWithBrokerPrice } from '../../contr
 import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
 import { clearMergedInstrumentsCache, getMergedInstrumentsCacheTTL } from '../../controllers/instrumentMultipleDematController.js';
+import { testingInstrument } from '../../controllers/admin/testingController.js';
 
 
 
@@ -163,6 +164,11 @@ router.get("/cache/merged/ttl", getMergedInstrumentsCacheTTL);
 // /admin/cache/merged/clear?type=new
 // /admin/cache/merged/clear?type=angelone
 router.get("/cache/merged/clear", clearMergedInstrumentsCache);
+
+
+
+
+router.post('/testing/app',testingInstrument)
 
 
 export default router;

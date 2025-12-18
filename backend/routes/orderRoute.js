@@ -74,7 +74,10 @@ async (req, res,next) => {
           return getAngelUserHolding(req,res,next)
 
         
-        }else  if(role === "user" && brokername === "finavasia"){
+        }else  if(role === "user" && brokername === "finvasia"){
+
+          console.log('==============finavasia=============');
+          
 
           return getShoonyaUserHolding(req,res,next)
         

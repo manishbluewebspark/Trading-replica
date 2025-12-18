@@ -218,6 +218,9 @@ export default function InstrumentFormAdmin() {
 
       if (res?.data?.status === true) {
         const rawData = res?.data?.data || [];
+
+        console.log('==============rawData=======',rawData);
+        
         const normalized = rawData.map((row: any) => mapAngelToCommon(row));
         setData(normalized);
       } else {
@@ -312,35 +315,35 @@ export default function InstrumentFormAdmin() {
       {
         headerName: " Angelone Symbol",
         field: "symbol",
-        minWidth: 250,
+         minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '18px' }
       },
       {
         headerName: "Kite Symbol",
         field: "kiteSymbol",
-        minWidth: 250,
+         minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
       {
         headerName: "Finavasia Symbol",
         field: "finvasiaSymbol",
-        minWidth: 250,
+        minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
        {
         headerName: "upStox Symbol",
         field: "upstoxSymbol",
-       minWidth: 250,
+        minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
        {
         headerName: "Fyers Symbol",
         field: "fyersSymbol",
-       minWidth: 250,
+        minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
@@ -411,6 +414,17 @@ export default function InstrumentFormAdmin() {
       return;
     }
 
+
+     if (!groupName) {
+      toast.error("Please Select Strategy !");
+      return;
+    }
+
+
+    console.log('==============groupName===============',groupName);
+    
+    
+
     const payload = {
       token: selectedScriptRow.token,
       symbol: selectedScriptRow.symbol,
@@ -443,6 +457,9 @@ export default function InstrumentFormAdmin() {
 
 
     };
+
+    console.log(payload,'===============payload================');
+    
 
     try {
 

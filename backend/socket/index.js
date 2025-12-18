@@ -24,9 +24,6 @@ export function initSocket(server) {
   });
 
 
-
-  
-
   // --- Debug connection-level events ---
   io.engine.on("connection_error", (err) => {
     console.error("❌ Engine connection error:", {
@@ -43,19 +40,6 @@ export function initSocket(server) {
     const room = socket.handshake.query?.room || "orders";
     socket.join(room);
     console.log(`📦 Joined room: ${room}`);
-
-//     const now = Date.now();
-// startSendNifty(
-//   {
-//     mode: 1,
-//     exchangeType: 1,
-//     token: "NIFTY",
-//     sequenceNumber: now,
-//     exchangeTimestamp: new Date(now).toISOString(),
-//     ltpPaiseOrRaw: 225430 + Math.floor(Math.random() * 10) - 5,
-//     ltp: 22543 + Math.random() * 0.5 - 0.25,
-//   }
-// )
 
     // Send acknowledgment
     socket.emit("server_ready", { ok: true, id: socket.id, ts: Date.now() });
@@ -106,16 +90,8 @@ export function emitTick(tick) {
   // expected: { token, exchangeType, ltp, ts?, tradingsymbol? }
   try {
 
-    // console.log(tick,'hello');
-    
     const _io = getIO();
 
-    // if (_io && _io.engine && _io.engine.clientsCount > 0) {
-    //   console.log("✅ Socket.IO is running and has active connections");
-    // } else {
-    //   console.log("⚠️ Socket.IO not ready or no active clients yet");
-    // }
-    
     _io.to("orders").emit("tick", tick); 
 
 
@@ -133,18 +109,11 @@ export function emitFeedStatus(payload) {
 }
 
 
-
-
 export function startSendNifty(data) {
   const io = getIO();
 
   console.log("📡 Start sending Nifty data...");
 
-  // send data every 1 second
-  //   setInterval(() => {
-  //   io.to("orders").emit("niftyreal", data);
-  //   console.log("📤 Sent Nifty data:", data);
-  // }, 1000); // 1000ms = 1 sec
 }
 
 

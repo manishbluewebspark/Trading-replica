@@ -244,13 +244,16 @@ export const getMergedInstrumentsNew = async (req, res) => {
         payloadSizeBytes: Buffer.byteLength(cachedData, "utf8"),
       });
 
-      return res.json({
-        status: true,
-        statusCode: 200,
-        data: JSON.parse(cachedData),
-        cache: true,
-        message: "Merged instruments fetched from Redis cache",
-      });
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      return res.status(200).send(cachedData);
+
+      // return res.json({
+      //   status: true,
+      //   statusCode: 200,
+      //   data: JSON.parse(cachedData),
+      //   cache: true,
+      //   message: "Merged instruments fetched from Redis cache",
+      // });
     }
 
     logSuccess(req, {
@@ -440,7 +443,16 @@ export const getMergedInstrumentsNew = async (req, res) => {
 
     // ✅ Cache set timing
     const tCache0 = Date.now();
-    const payload = JSON.stringify(finalMerged);
+
+   const responseObj = {
+        status: true,
+        statusCode: 200,
+        data: finalMerged,
+        cache: false,
+        message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
+      };
+
+   const payload = JSON.stringify(responseObj);
 
     await redis.set(MERGED_REDIS_KEY, payload, "EX", TEN_HOURS_IN_SECONDS);
 
@@ -460,13 +472,18 @@ export const getMergedInstrumentsNew = async (req, res) => {
       mergedCount: finalMerged.length,
     });
 
-    return res.json({
-      status: true,
-      statusCode: 200,
-      data: finalMerged,
-      cache: false,
-      message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
-    });
+      // ✅ send JSON string directly (no res.json stringify)
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      return res.status(200).send(payload);
+
+    // return res.json({
+    //   status: true,
+    //   statusCode: 200,
+    //   data: payload,
+    //   cache: false,
+    //   message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
+    // });
+
   } catch (error) {
     logError(req, error, {
       msg: "Error in getMergedInstrumentsNew",

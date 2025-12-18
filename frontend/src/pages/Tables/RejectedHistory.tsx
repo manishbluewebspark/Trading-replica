@@ -421,8 +421,8 @@ export default function RejectedHistory () {
       filter: true,
       sortable: true,
       cellRenderer: textCellRenderer,
-      width: 570,
-      minWidth: 450,
+      width: 770,
+      minWidth: 650,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
 

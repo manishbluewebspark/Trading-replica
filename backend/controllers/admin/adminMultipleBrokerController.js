@@ -479,10 +479,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             };
           }
 
-
-   let reqStrategyUniqueId = o.strategyUniqueId
-
-    const afterUnderscore = reqStrategyUniqueId.split("_").pop();
+         const strategyUniqueId = o.strategyUniqueId || "";
 
           const transactiontype = "SELL"; // square off leg
 
@@ -508,7 +505,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             broker: o?.broker,
             buyOrderId: String(o.orderid),
             groupName:o?.strategyName||"",
-            strategyUniqueId:afterUnderscore,
+            strategyUniqueId:strategyUniqueId,
             kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
             kiteToken: o.symboltoken || o.angelOneToken,
             finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,

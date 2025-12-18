@@ -263,10 +263,13 @@ export  function connectSmartSocket(userId,authToken,feedToken,clientId,) {
           console.log("📈 LTP:", tick,'full object');
          }
 
-        //  console.log("📈 LTP:", tick,'full object');
+         console.log("📈 LTP:", tick,'full object');
         
         // 🔥 ship to your socket clients
         emitTick(tick);
+
+        
+
       } else {
         // Not LTP (mode 2/3) or unparsed – ignore for now
         console.log("bin len", data.length);

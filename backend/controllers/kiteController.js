@@ -1497,12 +1497,6 @@ export const getKiteHolding = async (req, res) => {
        raw:true
     });
 
-  
-
-   
-    
-    
-
     return res.json({
       status: true,
       statusCode: 200,

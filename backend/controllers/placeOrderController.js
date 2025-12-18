@@ -1480,6 +1480,7 @@ export const adminGetTradeInTables = async (req, res, next) => {
         transactiontype: "SELL",
       },
       order: [["filltime", "DESC"]], // Latest first
+      //  limit: 6,        
       raw: true,
     });
 
