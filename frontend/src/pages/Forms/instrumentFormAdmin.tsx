@@ -308,15 +308,9 @@ export default function InstrumentFormAdmin() {
         sortable: false,
         filter: false,
       },
+     
       {
-        headerName: "Token",
-        field: "token",
-        minWidth: 250,
-        filter: "agTextColumnFilter",
-        cellStyle: { fontSize: '15px' }
-      },
-      {
-        headerName: "Symbol",
+        headerName: " Angelone Symbol",
         field: "symbol",
         minWidth: 250,
         filter: "agTextColumnFilter",
@@ -325,32 +319,40 @@ export default function InstrumentFormAdmin() {
       {
         headerName: "Kite Symbol",
         field: "kiteSymbol",
-        minWidth: 120,
+        minWidth: 250,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
       {
         headerName: "Finavasia Symbol",
         field: "finvasiaSymbol",
-        minWidth: 120,
+        minWidth: 250,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
+       {
+        headerName: "upStox Symbol",
+        field: "upstoxSymbol",
+       minWidth: 250,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
        {
         headerName: "Fyers Symbol",
         field: "fyersSymbol",
-        minWidth: 120,
+       minWidth: 250,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
 
-       {
-        headerName: "upStox Symbol",
-        field: "upstoxSymbol",
-        minWidth: 120,
-        filter: "agTextColumnFilter",
-        cellStyle: { fontSize: '20px' }
-      },
+      
+      //  {
+      //   headerName: "Token",
+      //   field: "token",
+      //   minWidth: 250,
+      //   filter: "agTextColumnFilter",
+      //   cellStyle: { fontSize: '15px' }
+      // },
     ],
     []
   );
