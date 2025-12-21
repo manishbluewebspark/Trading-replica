@@ -1717,18 +1717,49 @@ export const adminGetOrderWithDate = async (req, res,next) => {
         },
       });
 
-                  const formatted = data.map(o => ({
-  ...o,
-   createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
-      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
-      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
-      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
-}));
+          const formatted = data.map(o => ({
+              ...o,
+              createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+                  updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+                  buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+                  filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+            }));
+
+
+            // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+    const groups = {};
+    formatted.forEach((item) => {
+      const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of formatted) {
+      const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      const key = `${uniqueKey}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Add client_data field with all matching objects
+      unique.push({
+        ...o,
+        client_data: groups[uniqueKey] || [],
+      });
+    }
+
+
+
+
     
         return res.json({
             status: true,
             statusCode:200,
-            data: formatted ,
+            data: unique ,
             buydata:buyCount,
             message:'get data'
         });
