@@ -1,0 +1,2280 @@
+// import React, { useEffect, useState, useMemo } from "react";
+// import axios from "axios";
+// import * as XLSX from "xlsx";
+// import { DatePicker, Button } from "antd";
+// import dayjs, { Dayjs } from "dayjs";
+// import "antd/dist/reset.css";
+// import { toast } from "react-toastify";
+// import { AgGridReact } from "ag-grid-react";
+// import type { ColDef, ICellRendererParams } from "ag-grid-community";
+// import "ag-grid-community/styles/ag-grid.css";
+// import "ag-grid-community/styles/ag-theme-alpine.css";
+// import { FaChevronDown, FaChevronRight } from "react-icons/fa";
+
+// type Order = {
+//   variety: string;
+//   ordertype: string;
+//   producttype: string;
+//   duration: string;
+//   price: number;
+//   triggerprice: number;
+//   quantity: string;
+//   disclosedquantity: string;
+//   squareoff: number;
+//   stoploss: number;
+//   trailingstoploss: number;
+//   tradingsymbol: string;
+//   transactiontype: string;
+//   exchange: string;
+//   symboltoken: string;
+//   ordertag: string;
+//   instrumenttype: string;
+//   strikeprice: number;
+//   optiontype: string;
+//   expirydate: string;
+//   lotsize: string;
+//   cancelsize: string;
+//   averageprice: number;
+//   filledshares: string;
+//   unfilledshares: string;
+//   orderid: string;
+//   text: string;
+//   status: string;
+//   orderstatus: string;
+//   updatetime: string;
+//   exchtime: string;
+//   exchorderupdatetime: string;
+//   fillid: string;
+//   filltime: string;
+//   fillprice: string;
+//   fillsize: string;
+//   parentorderid: string;
+//   uniqueorderid: string;
+//   exchangeorderid: string;
+//   createdAt: string;
+//   tradedValue: any;
+//   pnl: any;
+//   buyvalue: any;
+//   buyprice: any;
+//   buysize: any;
+//   updatedAt: any;
+//   userNameId: any;
+//   strategyUniqueId: string;
+// };
+
+// const { RangePicker } = DatePicker;
+
+// // Custom cell renderer for expand/collapse button
+// const DetailCellRenderer =  (props: ICellRendererParams) => {
+  
+//   const [isOpen, setIsOpen] = useState(false);
+
+//   const toggleOpen = () => {
+//     setIsOpen(!isOpen);
+//     const node = props.node;
+//     node.setExpanded(!node.expanded);
+//   };
+
+//   return (
+//     <div className="flex items-center h-full">
+//       <button
+//         onClick={toggleOpen}
+//         className="p-1 rounded hover:bg-gray-100 transition-colors"
+//       >
+//         {isOpen ? (
+//           <FaChevronDown className="w-3 h-3 text-gray-600" />
+//         ) : (
+//           <FaChevronRight className="w-3 h-3 text-gray-600" />
+//         )}
+//       </button>
+//       <span className="ml-2">{props.value}</span>
+//     </div>
+//   );
+// };
+
+// // Detail panel component
+// const DetailPanel = ({ data }: { data: Order }) => {
+//   const detailFields = [
+//     { label: "Variety", value: data.variety },
+//     { label: "Duration", value: data.duration },
+//     { label: "Trigger Price", value: data.triggerprice },
+//     { label: "Disclosed Quantity", value: data.disclosedquantity },
+//     { label: "Square Off", value: data.squareoff },
+//     { label: "Stop Loss", value: data.stoploss },
+//     { label: "Trailing Stop Loss", value: data.trailingstoploss },
+//     { label: "Symbol Token", value: data.symboltoken },
+//     { label: "Order Tag", value: data.ordertag },
+//     { label: "Strike Price", value: data.strikeprice },
+//     { label: "Option Type", value: data.optiontype },
+//     { label: "Expiry Date", value: data.expirydate },
+//     { label: "Lot Size", value: data.lotsize },
+//     { label: "Cancel Size", value: data.cancelsize },
+//     { label: "Average Price", value: data.averageprice },
+//     { label: "Filled Shares", value: data.filledshares },
+//     { label: "Unfilled Shares", value: data.unfilledshares },
+//     { label: "Parent Order ID", value: data.parentorderid },
+//     { label: "Unique Order ID", value: data.uniqueorderid },
+//     { label: "Exchange Order ID", value: data.exchangeorderid },
+//     { label: "Update Time", value: data.updatetime },
+//     { label: "Exchange Time", value: data.exchtime },
+//     { label: "Exchange Order Update Time", value: data.exchorderupdatetime },
+//     { label: "Traded Value", value: data.tradedValue },
+//     { label: "Buy Value", value: data.buyvalue },
+//     { label: "Buy Size", value: data.buysize },
+//     { label: "Created At", value: data.createdAt },
+//     { label: "Updated At", value: data.updatedAt },
+//     { label: "User Name ID", value: data.userNameId },
+//   ];
+
+//   return (
+//     <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg m-3">
+//       <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">
+//         Order Details
+//       </h3>
+//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+//         {detailFields.map((field, index) => (
+//           <div key={index} className="mb-2">
+//             <div className="text-sm font-medium text-gray-600 mb-1">
+//               {field.label}:
+//             </div>
+//             <div className="text-sm text-gray-800 bg-white p-2 rounded border">
+//               {field.value || (
+//                 <span className="text-gray-400 italic">Not available</span>
+//               )}
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+//       {data.text && (
+//         <div className="mt-4 pt-4 border-t">
+//           <div className="text-sm font-medium text-gray-600 mb-2">
+//             Full Message:
+//           </div>
+//           <div className="text-sm text-gray-800 bg-white p-3 rounded border whitespace-pre-wrap break-words">
+//             {data.text}
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default function TradeAdmin() {
+//   const apiUrl = import.meta.env.VITE_API_URL;
+
+//   const [orders, setOrders] = useState<Order[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [totalTradedData, setTotalTradedData] = useState<number>(0);
+//   const [searchTerm, setSearchTerm] = useState("");
+
+//   // final applied range
+//   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+//     () => [dayjs().startOf("day"), dayjs().endOf("day")]
+//   );
+
+//   // calendar popup state
+//   const [pickerOpen, setPickerOpen] = useState(false);
+
+//   // temporary range while user is selecting inside popup
+//   const [panelRange, setPanelRange] = useState<
+//     [dayjs.Dayjs, dayjs.Dayjs] | null
+//   >(() => [dayjs().startOf("day"), dayjs().endOf("day")]);
+
+//   const pnlCellRenderer = (params: any) => {
+//     const pnl = params.value;
+//     const numericPnl = Number(pnl);
+//     const isPositive = numericPnl > 0;
+//     const isNegative = numericPnl < 0;
+
+//     // Text color logic
+//     const colorClass = isPositive
+//       ? "text-green-700"
+//       : isNegative
+//       ? "text-red-700"
+//       : "text-gray-800";
+
+//     // Background color logic
+//     const bgClass = isPositive
+//       ? "bg-green-100"
+//       : isNegative
+//       ? "bg-red-100"
+//       : "bg-gray-200";
+
+//     return (
+//       <span
+//         className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}
+//       >
+//         {numericPnl > 0 ? +`${numericPnl.toFixed(2)}` : numericPnl.toFixed(2)}
+//       </span>
+//     );
+//   };
+
+//   // AG Grid column definitions with expand/collapse column
+//   const columnDefs = useMemo(
+//     () =>
+//       [
+//         {
+//           headerName: "",
+//           field: "expand",
+//           width: 50,
+//           minWidth: 50,
+//           cellRenderer: DetailCellRenderer,
+//           cellStyle: { borderRight: "1px solid #e2e8f0", display: "flex", alignItems: "center" },
+//           sortable: false,
+//           filter: false,
+//           resizable: false,
+//         },
+//         {
+//           headerName: "Strategy ID",
+//           field: "strategyUniqueId",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Symbol",
+//           field: "tradingsymbol",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Instrument",
+//           field: "instrumenttype",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Type",
+//           field: "transactiontype",
+//           cellRenderer: (params: any) => {
+//             const isBuy = params.value === "BUY";
+//             const isSell = params.value === "SELL";
+//             const txnBg = isBuy
+//               ? "bg-green-100"
+//               : isSell
+//               ? "bg-red-100"
+//               : "bg-gray-200";
+//             const txnColor = isBuy
+//               ? "text-green-800"
+//               : isSell
+//               ? "text-red-800"
+//               : "text-gray-800";
+
+//             return (
+//               <span
+//                 className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${txnBg} ${txnColor}`}
+//               >
+//                 {params.value || "BUY"}
+//               </span>
+//             );
+//           },
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Order Type",
+//           field: "ordertype",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Product Type",
+//           field: "producttype",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Buy Price",
+//           field: "buyprice",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Sell Price",
+//           field: "fillprice",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Quantity",
+//           field: "quantity",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "PNL Value",
+//           field: "pnl",
+//           cellRenderer: pnlCellRenderer,
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Order ID",
+//           field: "orderid",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Traded ID",
+//           field: "fillid",
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Status",
+//           field: "status",
+//           cellRenderer: (params: any) => {
+//             const status = params.value || params.data.orderstatus;
+//             const s = status?.toLowerCase();
+//             let color = "#64748b";
+
+//             if (s === "complete" || s === "filled" || s === "success")
+//               color = "#16a34a";
+//             else if (
+//               s === "rejected" ||
+//               s === "cancelled" ||
+//               s === "canceled"
+//             )
+//               color = "#ef4444";
+//             else if (s === "pending" || s === "open" || s === "queued")
+//               color = "#f59e0b";
+
+//             return (
+//               <span
+//                 className="inline-block px-2.5 py-1 rounded-full text-xs font-medium text-white capitalize"
+//                 style={{ backgroundColor: color }}
+//                 title={params.data.orderstatus}
+//               >
+//                 {status || params.data.orderstatus || "-"}
+//               </span>
+//             );
+//           },
+//           filter: true,
+//           sortable: true,
+//           width: 200,
+//           minWidth: 180,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Buy Time",
+//           field: "buyTime",
+//           filter: true,
+//           sortable: true,
+//           width: 300,
+//           minWidth: 250,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Sell Time",
+//           field: "filltime",
+//           filter: true,
+//           sortable: true,
+//           width: 300,
+//           minWidth: 250,
+//           cellStyle: { borderRight: "1px solid #e2e8f0" },
+//         },
+//         {
+//           headerName: "Message",
+//           field: "text",
+//           tooltipField: "text",
+//           filter: true,
+//           sortable: true,
+//           width: 450,
+//           minWidth: 300,
+//           cellStyle: {
+//             overflow: "hidden",
+//             textOverflow: "ellipsis",
+//             borderRight: "1px solid #e2e8f0",
+//           },
+//         },
+//       ] as ColDef<Order>[],
+//     []
+//   );
+
+//   // Default column definition
+//   const defaultColDef = useMemo(
+//     () => ({
+//       resizable: true,
+//       filter: true,
+//       sortable: true,
+//       flex: 1,
+//       minWidth: 100,
+//     }),
+//     []
+//   );
+
+//   // Detail row configuration
+//   const detailCellRendererParams = useMemo(() => {
+//     return {
+//       detailGridOptions: {
+//         rowSelection: "multiple",
+//         suppressRowClickSelection: true,
+//         enableRangeSelection: true,
+//         pagination: true,
+//         paginationAutoPageSize: true,
+//       },
+//       getDetailRowData: (params: any) => {
+//         params.successCallback([params.data]);
+//       },
+//       template: (params: any) => {
+//         const data = params.data;
+//         return React.createElement(DetailPanel, { data });
+//       },
+//     };
+//   }, []);
+
+//   // Fetch all orders
+//   const fetchOrders = async () => {
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const { data } = await axios.get(`${apiUrl}/admin/get/table/trade`, {
+//         headers: {
+//           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//           AngelOneToken: localStorage.getItem("angel_token") || "",
+//         },
+//       });
+
+//       if (data?.status === true) {
+//         setOrders(Array.isArray(data.data) ? data.data : []);
+//         setTotalTradedData(data.buydata || 0);
+//       } else if (data?.status === false && data?.message === "Unauthorized") {
+//         toast.error("Unauthorized User");
+//         localStorage.clear();
+//       } else {
+//         toast.error(data?.message || "Something went wrong");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchOrders();
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
+
+//   // Date filter – now accepts rangeParam from Apply
+//   const handleGetDates = async (
+//     rangeParam?: [Dayjs, Dayjs] | null
+//   ): Promise<void> => {
+//     const activeRange = rangeParam ?? dateRange;
+
+//     if (!activeRange) {
+//       toast.error("Please select a date range");
+//       return;
+//     }
+
+//     const [from, to] = activeRange;
+//     const payload = [from.toISOString(), to.toISOString()];
+
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const res = await axios.post(
+//         `${apiUrl}/admin/datefilter/order`,
+//         payload,
+//         {
+//           headers: {
+//             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//           },
+//         }
+//       );
+
+//       console.log("date filter response:", res.data.buydata);
+
+//       if (res.data?.status === true) {
+//         setOrders(Array.isArray(res.data.data) ? res.data.data : []);
+//         setTotalTradedData(res?.data?.buydata || 0);
+//         toast.success(res.data?.message || "Filtered orders loaded");
+//       } else if (
+//         res.data?.status === false &&
+//         res.data?.message === "Unauthorized"
+//       ) {
+//         localStorage.clear();
+//         toast.error("Session expired. Please log in again.");
+//       } else {
+//         toast.error(res.data?.message || "Something went wrong");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Cancel → clear date selection & reload full orders
+//   const handleCancelDate = async (): Promise<void> => {
+//     setDateRange(null);
+//     setPanelRange(null);
+//     setPickerOpen(false);
+//     await fetchOrders();
+//   };
+
+//   // 🔍 Backend search on key up
+//   const handleKeyUp = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+//     const raw = e.currentTarget.value;
+//     const query = raw.trim();
+
+//     if (!query) {
+//       // empty → reset to full list
+//       fetchOrders();
+//       return;
+//     }
+
+//     if (query.length < 3) {
+//       return;
+//     }
+
+//     setLoading(true);
+//     setError(null);
+
+//     try {
+//       console.log(query, "query search");
+
+//       const res = await axios.post(
+//         `${apiUrl}/admin/search/order`,
+//         { search: query },
+//         {
+//           params: { search: query },
+//           headers: {
+//             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//             AngelOneToken: localStorage.getItem("angel_token") || "",
+//           },
+//         }
+//       );
+
+//       console.log("search result", res.data.data);
+
+//       if (res.data?.status === true && Array.isArray(res.data.data)) {
+//         setOrders(res.data.data);
+//       } else {
+//         setOrders([]);
+//         toast.error(res.data?.message || "No matching orders found");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//       setOrders([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Excel download
+//   const handleExcelDownload = () => {
+//     const ws = XLSX.utils.json_to_sheet(orders);
+//     const wb = XLSX.utils.book_new();
+//     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+//     XLSX.writeFile(wb, "orders.xlsx");
+//   };
+
+//   const getRowStyle = () => {
+//     return {
+//       height: "70px",
+//       display: "flex",
+//       alignItems: "center",
+//       borderBottom: "1px solid #e2e8f0",
+//     };
+//   };
+
+//   return (
+//     <div className="p-4 font-sans">
+//       <h2 className="mb-3 text-xl font-semibold">Orders History</h2>
+
+//       <div className="flex justify-between items-center gap-6 mb-3">
+//         <RangePicker
+//           format="DD-MMMM-YYYY"
+//           className="h-11 w-140 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+//           open={pickerOpen}
+//           onOpenChange={(open) => {
+//             if (open) {
+//               setPickerOpen(true);
+//               setPanelRange(dateRange);
+//             }
+//           }}
+//           value={panelRange ?? dateRange ?? null}
+//           onCalendarChange={(val) =>
+//             setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)
+//           }
+//           onChange={(val) =>
+//             setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)
+//           }
+//           allowClear={false}
+//           ranges={{
+//             Today: [dayjs().startOf("day"), dayjs().endOf("day")],
+//             Yesterday: [
+//               dayjs().subtract(1, "day").startOf("day"),
+//               dayjs().subtract(1, "day").endOf("day"),
+//             ],
+//             "Last 7 Days": [
+//               dayjs().subtract(6, "day").startOf("day"),
+//               dayjs().endOf("day"),
+//             ],
+//             "Last 30 Days": [
+//               dayjs().subtract(29, "day").startOf("day"),
+//               dayjs().endOf("day"),
+//             ],
+//             "This Month": [dayjs().startOf("month"), dayjs().endOf("month")],
+//             "Last Month": [
+//               dayjs().subtract(1, "month").startOf("month"),
+//               dayjs().subtract(1, "month").endOf("month"),
+//             ],
+//           }}
+//           renderExtraFooter={() => (
+//             <div className="flex justify-end gap-2 p-2">
+//               <Button
+//                 size="small"
+//                 onClick={() => {
+//                   setPanelRange(dateRange);
+//                   setPickerOpen(false);
+//                   handleCancelDate();
+//                 }}
+//               >
+//                 Cancel
+//               </Button>
+
+//               <Button
+//                 size="small"
+//                 type="primary"
+//                 disabled={!panelRange || !panelRange[0] || !panelRange[1]}
+//                 onClick={() => {
+//                   if (!panelRange) return;
+//                   setDateRange(panelRange);
+//                   setPickerOpen(false);
+//                   handleGetDates(panelRange);
+//                 }}
+//               >
+//                 Apply
+//               </Button>
+//             </div>
+//           )}
+//         />
+
+//         <div className="flex flex-wrap items-center gap-3">
+//           <button
+//             onClick={handleExcelDownload}
+//             className="px-5 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-md"
+//           >
+//             <span className="text-white">Excel Download</span>
+//           </button>
+//           <div className="px-5 py-3 bg-blue-50 text-blue-800 rounded-lg font-semibold text-sm border border-blue-200 whitespace-nowrap">
+//             Total Traded: {totalTradedData}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Search box */}
+//       <div className="flex justify-start mb-4 gap-4">
+//         <div className="w-full sm:w-64">
+//           <input
+//             type="text"
+//             value={searchTerm}
+//             onChange={(e) => setSearchTerm(e.target.value)}
+//             onKeyUp={handleKeyUp}
+//             placeholder="Search (min 3 chars)"
+//             className="border border-gray-300 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+//           />
+//         </div>
+//       </div>
+
+//       {/* Loading State */}
+//       {loading && (
+//         <div className="flex justify-center items-center h-32 bg-white rounded-lg border">
+//           <div className="text-center">
+//             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+//             <p className="text-gray-600">Loading orders...</p>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Error State */}
+//       {error && !loading && (
+//         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+//           <div className="text-red-500 text-lg font-medium mb-2">Error</div>
+//           <p className="text-red-700">{error}</p>
+//           <Button
+//             onClick={fetchOrders}
+//             className="mt-3 bg-red-500 text-white hover:bg-red-600"
+//           >
+//             Try Again
+//           </Button>
+//         </div>
+//       )}
+
+//       {!loading && !error && (
+//         <div
+//           className="ag-theme-alpine custom-ag-grid"
+//           style={{ height: "600px", width: "100%" }}
+//         >
+//           <AgGridReact
+//             rowData={orders}
+//             columnDefs={columnDefs}
+//             defaultColDef={defaultColDef}
+//             pagination={true}
+//             paginationPageSize={20}
+//             suppressCellFocus={true}
+//             animateRows={true}
+//             rowSelection="single"
+//             enableCellTextSelection={true}
+//             ensureDomOrder={true}
+//             getRowStyle={getRowStyle}
+//             rowHeight={40}
+//             headerHeight={40}
+//             masterDetail={true}
+//             detailRowAutoHeight={true}
+//             detailCellRendererParams={detailCellRendererParams}
+//             rowClass="ag-row-custom"
+//             suppressRowHoverHighlight={false}
+//             enableBrowserTooltips={true}
+//             enableRangeSelection={true}
+//             enableRangeHandle={true}
+//             enableCharts={true}
+//             enableFillHandle={true}
+//             overlayLoadingTemplate={
+//               '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
+//             }
+//             overlayNoRowsTemplate={
+//               '<div class="flex flex-col items-center justify-center h-full text-gray-500"><svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>No orders match your search criteria</div>'
+//             }
+//           />
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
+
+// import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+// import axios from "axios";
+// import * as XLSX from "xlsx";
+// import { DatePicker, Button } from "antd";
+// import dayjs, { Dayjs } from "dayjs";
+// import "antd/dist/reset.css";
+// import { toast } from "react-toastify";
+// import { AgGridReact } from "ag-grid-react";
+// import type {
+//   ColDef,
+//   GridApi,
+//   GridReadyEvent,
+//   ICellRendererParams,
+//   RowHeightParams,
+// } from "ag-grid-community";
+// import "ag-grid-community/styles/ag-grid.css";
+// import "ag-grid-community/styles/ag-theme-alpine.css";
+// import { FaChevronDown, FaChevronRight } from "react-icons/fa";
+
+// const { RangePicker } = DatePicker;
+
+// type ClientOrder = {
+//   id: number;
+//   userId: number;
+//   userNameId: string;
+//   broker: string;
+
+//   variety?: string;
+//   ordertype?: string;
+//   producttype?: string;
+//   duration?: string;
+
+//   tradingsymbol?: string;
+//   transactiontype?: string;
+//   exchange?: string;
+
+//   orderid?: string;
+//   fillid?: string;
+
+//   status?: string;
+//   orderstatus?: string;
+//   orderstatuslocaldb?: string;
+
+//   buyprice?: any;
+//   buyvalue?: any;
+//   buysize?: any;
+
+//   fillprice?: any;
+//   fillsize?: any;
+//   tradedValue?: any;
+//   pnl?: any;
+
+//   buyTime?: any;
+//   filltime?: any;
+
+//   text?: any;
+//   createdAt?: any;
+//   updatedAt?: any;
+// };
+
+// type Order = ClientOrder & {
+//   strategyUniqueId?: string;
+//   strategyName?: string;
+//   angelOneToken?: string;
+//   angelOneSymbol?: string;
+//   symboltoken?: string;
+
+//   client_data?: ClientOrder[];
+// };
+
+// type RowItem =
+//   | (Order & { __rowType?: "MASTER" })
+//   | {
+//       __rowType: "DETAIL";
+//       id: string; // unique row id for ag-grid
+//       parentId: number;
+//       client_data: ClientOrder[];
+//     };
+
+// const pnlPill = (val: any) => {
+//   const n = Number(val);
+//   const isPositive = n > 0;
+//   const isNegative = n < 0;
+
+//   const colorClass = isPositive
+//     ? "text-green-700"
+//     : isNegative
+//     ? "text-red-700"
+//     : "text-gray-800";
+
+//   const bgClass = isPositive
+//     ? "bg-green-100"
+//     : isNegative
+//     ? "bg-red-100"
+//     : "bg-gray-200";
+
+//   return (
+//     <span className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}>
+//       {Number.isFinite(n) ? n.toFixed(2) : "-"}
+//     </span>
+//   );
+// };
+
+// // Expand/collapse renderer
+// const ExpandCellRenderer = (props: ICellRendererParams) => {
+//   const data = props.data as any;
+
+//   // detail row pe icon nahi
+//   if (data?.__rowType === "DETAIL") return null;
+
+//   const isExpanded = !!data?.__isExpanded;
+//   const toggle = props.context?.toggleRow;
+
+//   return (
+//     <div className="flex items-center h-full">
+//       <button
+//         onClick={() => toggle?.(data)}
+//         className="p-1 rounded hover:bg-gray-100 transition-colors"
+//         title={isExpanded ? "Collapse" : "Expand"}
+//       >
+//         {isExpanded ? (
+//           <FaChevronDown className="w-3 h-3 text-gray-600" />
+//         ) : (
+//           <FaChevronRight className="w-3 h-3 text-gray-600" />
+//         )}
+//       </button>
+//     </div>
+//   );
+// };
+
+// // Full width detail row renderer (subtable)
+// const DetailRowRenderer = (props: any) => {
+//   const row = props.data as { __rowType: "DETAIL"; client_data: ClientOrder[] };
+
+//   const subColumnDefs: ColDef<ClientOrder>[] = [
+//     { headerName: "Broker", field: "broker", width: 130 },
+//     { headerName: "User", field: "userNameId", width: 120 },
+//     { headerName: "Symbol", field: "tradingsymbol", width: 160 },
+//     {
+//       headerName: "Type",
+//       field: "transactiontype",
+//       width: 110,
+//       cellRenderer: (p: any) => {
+//         const isBuy = p.value === "BUY";
+//         const isSell = p.value === "SELL";
+//         const txnBg = isBuy ? "bg-green-100" : isSell ? "bg-red-100" : "bg-gray-200";
+//         const txnColor = isBuy ? "text-green-800" : isSell ? "text-red-800" : "text-gray-800";
+//         return (
+//           <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold uppercase ${txnBg} ${txnColor}`}>
+//             {p.value || "-"}
+//           </span>
+//         );
+//       },
+//     },
+//     { headerName: "Order ID", field: "orderid", width: 190 },
+//     { headerName: "Buy Price", field: "buyprice", width: 120 },
+//     { headerName: "Sell Price", field: "fillprice", width: 120 },
+//     { headerName: "Qty", field: "fillsize", width: 90 },
+//     {
+//       headerName: "PNL",
+//       field: "pnl",
+//       width: 110,
+//       cellRenderer: (p: any) => pnlPill(p.value),
+//     },
+//     { headerName: "Buy Time", field: "buyTime", width: 210 },
+//     { headerName: "Sell Time", field: "filltime", width: 210 },
+//     {
+//       headerName: "Message",
+//       field: "text",
+//       width: 420,
+//       wrapText: true,
+//       autoHeight: true,
+//       cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
+//     },
+//   ];
+
+//   const subDefaultColDef = useMemo(
+//     () => ({
+//       resizable: true,
+//       sortable: true,
+//       filter: true,
+//     }),
+//     []
+//   );
+
+//   return (
+//     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg mx-2 my-2">
+//       <div className="text-sm font-semibold text-gray-700 mb-2">
+//         Client Orders ({row.client_data?.length || 0})
+//       </div>
+
+//       <div className="ag-theme-alpine" style={{ width: "100%", height: "260px" }}>
+//         <AgGridReact
+//           rowData={row.client_data || []}
+//           columnDefs={subColumnDefs}
+//           defaultColDef={subDefaultColDef}
+//           pagination={true}
+//           rowHeight={40}
+//           paginationPageSize={10}
+//           suppressCellFocus={true}
+//           animateRows={true}
+//                       headerHeight={40}
+//             overlayLoadingTemplate={
+//               '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
+//             }
+//             overlayNoRowsTemplate={
+//               '<div class="flex flex-col items-center justify-center h-full text-gray-500">No orders match your search criteria</div>'
+//             }
+//         />
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default function TradeAdmin() {
+//   const apiUrl = import.meta.env.VITE_API_URL;
+
+//   const [rawOrders, setRawOrders] = useState<Order[]>([]);
+//   const [rowData, setRowData] = useState<RowItem[]>([]);
+//   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [totalTradedData, setTotalTradedData] = useState<number>(0);
+//   const [searchTerm, setSearchTerm] = useState("");
+
+//   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+//     () => [dayjs().startOf("day"), dayjs().endOf("day")]
+//   );
+
+//   const [pickerOpen, setPickerOpen] = useState(false);
+//   const [panelRange, setPanelRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+//     () => [dayjs().startOf("day"), dayjs().endOf("day")]
+//   );
+
+//   const gridApiRef = useRef<GridApi | null>(null);
+
+//   const buildRows = useCallback(
+//     (orders: Order[], expanded: Set<number>) => {
+//       const rows: RowItem[] = [];
+
+//       for (const o of orders) {
+//         const isExpanded = expanded.has(o.id);
+
+//         rows.push({
+//           ...o,
+//           __rowType: "MASTER",
+//           __isExpanded: isExpanded,
+//         } as any);
+
+//         if (isExpanded) {
+//           rows.push({
+//             __rowType: "DETAIL",
+//             id: `detail-${o.id}`,
+//             parentId: o.id,
+//             client_data: Array.isArray(o.client_data) ? o.client_data : [],
+//           });
+//         }
+//       }
+
+//       return rows;
+//     },
+//     []
+//   );
+
+//   // apply rawOrders + expandedIds => rowData
+//   useEffect(() => {
+//     setRowData(buildRows(rawOrders, expandedIds));
+//   }, [rawOrders, expandedIds, buildRows]);
+
+//   const toggleRow = useCallback((masterRow: Order) => {
+//     setExpandedIds((prev) => {
+//       const next = new Set(prev);
+//       if (next.has(masterRow.id)) next.delete(masterRow.id);
+//       else next.add(masterRow.id);
+//       return next;
+//     });
+//   }, []);
+
+//   const pnlCellRenderer = (params: any) => pnlPill(params.value);
+
+//   const columnDefs = useMemo<ColDef<RowItem>[]>(
+//     () => [
+//       {
+//         headerName: "",
+//         width: 55,
+//         minWidth: 55,
+//         maxWidth: 55,
+//         cellRenderer: ExpandCellRenderer,
+//         sortable: false,
+//         filter: false,
+//         resizable: false,
+//         pinned: "left",
+//       },
+//       {
+//         headerName: "Strategy ID",
+//         field: "strategyUniqueId",
+//         width: 200,
+//         minWidth: 180,
+//       },
+//       {
+//         headerName: "Symbol",
+//         field: "tradingsymbol",
+//         width: 170,
+//         minWidth: 150,
+//       },
+//       {
+//         headerName: "Instrument",
+//         field: "instrumenttype",
+//         width: 150,
+//         minWidth: 140,
+//       },
+//       {
+//         headerName: "Type",
+//         field: "transactiontype",
+//         width: 120,
+//         minWidth: 110,
+//         cellRenderer: (params: any) => {
+//           const isBuy = params.value === "BUY";
+//           const isSell = params.value === "SELL";
+//           const txnBg = isBuy ? "bg-green-100" : isSell ? "bg-red-100" : "bg-gray-200";
+//           const txnColor = isBuy ? "text-green-800" : isSell ? "text-red-800" : "text-gray-800";
+//           return (
+//             <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${txnBg} ${txnColor}`}>
+//               {params.value || "-"}
+//             </span>
+//           );
+//         },
+//       },
+//       { headerName: "Order Type", field: "ordertype", width: 140 },
+//       { headerName: "Product Type", field: "producttype", width: 140 },
+
+//       { headerName: "Buy Price", field: "buyprice", width: 120 },
+//       { headerName: "Sell Price", field: "fillprice", width: 120 },
+
+//       { headerName: "Quantity", field: "quantity", width: 110 },
+
+//       {
+//         headerName: "PNL",
+//         field: "pnl",
+//         width: 120,
+//         cellRenderer: pnlCellRenderer,
+//       },
+//       { headerName: "Order ID", field: "orderid", width: 190 },
+//       { headerName: "Traded ID", field: "fillid", width: 140 },
+
+//       {
+//         headerName: "Status",
+//         field: "status",
+//         width: 140,
+//         cellRenderer: (params: any) => {
+//           const row = params.data as any;
+//           if (row?.__rowType === "DETAIL") return null;
+
+//           const status = params.value || (row?.orderstatus ?? row?.orderstatuslocaldb);
+//           const s = String(status || "").toLowerCase();
+//           let color = "#64748b";
+
+//           if (s === "complete" || s === "filled" || s === "success") color = "#16a34a";
+//           else if (s === "rejected" || s === "cancelled" || s === "canceled") color = "#ef4444";
+//           else if (s === "pending" || s === "open" || s === "queued") color = "#f59e0b";
+
+//           return (
+//             <span
+//               className="inline-block px-2.5 py-1 rounded-full text-xs font-medium text-white capitalize"
+//               style={{ backgroundColor: color }}
+//             >
+//               {status || "-"}
+//             </span>
+//           );
+//         },
+//       },
+
+//       { headerName: "Buy Time", field: "buyTime", width: 230 },
+//       { headerName: "Sell Time", field: "filltime", width: 230 },
+
+//       // ✅ FULL WRAP MESSAGE (no half text)
+//       {
+//         headerName: "Message",
+//         field: "text",
+//         width: 470,
+//         minWidth: 350,
+//         wrapText: true,
+//         autoHeight: true,
+//         cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
+//       },
+//     ],
+//     []
+//   );
+
+//   const defaultColDef = useMemo(
+//     () => ({
+//       resizable: true,
+//       filter: true,
+//       sortable: true,
+//     }),
+//     []
+//   );
+
+//   const onGridReady = (params: GridReadyEvent) => {
+//     gridApiRef.current = params.api;
+//   };
+
+//   // ✅ Full width detail row logic (Community)
+//   const isFullWidthRow = useCallback((params: any) => {
+//     return params?.rowNode?.data?.__rowType === "DETAIL";
+//   }, []);
+
+//   const fullWidthCellRenderer = useCallback((props: any) => {
+//     return <DetailRowRenderer {...props} />;
+//   }, []);
+
+//   // row id stable
+//   const getRowId = useCallback((params: any) => {
+//     const d = params.data as any;
+//     if (d?.__rowType === "DETAIL") return d.id;
+//     return String(d.id);
+//   }, []);
+
+//   // row height (detail row bigger)
+//   const getRowHeight = useCallback((params: RowHeightParams) => {
+//     const d: any = params.data;
+//     if (d?.__rowType === "DETAIL") return 310;
+//     return undefined; // let autoHeight work for wrapText columns
+//   }, []);
+
+//   const fetchOrders = async () => {
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const { data } = await axios.get(`${apiUrl}/admin/get/table/trade`, {
+//         headers: {
+//           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//           AngelOneToken: localStorage.getItem("angel_token") || "",
+//         },
+//       });
+
+//       if (data?.status === true) {
+//         const list = Array.isArray(data.data) ? data.data : [];
+//         setRawOrders(list);
+//         setTotalTradedData(data.buydata || 0);
+//         setExpandedIds(new Set()); // reset expand on reload
+//       } else if (data?.status === false && data?.message === "Unauthorized") {
+//         toast.error("Unauthorized User");
+//         localStorage.clear();
+//       } else {
+//         toast.error(data?.message || "Something went wrong");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchOrders();
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
+
+//   const handleGetDates = async (rangeParam?: [Dayjs, Dayjs] | null): Promise<void> => {
+//     const activeRange = rangeParam ?? dateRange;
+//     if (!activeRange) {
+//       toast.error("Please select a date range");
+//       return;
+//     }
+
+//     const [from, to] = activeRange;
+//     const payload = [from.toISOString(), to.toISOString()];
+
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const res = await axios.post(`${apiUrl}/admin/datefilter/order`, payload, {
+//         headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+//       });
+
+//       if (res.data?.status === true) {
+//         const list = Array.isArray(res.data.data) ? res.data.data : [];
+//         setRawOrders(list);
+//         setTotalTradedData(res.data?.buydata || 0);
+//         setExpandedIds(new Set());
+//         toast.success(res.data?.message || "Filtered orders loaded");
+//       } else if (res.data?.status === false && res.data?.message === "Unauthorized") {
+//         localStorage.clear();
+//         toast.error("Session expired. Please log in again.");
+//       } else {
+//         toast.error(res.data?.message || "Something went wrong");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleCancelDate = async (): Promise<void> => {
+//     setDateRange(null);
+//     setPanelRange(null);
+//     setPickerOpen(false);
+//     await fetchOrders();
+//   };
+
+//   const handleKeyUp = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+//     const raw = e.currentTarget.value;
+//     const query = raw.trim();
+
+//     if (!query) {
+//       fetchOrders();
+//       return;
+//     }
+//     if (query.length < 3) return;
+
+//     setLoading(true);
+//     setError(null);
+
+//     try {
+//       const res = await axios.post(
+//         `${apiUrl}/admin/search/order`,
+//         { search: query },
+//         {
+//           params: { search: query },
+//           headers: {
+//             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//             AngelOneToken: localStorage.getItem("angel_token") || "",
+//           },
+//         }
+//       );
+
+//       if (res.data?.status === true && Array.isArray(res.data.data)) {
+//         setRawOrders(res.data.data);
+//         setExpandedIds(new Set());
+//       } else {
+//         setRawOrders([]);
+//         setExpandedIds(new Set());
+//         toast.error(res.data?.message || "No matching orders found");
+//       }
+//     } catch (err: any) {
+//       console.error(err);
+//       setError(err?.message || "Something went wrong");
+//       toast.error(err?.message || "Something went wrong");
+//       setRawOrders([]);
+//       setExpandedIds(new Set());
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleExcelDownload = () => {
+//     const ws = XLSX.utils.json_to_sheet(rawOrders);
+//     const wb = XLSX.utils.book_new();
+//     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+//     XLSX.writeFile(wb, "orders.xlsx");
+//   };
+
+//   return (
+//     <div className="p-4 font-sans">
+//       <h2 className="mb-3 text-xl font-semibold">Orders History</h2>
+
+//       <div className="flex justify-between items-center gap-6 mb-3">
+//         <RangePicker
+//           format="DD-MMMM-YYYY"
+//           className="h-11 w-140 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+//           open={pickerOpen}
+//           onOpenChange={(open) => {
+//             if (open) {
+//               setPickerOpen(true);
+//               setPanelRange(dateRange);
+//             }
+//           }}
+//           value={panelRange ?? dateRange ?? null}
+//           onCalendarChange={(val) => setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+//           onChange={(val) => setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+//           allowClear={false}
+//           ranges={{
+//             Today: [dayjs().startOf("day"), dayjs().endOf("day")],
+//             Yesterday: [dayjs().subtract(1, "day").startOf("day"), dayjs().subtract(1, "day").endOf("day")],
+//             "Last 7 Days": [dayjs().subtract(6, "day").startOf("day"), dayjs().endOf("day")],
+//             "Last 30 Days": [dayjs().subtract(29, "day").startOf("day"), dayjs().endOf("day")],
+//             "This Month": [dayjs().startOf("month"), dayjs().endOf("month")],
+//             "Last Month": [dayjs().subtract(1, "month").startOf("month"), dayjs().subtract(1, "month").endOf("month")],
+//           }}
+//           renderExtraFooter={() => (
+//             <div className="flex justify-end gap-2 p-2">
+//               <Button
+//                 size="small"
+//                 onClick={() => {
+//                   setPanelRange(dateRange);
+//                   setPickerOpen(false);
+//                   handleCancelDate();
+//                 }}
+//               >
+//                 Cancel
+//               </Button>
+
+//               <Button
+//                 size="small"
+//                 type="primary"
+//                 disabled={!panelRange || !panelRange[0] || !panelRange[1]}
+//                 onClick={() => {
+//                   if (!panelRange) return;
+//                   setDateRange(panelRange);
+//                   setPickerOpen(false);
+//                   handleGetDates(panelRange);
+//                 }}
+//               >
+//                 Apply
+//               </Button>
+//             </div>
+//           )}
+//         />
+
+//         <div className="flex flex-wrap items-center gap-3">
+//           <button
+//             onClick={handleExcelDownload}
+//             className="px-5 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-md"
+//           >
+//             <span className="text-white">Excel Download</span>
+//           </button>
+//           <div className="px-5 py-3 bg-blue-50 text-blue-800 rounded-lg font-semibold text-sm border border-blue-200 whitespace-nowrap">
+//             Total Traded: {totalTradedData}
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="flex justify-start mb-4 gap-4">
+//         <div className="w-full sm:w-64">
+//           <input
+//             type="text"
+//             value={searchTerm}
+//             onChange={(e) => setSearchTerm(e.target.value)}
+//             onKeyUp={handleKeyUp}
+//             placeholder="Search (min 3 chars)"
+//             className="border border-gray-300 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+//           />
+//         </div>
+//       </div>
+
+//       {loading && (
+//         <div className="flex justify-center items-center h-32 bg-white rounded-lg border">
+//           <div className="text-center">
+//             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+//             <p className="text-gray-600">Loading orders...</p>
+//           </div>
+//         </div>
+//       )}
+
+//       {error && !loading && (
+//         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+//           <div className="text-red-500 text-lg font-medium mb-2">Error</div>
+//           <p className="text-red-700">{error}</p>
+//           <Button onClick={fetchOrders} className="mt-3 bg-red-500 text-white hover:bg-red-600">
+//             Try Again
+//           </Button>
+//         </div>
+//       )}
+
+//       {!loading && !error && (
+//         <div className="ag-theme-alpine custom-ag-grid" style={{ height: "650px", width: "100%" }}>
+//           <AgGridReact
+//             onGridReady={onGridReady}
+//             rowData={rowData}
+//             rowHeight={50}
+//             columnDefs={columnDefs}
+//             defaultColDef={defaultColDef}
+//             context={{ toggleRow }}
+//             pagination={true}
+//             paginationPageSize={20}
+//             suppressCellFocus={true}
+//             animateRows={true}
+//             rowSelection="single"
+//             enableCellTextSelection={true}
+//             ensureDomOrder={true}
+//             getRowId={getRowId}
+//             isFullWidthRow={isFullWidthRow}
+//             fullWidthCellRenderer={fullWidthCellRenderer}
+//             getRowHeight={getRowHeight}
+//             // NOTE: rowHeight remove so wrap/autoHeight can work
+//             headerHeight={40}
+//             overlayLoadingTemplate={
+//               '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
+//             }
+//             overlayNoRowsTemplate={
+//               '<div class="flex flex-col items-center justify-center h-full text-gray-500">No orders match your search criteria</div>'
+//             }
+//           />
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
+
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import axios from "axios";
+import * as XLSX from "xlsx";
+import { DatePicker, Button } from "antd";
+import dayjs, { Dayjs } from "dayjs";
+import "antd/dist/reset.css";
+import { toast } from "react-toastify";
+import { AgGridReact } from "ag-grid-react";
+import type {
+  ColDef,
+  GridApi,
+  GridReadyEvent,
+  ICellRendererParams,
+  RowHeightParams,
+} from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
+import { FaChevronDown, FaChevronRight } from "react-icons/fa";
+
+const { RangePicker } = DatePicker;
+
+type ClientOrder = {
+  id: number;
+  userId: number;
+  userNameId: string;
+  broker: string;
+
+  variety?: string;
+  ordertype?: string;
+  producttype?: string;
+  duration?: string;
+
+  tradingsymbol?: string;
+  transactiontype?: string;
+  exchange?: string;
+
+  orderid?: string;
+  fillid?: string;
+
+  status?: string;
+  orderstatus?: string;
+  orderstatuslocaldb?: string;
+
+  buyprice?: any;
+  buyvalue?: any;
+  buysize?: any;
+
+  fillprice?: any;
+  fillsize?: any;
+  tradedValue?: any;
+  pnl?: any;
+
+  buyTime?: any;
+  filltime?: any;
+
+  text?: any;
+  createdAt?: any;
+  updatedAt?: any;
+
+  instrumenttype?: any;
+  quantity?: any;
+};
+
+type Order = ClientOrder & {
+  strategyUniqueId?: string;
+  strategyName?: string;
+  angelOneToken?: string;
+  angelOneSymbol?: string;
+  symboltoken?: string;
+
+  client_data?: ClientOrder[];
+  __isExpanded?: boolean;
+  __rowType?: "MASTER";
+};
+
+type RowItem =
+  | (Order & { __rowType?: "MASTER" })
+  | {
+      __rowType: "DETAIL";
+      id: string; // unique row id for ag-grid
+      parentId: number;
+      client_data: ClientOrder[];
+    };
+
+const pnlPill = (val: any) => {
+  const n = Number(val);
+  const isPositive = n > 0;
+  const isNegative = n < 0;
+
+  const colorClass = isPositive
+    ? "text-green-700"
+    : isNegative
+    ? "text-red-700"
+    : "text-gray-800";
+
+  const bgClass = isPositive
+    ? "bg-green-100"
+    : isNegative
+    ? "bg-red-100"
+    : "bg-gray-200";
+
+  return (
+    <span
+      className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}
+    >
+      {Number.isFinite(n) ? n.toFixed(2) : "-"}
+    </span>
+  );
+};
+
+// Expand/collapse renderer
+const ExpandCellRenderer = (props: ICellRendererParams) => {
+  const data = props.data as any;
+
+  // detail row pe icon nahi
+  if (data?.__rowType === "DETAIL") return null;
+
+  const isExpanded = !!data?.__isExpanded;
+  const toggle = props.context?.toggleRow;
+
+  return (
+    <div className="flex items-center h-full">
+      <button
+        onClick={() => toggle?.(data)}
+        className="p-1 rounded hover:bg-gray-100 transition-colors"
+        title={isExpanded ? "Collapse" : "Expand"}
+      >
+        {isExpanded ? (
+          <FaChevronDown className="w-3 h-3 text-gray-600" />
+        ) : (
+          <FaChevronRight className="w-3 h-3 text-gray-600" />
+        )}
+      </button>
+    </div>
+  );
+};
+
+// Full width detail row renderer (subtable)
+const DetailRowRenderer = (props: any) => {
+  const row = props.data as { __rowType: "DETAIL"; client_data: ClientOrder[] };
+
+  // ✅ SUBTABLE: main table jaisi fields + 2 extra: broker, userNameId
+  const subColumnDefs: ColDef<ClientOrder>[] = [
+    // extra 2 fields
+    { headerName: "Broker", field: "broker", width: 130 },
+    { headerName: "User ID", field: "userNameId", width: 120 },
+
+    // same as main
+    { headerName: "Strategy ID", field: "strategyUniqueId" as any, width: 200 },
+    { headerName: "Symbol", field: "tradingsymbol", width: 170 },
+    { headerName: "Instrument", field: "instrumenttype", width: 150 },
+    {
+      headerName: "Type",
+      field: "transactiontype",
+      width: 120,
+      cellRenderer: (params: any) => {
+        const isBuy = params.value === "BUY";
+        const isSell = params.value === "SELL";
+        const txnBg = isBuy
+          ? "bg-green-100"
+          : isSell
+          ? "bg-red-100"
+          : "bg-gray-200";
+        const txnColor = isBuy
+          ? "text-green-800"
+          : isSell
+          ? "text-red-800"
+          : "text-gray-800";
+
+        return (
+          <span
+            className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${txnBg} ${txnColor}`}
+          >
+            {params.value || "-"}
+          </span>
+        );
+      },
+    },
+    { headerName: "Order Type", field: "ordertype", width: 140 },
+    { headerName: "Product Type", field: "producttype", width: 140 },
+    { headerName: "Buy Price", field: "buyprice", width: 120 },
+    { headerName: "Sell Price", field: "fillprice", width: 120 },
+    { headerName: "Quantity", field: "quantity" as any, width: 110 },
+    {
+      headerName: "PNL",
+      field: "pnl",
+      width: 120,
+      cellRenderer: (p: any) => pnlPill(p.value),
+    },
+    { headerName: "Order ID", field: "orderid", width: 190 },
+    { headerName: "Traded ID", field: "fillid", width: 140 },
+    {
+      headerName: "Status",
+      field: "status",
+      width: 140,
+      cellRenderer: (params: any) => {
+        const status = params.value || params.data?.orderstatus;
+        const s = String(status || "").toLowerCase();
+        let color = "#64748b";
+
+        if (s === "complete" || s === "filled" || s === "success")
+          color = "#16a34a";
+        else if (s === "rejected" || s === "cancelled" || s === "canceled")
+          color = "#ef4444";
+        else if (s === "pending" || s === "open" || s === "queued")
+          color = "#f59e0b";
+
+        return (
+          <span
+            className="inline-block px-2.5 py-1 rounded-full text-xs font-medium text-white capitalize"
+            style={{ backgroundColor: color }}
+          >
+            {status || "-"}
+          </span>
+        );
+      },
+    },
+    { headerName: "Buy Time", field: "buyTime", width: 230 },
+    { headerName: "Sell Time", field: "filltime", width: 230 },
+    {
+      headerName: "Message",
+      field: "text",
+      width: 470,
+      minWidth: 350,
+      wrapText: true,
+      autoHeight: true,
+      cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
+    },
+  ];
+
+  const subDefaultColDef = useMemo(
+    () => ({
+      resizable: true,
+      sortable: true,
+      filter: true,
+    }),
+    []
+  );
+
+  return (
+    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg mx-2 my-2">
+      <div className="text-sm font-semibold text-gray-700 mb-2">
+        Client Orders ({row.client_data?.length || 0})
+      </div>
+
+      <div
+        className="ag-theme-alpine"
+        style={{ width: "100%", height: "280px" }}
+      >
+        <AgGridReact
+          rowData={row.client_data || []}
+          columnDefs={subColumnDefs}
+          defaultColDef={subDefaultColDef}
+          pagination={true}
+          paginationPageSize={10}
+          rowHeight={50}
+          headerHeight={40}
+          suppressCellFocus={true}
+          animateRows={true}
+          overlayLoadingTemplate={
+            '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
+          }
+          overlayNoRowsTemplate={
+            '<div class="flex flex-col items-center justify-center h-full text-gray-500">No orders match your search criteria</div>'
+          }
+        />
+      </div>
+    </div>
+  );
+};
+
+export default function TradeAdmin() {
+
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  const [rawOrders, setRawOrders] = useState<Order[]>([]);
+  const [rowData, setRowData] = useState<RowItem[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalTradedData, setTotalTradedData] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    () => [dayjs().startOf("day"), dayjs().endOf("day")]
+  );
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [panelRange, setPanelRange] = useState<
+    [dayjs.Dayjs, dayjs.Dayjs] | null
+  >(() => [dayjs().startOf("day"), dayjs().endOf("day")]);
+
+  const gridApiRef = useRef<GridApi | null>(null);
+
+  const buildRows = useCallback((orders: Order[], expanded: Set<number>) => {
+    const rows: RowItem[] = [];
+
+    for (const o of orders) {
+      const isExpanded = expanded.has(o.id);
+
+      rows.push({
+        ...o,
+        __rowType: "MASTER",
+        __isExpanded: isExpanded,
+      } as any);
+
+      if (isExpanded) {
+        rows.push({
+          __rowType: "DETAIL",
+          id: `detail-${o.id}`,
+          parentId: o.id,
+          client_data: Array.isArray(o.client_data) ? o.client_data : [],
+        });
+      }
+    }
+
+    return rows;
+  }, []);
+
+  useEffect(() => {
+    setRowData(buildRows(rawOrders, expandedIds));
+  }, [rawOrders, expandedIds, buildRows]);
+
+  const toggleRow = useCallback((masterRow: Order) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(masterRow.id)) next.delete(masterRow.id);
+      else next.add(masterRow.id);
+      return next;
+    });
+  }, []);
+
+  const pnlCellRenderer = (params: any) => pnlPill(params.value);
+
+  const columnDefs = useMemo<ColDef<RowItem>[]>(
+    () => [
+      {
+        headerName: "",
+        width: 55,
+        minWidth: 55,
+        maxWidth: 55,
+        cellRenderer: ExpandCellRenderer,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        pinned: "left",
+      },
+     
+      {
+        headerName: "Symbol",
+        field: "tradingsymbol",
+        width: 170,
+        minWidth: 150,
+      },
+     
+      {
+        headerName: "Type",
+        field: "transactiontype",
+        width: 120,
+        minWidth: 110,
+        cellRenderer: (params: any) => {
+          const isBuy = params.value === "BUY";
+          const isSell = params.value === "SELL";
+          const txnBg = isBuy
+            ? "bg-green-100"
+            : isSell
+            ? "bg-red-100"
+            : "bg-gray-200";
+          const txnColor = isBuy
+            ? "text-green-800"
+            : isSell
+            ? "text-red-800"
+            : "text-gray-800";
+
+          return (
+            <span
+              className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${txnBg} ${txnColor}`}
+            >
+              {params.value || "-"}
+            </span>
+          );
+        },
+      },
+    
+      { headerName: "Buy Price", field: "buyprice", width: 120 },
+      { headerName: "Sell Price", field: "fillprice", width: 120 },
+      { headerName: "Quantity", field: "quantity" as any, width: 110 },
+      {
+        headerName: "PNL",
+        field: "pnl",
+        width: 120,
+        cellRenderer: pnlCellRenderer,
+      },
+      { headerName: "Order ID", field: "orderid", width: 190 },
+    
+
+       {
+        headerName: "Strategy ID",
+        field: "strategyUniqueId",
+        width: 200,
+        minWidth: 180,
+      },
+       {
+        headerName: "Instrument",
+        field: "instrumenttype",
+        width: 150,
+        minWidth: 140,
+      },
+        { headerName: "Order Type", field: "ordertype", width: 140 },
+      { headerName: "Product Type", field: "producttype", width: 140 },
+  { headerName: "Traded ID", field: "fillid", width: 140 },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 140,
+        cellRenderer: (params: any) => {
+          const row = params.data as any;
+          if (row?.__rowType === "DETAIL") return null;
+
+          const status =
+            params.value || (row?.orderstatus ?? row?.orderstatuslocaldb);
+          const s = String(status || "").toLowerCase();
+          let color = "#64748b";
+
+          if (s === "complete" || s === "filled" || s === "success")
+            color = "#16a34a";
+          else if (
+            s === "rejected" ||
+            s === "cancelled" ||
+            s === "canceled"
+          )
+            color = "#ef4444";
+          else if (s === "pending" || s === "open" || s === "queued")
+            color = "#f59e0b";
+
+          return (
+            <span
+              className="inline-block px-2.5 py-1 rounded-full text-xs font-medium text-white capitalize"
+              style={{ backgroundColor: color }}
+            >
+              {status || "-"}
+            </span>
+          );
+        },
+      },
+      { headerName: "Buy Time", field: "buyTime", width: 230 },
+      { headerName: "Sell Time", field: "filltime", width: 230 },
+      {
+        headerName: "Message",
+        field: "text",
+        width: 470,
+        minWidth: 350,
+        wrapText: true,
+        autoHeight: true,
+        cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
+      },
+    ],
+    []
+  );
+
+  const defaultColDef = useMemo(
+    () => ({
+      resizable: true,
+      filter: true,
+      sortable: true,
+    }),
+    []
+  );
+
+  const onGridReady = (params: GridReadyEvent) => {
+    gridApiRef.current = params.api;
+  };
+
+  const isFullWidthRow = useCallback((params: any) => {
+    return params?.rowNode?.data?.__rowType === "DETAIL";
+  }, []);
+
+  const fullWidthCellRenderer = useCallback((props: any) => {
+    return <DetailRowRenderer {...props} />;
+  }, []);
+
+  const getRowId = useCallback((params: any) => {
+    const d = params.data as any;
+    if (d?.__rowType === "DETAIL") return d.id;
+    return String(d.id);
+  }, []);
+
+  const getRowHeight = useCallback((params: RowHeightParams) => {
+    const d: any = params.data;
+    if (d?.__rowType === "DETAIL") return 330;
+    return undefined;
+  }, []);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await axios.get(`${apiUrl}/admin/get/table/trade`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          AngelOneToken: localStorage.getItem("angel_token") || "",
+        },
+      });
+
+      if (data?.status === true) {
+        const list = Array.isArray(data.data) ? data.data : [];
+        setRawOrders(list);
+        setTotalTradedData(data.buydata || 0);
+        setExpandedIds(new Set());
+      } else if (data?.status === false && data?.message === "Unauthorized") {
+        toast.error("Unauthorized User");
+        localStorage.clear();
+      } else {
+        toast.error(data?.message || "Something went wrong");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Something went wrong");
+      toast.error(err?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleGetDates = async (rangeParam?: [Dayjs, Dayjs] | null) => {
+    const activeRange = rangeParam ?? dateRange;
+    if (!activeRange) {
+      toast.error("Please select a date range");
+      return;
+    }
+
+    const [from, to] = activeRange;
+    const payload = [from.toISOString(), to.toISOString()];
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.post(`${apiUrl}/admin/datefilter/order`, payload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+      });
+
+      if (res.data?.status === true) {
+        const list = Array.isArray(res.data.data) ? res.data.data : [];
+        setRawOrders(list);
+        setTotalTradedData(res.data?.buydata || 0);
+        setExpandedIds(new Set());
+        toast.success(res.data?.message || "Filtered orders loaded");
+      } else if (
+        res.data?.status === false &&
+        res.data?.message === "Unauthorized"
+      ) {
+        localStorage.clear();
+        toast.error("Session expired. Please log in again.");
+      } else {
+        toast.error(res.data?.message || "Something went wrong");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Something went wrong");
+      toast.error(err?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelDate = async () => {
+    setDateRange(null);
+    setPanelRange(null);
+    setPickerOpen(false);
+    await fetchOrders();
+  };
+
+  const handleKeyUp = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const raw = e.currentTarget.value;
+    const query = raw.trim();
+
+    if (!query) {
+      fetchOrders();
+      return;
+    }
+    if (query.length < 3) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await axios.post(
+        `${apiUrl}/admin/search/order`,
+        { search: query },
+        {
+          params: { search: query },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+            AngelOneToken: localStorage.getItem("angel_token") || "",
+          },
+        }
+      );
+
+      if (res.data?.status === true && Array.isArray(res.data.data)) {
+        setRawOrders(res.data.data);
+        setExpandedIds(new Set());
+      } else {
+        setRawOrders([]);
+        setExpandedIds(new Set());
+        toast.error(res.data?.message || "No matching orders found");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Something went wrong");
+      toast.error(err?.message || "Something went wrong");
+      setRawOrders([]);
+      setExpandedIds(new Set());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExcelDownload = () => {
+    const ws = XLSX.utils.json_to_sheet(rawOrders);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, "orders.xlsx");
+  };
+
+  return (
+    <div className="p-4 font-sans">
+      <h2 className="mb-3 text-xl font-semibold">Orders History</h2>
+
+      <div className="flex justify-between items-center gap-6 mb-3">
+        <RangePicker
+          format="DD-MMMM-YYYY"
+          className="h-11 w-140 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          open={pickerOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setPickerOpen(true);
+              setPanelRange(dateRange);
+            }
+          }}
+          value={panelRange ?? dateRange ?? null}
+          onCalendarChange={(val) =>
+            setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)
+          }
+          onChange={(val) =>
+            setPanelRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)
+          }
+          allowClear={false}
+          ranges={{
+            Today: [dayjs().startOf("day"), dayjs().endOf("day")],
+            Yesterday: [
+              dayjs().subtract(1, "day").startOf("day"),
+              dayjs().subtract(1, "day").endOf("day"),
+            ],
+            "Last 7 Days": [
+              dayjs().subtract(6, "day").startOf("day"),
+              dayjs().endOf("day"),
+            ],
+            "Last 30 Days": [
+              dayjs().subtract(29, "day").startOf("day"),
+              dayjs().endOf("day"),
+            ],
+            "This Month": [dayjs().startOf("month"), dayjs().endOf("month")],
+            "Last Month": [
+              dayjs().subtract(1, "month").startOf("month"),
+              dayjs().subtract(1, "month").endOf("month"),
+            ],
+          }}
+          renderExtraFooter={() => (
+            <div className="flex justify-end gap-2 p-2">
+              <Button
+                size="small"
+                onClick={() => {
+                  setPanelRange(dateRange);
+                  setPickerOpen(false);
+                  handleCancelDate();
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="small"
+                type="primary"
+                disabled={!panelRange || !panelRange[0] || !panelRange[1]}
+                onClick={() => {
+                  if (!panelRange) return;
+                  setDateRange(panelRange);
+                  setPickerOpen(false);
+                  handleGetDates(panelRange);
+                }}
+              >
+                Apply
+              </Button>
+            </div>
+          )}
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleExcelDownload}
+            className="px-5 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-md"
+          >
+            <span className="text-white">Excel Download</span>
+          </button>
+          <div className="px-5 py-3 bg-blue-50 text-blue-800 rounded-lg font-semibold text-sm border border-blue-200 whitespace-nowrap">
+            Total Traded: {totalTradedData}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-start mb-4 gap-4">
+        <div className="w-full sm:w-64">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyUp={handleKeyUp}
+            placeholder="Search (min 3 chars)"
+            className="border border-gray-300 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {loading && (
+        <div className="flex justify-center items-center h-32 bg-white rounded-lg border">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <p className="text-gray-600">Loading orders...</p>
+          </div>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-500 text-lg font-medium mb-2">Error</div>
+          <p className="text-red-700">{error}</p>
+          <Button
+            onClick={fetchOrders}
+            className="mt-3 bg-red-500 text-white hover:bg-red-600"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div
+          className="ag-theme-alpine custom-ag-grid"
+          style={{ height: "650px", width: "100%" }}
+        >
+          <AgGridReact
+            onGridReady={onGridReady}
+            rowData={rowData}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            context={{ toggleRow }}
+            pagination={true}
+            paginationPageSize={20}
+            suppressCellFocus={true}
+            animateRows={true}
+            rowSelection="single"
+            enableCellTextSelection={true}
+            ensureDomOrder={true}
+            getRowId={getRowId}
+            isFullWidthRow={isFullWidthRow}
+            fullWidthCellRenderer={fullWidthCellRenderer}
+            getRowHeight={getRowHeight}
+             rowHeight={50}
+            overlayLoadingTemplate={
+              '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
+            }
+            overlayNoRowsTemplate={
+              '<div class="flex flex-col items-center justify-center h-full text-gray-500">No orders match your search criteria</div>'
+            }
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
