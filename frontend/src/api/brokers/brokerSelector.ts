@@ -5,8 +5,12 @@ import { cloneUserOneApi } from "./cloneUserApi";
 import { fyersApi } from "./fyersApi";
 import {finvasiaApi} from "./finvasiaApi"
 import {upStoxApi} from "./upStoxApi"
+import {  useNavigate } from "react-router-dom";
+
 
 export const useBrokerApi = () => {
+
+    const navigate = useNavigate();
 
   const userData = localStorage.getItem("user");
 
@@ -20,7 +24,9 @@ export const useBrokerApi = () => {
   
 
   if (!broker) {
-    throw new Error("Broker not selected in user data");
+
+     navigate("/", { replace: true });
+    // throw new Error("Broker not selected in user data");
   }
 
   if (!brokerImage) console.warn("brokerImageLink missing in user data");
@@ -79,6 +85,12 @@ if (broker === "angelone"&&userRole==='user') {
        role:userRole
     };
   }
+
+  // when logout
+  if(broker==undefined||userRole==undefined) {
+      navigate("/", { replace: true });
+  }
+
 
   throw new Error(`Unsupported broker: ${broker} and ${userRole}`);
 };

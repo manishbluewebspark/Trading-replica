@@ -34,6 +34,7 @@ const EXCHANGE_OPTIONS: ExchangeOption[] = [
 ];
 
 export default function InstrumentFormAdmin() {
+  
   const apiUrl = import.meta.env.VITE_API_URL;
 
   const [data, setData] = useState<any[]>([]);
@@ -42,31 +43,27 @@ export default function InstrumentFormAdmin() {
 
   const [duration, setDuration] = useState("DAY");
   const [ltp, setLtp] = useState(0);
-
-  console.log(ltp);
-
   const [orderType, setOrderType] = useState("MARKET");
-  const [variety, setVariety] = useState("NORMAL");
-
-  const [activeTab, setActiveTab] = useState<"Quick" | "Regular" | "Iceberg">(
-    "Quick"
-  );
+  const [activeTab, setActiveTab] = useState<"Quick" | "Regular" | "Iceberg">("Quick");
 
   // AG Grid Quick Filter ke liye state
   const [quickFilterText, setQuickFilterText] = useState("");
-
   const gridApiRef = useRef<GridApi | null>(null);
-
   const [groupName, setGroupName] = useState("");
   const [strategyList, setStrategyList] = useState<any[]>([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState("");
-
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [selectedScriptRow, setSelectedScriptRow] = useState<any | null>(null);
-
+  const [targetPrice, setTargetPrice] = useState(0);
+  const [stoploss, setStopLoss] = useState(0);
+   const [trasectionType, setTrasectionType] = useState("BUY");
+  const [squareoff, setSquareOff] = useState(0);
   const [scriptProductType, setScriptProductType] = useState<
     "" | "INTRADAY" | "DELIVERY" | "CARRYFORWARD" | "BO" | "MARGIN"
   >("INTRADAY");
+
+
+  const [varietyType, setvarietyTypeType] = useState< "" | "NORMAL" | "STOPLOSS" | "ROBO" >("NORMAL");
 
   // 🔹 Selected Exchange for filter on top
   const [selectedExchange, setSelectedExchange] = useState<string>("");
@@ -261,7 +258,6 @@ export default function InstrumentFormAdmin() {
     fetchData();
     fetchStrategies();
     setQuickFilterText("");
-    setVariety("")
     setDuration("")
   }, []);
 
@@ -273,16 +269,6 @@ export default function InstrumentFormAdmin() {
       {
         headerName: "Action",
         cellRenderer: (params: any) => (
-          // <button
-          //   onClick={() => {
-          //     setSelectedScriptRow(params.data);
-          //     setScriptModalOpen(true);
-          //     handleSell(params.data);   // example
-          //   }}
-          //   className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
-          // >
-          //   Buy
-          // </button>
           <button
             onClick={() => {
               setSelectedScriptRow(params.data);
@@ -347,15 +333,6 @@ export default function InstrumentFormAdmin() {
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
-
-      
-      //  {
-      //   headerName: "Token",
-      //   field: "token",
-      //   minWidth: 250,
-      //   filter: "agTextColumnFilter",
-      //   cellStyle: { fontSize: '15px' }
-      // },
     ],
     []
   );
@@ -433,10 +410,16 @@ export default function InstrumentFormAdmin() {
       exch_seg: selectedScriptRow.exch_seg,
       lotsize: selectedScriptRow.lotsize,
       quantity: Number(selectedScriptRow.lotsize),
-      transactiontype: "BUY",
+      // transactiontype: "BUY",
+
+      transactiontype: trasectionType,
       duration,
       orderType,
-      variety,
+      variety:varietyType,
+      price:ltp,
+      triggerprice:targetPrice,
+      stoploss:stoploss,
+      squareoff:squareoff,
       productType: scriptProductType,
       strategyId: selectedStrategyId,
       groupName,
@@ -458,11 +441,7 @@ export default function InstrumentFormAdmin() {
 
     };
 
-    console.log(payload,'===============payload================');
-    
-
     try {
-
 
       console.log(payload,'==================payload================');
       
@@ -614,6 +593,45 @@ export default function InstrumentFormAdmin() {
 
             {/* Body */}
             <div className="p-5">
+
+                {/* Vereity Type */}
+              <div className="flex gap-6 mb-5">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="varietyType"
+                    checked={varietyType === "ROBO"}
+                    onChange={() => setvarietyTypeType("ROBO")}
+                    className="h-4 w-4"
+                  />
+                  ROBO 
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                   name="varietyType"
+                    checked={varietyType === "STOPLOSS"}
+                    onChange={() => setvarietyTypeType("STOPLOSS")}
+                    className="h-4 w-4"
+                  />
+                  STOPLOSS 
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                      name="varietyType"
+                    checked={varietyType === "NORMAL"}
+                    onChange={() => setvarietyTypeType("NORMAL")}
+                    className="h-4 w-4"
+                  />
+                  NORMAL 
+                </label>
+
+
+              </div>
+
+              
               {/* Product Type */}
               <div className="flex gap-6 mb-5">
                 <label className="flex items-center gap-2">
@@ -677,25 +695,66 @@ export default function InstrumentFormAdmin() {
                   </label>
                   <input
                     type="number"
-                    value={selectedScriptRow.price || 0}
-                    readOnly
+                    value={ltp || 0}
+                     onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setLtp(val);
+                    }}
                     className="border rounded px-3 py-2 w-full text-center bg-gray-100 h-10"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Trigger price
+                    Entry price
                   </label>
                   <input
                     type="number"
-                    value={0}
-                    readOnly
+                     value={targetPrice || 0}
+                     onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setTargetPrice(val);
+                    }}
                     className="border rounded px-3 py-2 w-full text-center bg-gray-100 h-10"
                   />
                 </div>
               </div>
 
-              {/* Order Type */}
+                {/* Stoploss and Squareoff  */}
+              <div className="grid grid-cols-3 gap-5 mb-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stoploss Price
+                  </label>
+                  <input
+                    type="number"
+                    value={stoploss || 0}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setStopLoss(val);
+                    }}
+                    className="border rounded px-3 py-2 w-full text-center h-10"
+                  />
+                </div>
+
+                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Price
+                  </label>
+                  <input
+                    type="number"
+                    value={squareoff || 0}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setSquareOff(val);
+                    }}
+                    className="border rounded px-3 py-2 w-full text-center h-10"
+                  />
+                </div>
+             
+              
+              </div>
+
+              {/*  Type */}
               <div className="flex gap-5 mb-5">
                 <label className="flex items-center gap-2">
                   <input
@@ -738,6 +797,34 @@ export default function InstrumentFormAdmin() {
                   SL-M
                 </label>
               </div>
+
+                 {/* Trasection Type */}
+              <div className="flex gap-6 mb-5">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="trasectiontype"
+                    checked={trasectionType === "BUY"}
+                    onChange={() => setTrasectionType("BUY")}
+                    className="h-4 w-4"
+                  />
+                  BUY <span className="text-xs text-gray-500">BUY</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                   name="trasectiontype"
+                    checked={trasectionType === "SELL"}
+                    onChange={() => setTrasectionType("SELL")}
+                    className="h-4 w-4"
+                  />
+                  SELl <span className="text-xs text-gray-500">SELL</span>
+                </label>
+
+                
+
+              </div>
+
 
               {/* Strategy Dropdown */}
               <div className="mb-5">

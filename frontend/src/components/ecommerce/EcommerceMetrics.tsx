@@ -46,12 +46,12 @@ export default function EcommerceMetrics() {
 
 
        if(data.status==true) {
-        
+                
          setUserLength(data.data)
         
              }else if(data.status==false&&data.message=='Unauthorized'){
 
-               localStorage.removeItem("token");
+            localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("termsAccepted");
             localStorage.removeItem("feed_token");

@@ -28,7 +28,7 @@ router.get('/export/orders',authMiddleware, downloadOrderData);
 
 //  test apis
 // router.get('/test/get/user/fund', testGetAngelOneProfileFund); 
-// router.get('/test/get/user/profile', testGetAngelOneProfile); 
+
 // router.get('/test/get/user/trade', testGetTradeBook); 
 // router.get('/test/get/user/order', testGetOrder); 
 // router.get('/test/get/user/perticular/order', testGetPerticularOrder); 

@@ -9,12 +9,16 @@ import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, upda
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import {  adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import {  adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminPlaceMultiTargetStoplossOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
-import { adminFetchBuyOrdersAndUpdateManual, adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
+import {  adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
 import { clearMergedInstrumentsCache, getMergedInstrumentsCacheTTL } from '../../controllers/instrumentMultipleDematController.js';
 import { testingInstrument } from '../../controllers/admin/testingController.js';
+import { syncHoldingsAllBrokers } from '../../services/baseBrokerHoldings.js';
+import { reconcileOrdersAllScenarios } from '../../controllers/admin/reconcileOrders.controller.js';
+import { angelTradeWebhookController, kiteTradeWebhookController } from '../../controllers/admin/webhook/adminWHController.js';
+import { GetOrderStatusPerticularSymbol } from '../../controllers/admin/refreshController.js';
 
 
 
@@ -24,14 +28,25 @@ const router = express.Router();
 
 router.get('/tokenstatussummary',AdminAuthMiddleware,getTokenStatusSummary)
 
+
+//  update fetch function start 
+
+
+router.get('/fetchorderdetails',GetOrderStatusPerticularSymbol)
+
+//  update fetch function end 
+
 router.post('/multiple/place/order',AdminAuthMiddleware,adminPlaceMultiBrokerOrder)
 router.get('/sequareoff',AdminAuthMiddleware,adminMultipleSquareOff)
 router.post('/group/squareoff',AdminAuthMiddleware,adminGroupSquareOff)
 router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 
+router.post("/multiple/targetstoploss/order", AdminAuthMiddleware, adminPlaceMultiTargetStoplossOrder);
 
 
-router.get('/fetchorderdetails',adminFetchBuyOrdersAndUpdateManual)
+
+
+// router.get('/fetchorderdetails',adminFetchBuyOrdersAndUpdateManual)
 router.get('/fetchsellorderdetails',adminFetchSellOrdersAndUpdateManual)
 
 router.post("/getusers/pnldata", getUsersPnlData);
@@ -142,7 +157,7 @@ router.get("/get/recent/order",AdminAuthMiddleware, adminGetRecentOrder);
 
 // Holding Data in AngelOne
 router.get('/get/holdingdata',AdminAuthMiddleware, adminGetCloneUserHolding)
-router.get('/getall/holdingdata',AdminAuthMiddleware, AdminGetHoldingMultiple)
+router.get('/getall/holdingdata',AdminAuthMiddleware,syncHoldingsAllBrokers, AdminGetHoldingMultiple)
 
 
 router.get('/fetch/borker/order',AdminAuthMiddleware,adminFetchOrderHolding)
@@ -170,6 +185,19 @@ router.get("/cache/merged/clear", clearMergedInstrumentsCache);
 
 
 router.post('/testing/app',testingInstrument)
+
+
+
+
+
+//=================== webhook for all borker==================
+
+// POST /api/webhook/kite/trade
+router.post("/webhook/kite/trade", kiteTradeWebhookController);
+
+// POST /api/webhook/angel/trade
+router.post("/webhook/angelone/trade", angelTradeWebhookController);
+
 
 
 export default router;

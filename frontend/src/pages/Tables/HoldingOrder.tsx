@@ -1576,6 +1576,32 @@ const TransactionBadge = ({ type }: { type: string }) => {
   );
 };
 
+
+const pnlPill = (val: number | null | undefined) => {
+  const n = Number(val);
+  const isPositive = n > 0;
+  const isNegative = n < 0;
+
+  const colorClass = isPositive
+    ? "text-green-700"
+    : isNegative
+    ? "text-red-700"
+    : "text-gray-800";
+
+  const bgClass = isPositive
+    ? "bg-green-100"
+    : isNegative
+    ? "bg-red-100"
+    : "bg-gray-200";
+
+  return (
+    <span className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}>
+      {Number.isFinite(n) ? n.toFixed(2) : "—"}
+    </span>
+  );
+};
+
+
 export default function HoldingOrder() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -1609,14 +1635,14 @@ export default function HoldingOrder() {
   useEffect(() => {
     const socket = getSocket();
 
-    const onTick = (tick: Tick) => {
+     const onTick = (tick: Tick) => {
+
+      console.log(tick,'socket admin panel pnl');
+      
       setLtpByToken((prev) => {
-        const tokenKey = String(tick.token); // ⬅ normalize key
-        const curr = prev[tokenKey];
+        const curr = prev[tick.token];
         if (curr === tick.ltp) return prev;
-        const next = { ...prev, [tokenKey]: tick.ltp };
-        // console.log("Updated LTP map:", next);
-        return next;
+        return { ...prev, [tick.token]: tick.ltp };
       });
     };
 
@@ -1792,68 +1818,39 @@ export default function HoldingOrder() {
         minWidth: 100,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
-      // {
-      //   headerName: "PnL",
-      //   field: "symboltoken",
-      //   cellRenderer: (params: any) => {
-      //     const order = params.data as Order;
+     {
+        headerName: "CMP",
+        width: 110,
+        sortable: false,
+        filter: false,
+        valueGetter: (p) => {
+          const d: any = p.data;
+          if (d?.__rowType === "DETAIL") return undefined;
+          const t = d?.symboltoken;
+          return t ? ltpByToken[t] : undefined;
+        },
+        cellRenderer: (p: any) => (p.value !== undefined ? p.value : "—"),
+      },
 
-      //     console.log(ltpByToken,'ltpByToken');
-          
+      {
+        headerName: "PnL",
+        width: 140,
+        sortable: false,
+        filter: false,
+        valueGetter: (p) => {
+          const d: any = p.data;
+          if (d?.__rowType === "DETAIL") return null;
 
-      //     const live = order.symboltoken
-      //       ? ltpByToken[String(order.symboltoken)] // ⬅ normalize key here
-      //       : undefined;
-
-      //     const fillPrice = Number(order.fillprice ?? 0);
-      //     const fillSize = Number(order.fillsize ?? 0);
-
-      //     const pnl =
-      //       live !== undefined && fillSize
-      //         ? (live - fillPrice) * fillSize
-      //         : null;
-
-      //     if (pnl === null) {
-      //       return <span className="text-gray-400">—</span>;
-      //     }
-
-      //     const pnlFixed = pnl.toFixed(2);
-
-      //     const isPositive = pnl > 0;
-      //     const isNegative = pnl < 0;
-
-      //     const bgClass = isPositive
-      //       ? "bg-green-100"
-      //       : isNegative
-      //       ? "bg-red-100"
-      //       : "bg-gray-200";
-
-      //     const textClass = isPositive
-      //       ? "text-green-800"
-      //       : isNegative
-      //       ? "text-red-800"
-      //       : "text-gray-800";
-
-      //     const borderClass = isPositive
-      //       ? "border border-green-300"
-      //       : isNegative
-      //       ? "border border-red-300"
-      //       : "border border-gray-300";
-
-      //     return (
-      //       <div className="py-2">
-      //         <span
-      //           className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${bgClass} ${textClass} ${borderClass}`}
-      //         >
-      //           ₹{isPositive ? "+" + pnlFixed : pnlFixed}
-      //         </span>
-      //       </div>
-      //     );
-      //   },
-      //   width: 120,
-      //   minWidth: 100,
-      //   cellStyle: { borderRight: "1px solid #e2e8f0" },
-      // },
+          const token = d?.symboltoken;
+          const live = token ? ltpByToken[token] : undefined;
+          const price = Number(d?.price ?? 0);
+          const qty = Number(d?.quantity ?? 0);
+          if (live === undefined || !Number.isFinite(price) || !Number.isFinite(qty)) return null;
+          return (live - price) * qty;
+        },
+        cellRenderer: (p: any) => pnlPill(p.value),
+      },
+ 
       {
         headerName: "OrderQty",
         field: "quantity",

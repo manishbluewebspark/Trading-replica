@@ -5,13 +5,13 @@ const authMiddleware = (req, res, next) => {
 const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
-    
-     return res.json({
-            status: false,
-            statusCode:401,
-            message: "Unauthorized",
-            error: "Request with No Token Again Login",
-        });
+
+   return res.status(401).json({
+    status: false,
+    statusCode: 401,
+    message: "Unauthorized",
+    error: "Request with No Token Again Login",
+  });
   }
  
   try {
@@ -26,13 +26,12 @@ const token = req.headers.authorization?.split(' ')[1];
 
   } catch (err) {
 
-   
-    return res.json({
-            status: false,
-            statusCode:401,
-            message: "Unauthorized",
-            error: "Token invalid or expired",
-      });
+    return res.status(401).json({
+    status: false,
+    statusCode: 401,
+    message: "Unauthorized",
+    error: "Token invalid or expired",
+  });
 
   }
 };
@@ -42,13 +41,16 @@ const AdminAuthMiddleware = (req, res, next) => {
   
 const token = req.headers.authorization?.split(' ')[1];
 
+
+
   if (!token) {
-     return res.json({
-            status: false,
-            statusCode:401,
-            message: 'Unauthorized',
-            error: null,
-        });
+
+    return res.status(401).json({
+    status: false,
+    statusCode: 401,
+    message: "Unauthorized",
+    error: "Request with No Token Again Login",
+  });
   }
 
   try {
@@ -72,12 +74,15 @@ const token = req.headers.authorization?.split(' ')[1];
 
      }
   } catch (err) {
-    return res.json({
-            status: false,
-            statusCode:401,
-            message: err.message,
-            error: null,
-        });
+
+   
+   return res.status(401).json({
+    status: false,
+    statusCode: 401,
+    message: "Unauthorized",
+    error: "Token invalid or expired",
+  });
+    
   }
 };
 

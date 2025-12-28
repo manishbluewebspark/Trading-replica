@@ -3,12 +3,13 @@ import express from 'express';
 import { getOrderWithDate, getOrderInTables, getTradeWithDate, userGetTradeInTables, searchOrders, getRejectsOrdersTable} from '../controllers/placeOrderController.js';
 import { authMiddleware} from '../middleware/authMiddleware.js';
 import { getTradeBookInTable } from '../controllers/tradeController.js';
-import {  getKiteHolding, getKiteTradesDataUserPosition } from '../controllers/kiteController.js';
+import {   getKiteTradesDataUserPosition } from '../controllers/kiteController.js';
 import { getCloneUserHolding, getCloneUserTradeDataUserPostion } from '../controllers/admin/cloneUserController.js';
-import { getAngelUserHolding, getAngelOneTradeDataUserPostion } from '../controllers/angelController.js';
-import { getShoonyaUserHolding } from '../controllers/shoonyaController.js';
+import {  getAngelOneTradeDataUserPostion, getCommonUserHolding } from '../controllers/angelController.js';
+
 import { getFyersUserHolding } from '../controllers/fyersController.js';
 import { getUpstoxUserHolding } from '../controllers/upStockController.js';
+import { syncMyHoldings } from '../services/baseBrokerHoldings.js';
 
 
 const router = express.Router();
@@ -59,7 +60,7 @@ router.get('/userposition/common/todaytrade',authMiddleware,
 
 )
 
-router.get('/user/common/holding',authMiddleware,
+router.get('/user/common/holding',authMiddleware,syncMyHoldings,
 async (req, res,next) => {
     try {
 
@@ -67,11 +68,11 @@ async (req, res,next) => {
 
         if (role === "user" && brokername === "kite") {
 
-        return getKiteHolding(req, res,next);
+        return getCommonUserHolding(req, res,next);
         
         }else if(role === "user" && brokername === "angelone") {
 
-          return getAngelUserHolding(req,res,next)
+          return getCommonUserHolding(req,res,next)
 
         
         }else  if(role === "user" && brokername === "finvasia"){
@@ -79,7 +80,7 @@ async (req, res,next) => {
           console.log('==============finavasia=============');
           
 
-          return getShoonyaUserHolding(req,res,next)
+          return getCommonUserHolding(req,res,next)
         
         }else  if(role === "user" && brokername === "fyers"){
         
@@ -99,9 +100,6 @@ async (req, res,next) => {
       return res.status(500).json({ status: false, message: "Server error" });
     }
 }
-
-
-
 
 )
 

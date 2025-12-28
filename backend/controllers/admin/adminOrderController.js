@@ -1734,6 +1734,9 @@ export const AdminGetTotalUsers = async function (req,res,next) {
         where: { role: "user" },
       });
 
+      console.log(totalNormalUsers);
+      
+
       return res.json({
         status: true,
         statusCode:200,
@@ -3082,26 +3085,13 @@ export const adminFetchOrderHolding = async function (req,res,next) {
 
 export const AdminGetHoldingMultiple = async (req, res) => {
   try {
-    
-    // 2️⃣ Compute start of TODAY in IST, convert to UTC ISO for string comparison
-    const nowUtc = new Date();
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30
 
-    // Convert current UTC -> IST
-    const istNow = new Date(nowUtc.getTime() + IST_OFFSET_MS);
-    istNow.setHours(0, 0, 0, 0); // start of day in IST (00:00:00)
-
-    // Convert IST start-of-day back to UTC
-    const startOfTodayUtc = new Date(istNow.getTime() - IST_OFFSET_MS);
-    const startOfTodayIso = startOfTodayUtc.toISOString(); // e.g. "2025-12-10T00:00:00.000Z"
 
     // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
     const localOldOrders = await Order.findAll({
       where: {
         orderstatuslocaldb: "OPEN",
-        filltime: {
-          [Op.lt]: startOfTodayIso,  // only yesterday & older
-        },
+        positionStatus:"HOLDING",
       },
     });
 

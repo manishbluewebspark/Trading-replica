@@ -137,9 +137,10 @@ export const getOrderFunction = async function () {
 
        const tradesData = await Trade.findAll({
         where: {
-          createdAt: {
-            [Op.between]: [startOfToday, endOfToday],
-          },
+          orderstatuslocaldb:"OPEN",   // new line add 23 dec 2025
+          // createdAt: {
+          //   [Op.between]: [startOfToday, endOfToday],
+          // },
         },
         raw: true, // plain JS objects
       });

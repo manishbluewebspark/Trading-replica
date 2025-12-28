@@ -109,7 +109,7 @@ export default function MonthlyTarget() {
             show: true,
             total: {
               show: true,
-              label: "Total Tokens",
+              label: "Total Tokens",        
               formatter: (w) =>
                 w.globals.seriesTotals.reduce(
                   (a: number, b: number) => a + b,

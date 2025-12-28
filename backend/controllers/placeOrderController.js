@@ -217,10 +217,10 @@ export const searchOrders = async (req, res) => {
 export const getOrderPerticular = async (req, res,next) => {
     try {
 
-        let orderId = "62f93049-821d-429a-a3b8-c833db45ef51"
+        let orderId = "1faa7ec9-07ad-426f-befa-25027911275c"
 
-        let token ='eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTlRnM01UZ3dPU3dpYm1KbUlqb3hOelkxTnpnMU1qSTVMQ0pwWVhRaU9qRTNOalUzT0RVeU1qa3NJbXAwYVNJNklqUXdZV0l3WWpsbUxUTTJZMk10TkdKbU5pMDRaRFZoTFRNMFpHSmhaVEEwWldFNVppSXNJbFJ2YTJWdUlqb2lJbjAuam4yZ01lUEZVWW1RTWU2SHpVdU5JR2szN3g1NjRKMldQMDM0SjBPc3ZVRmdMNlBfdnJub05KN2Z6bFVELXRUWUdGWGhRTldyc3BuaUxPdmZmcWZMR0FkcWNTdTdrMGM4MGR2SnJlNW9PUUVFTzV2YXhnRHBBVFlxd1dvbldoOWl0c2c4NXhUVVJxMHlpZjVxZ1lTdkJ6bnRySERRd29sQVB6LWZaVWFNMkRrIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY1Nzg1NDA5LCJleHAiOjE3NjU4MjM0MDB9.zm6MAnyDQBTtdmEPawSaT84pfFxZXZvoOXcYKpmvxGiWcTCKqE7QAGv7L1w4rZHOO4Rks4Uq8AdrIG5fVAqslA'
-       
+        const token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpVMU5UTTROaXdpYm1KbUlqb3hOelkyTkRZNE9EQTJMQ0pwWVhRaU9qRTNOalkwTmpnNE1EWXNJbXAwYVNJNklqZG1ZalkxT0dKakxXUXpNalV0TkdVeE5DMDROR1JrTFRBNE5XUmxaRGcwTVdOa1lTSXNJbFJ2YTJWdUlqb2lJbjAuV2lxeUVoZXNPaVlYMGRBUGk5d2RzSDVndzhJdkxkQm5CVTdLV19KU3VBYkNVeGRnbWdTYUpCSm9XOUtzYlF1c1FWR1dzWk1KWUJXZm82dnlidWpKQnlLVzgtSFVBdUFjZVFQYUdoY0lZb25xSDVCdUVzVkJWdEVwZnFzbUljTnpRcWFYLS04UUx5bmtTYk15MXRITjE4QTdNLXA5dmFrZzNSYWlVQ1dCMnd3IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2NDY4OTg2LCJleHAiOjE3NjY1MTQ2MDB9.J0dNjDGYEOlPNJGD0z-Q4dPoDwT2mkLsc-Wi7ZHFVEiuoZKLaHsjNcu_6sU9ljmePTZoLSrIPMWToMZ3K7bLVQ"
+   
         var config = {
         method: 'get',
         url: `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/details/${orderId}`,
@@ -975,9 +975,6 @@ export const getOrderInTables = async (req, res, next) => {
 };
 
 
-
-
-
 export const adminGetOrderInTables1 = async (req, res,next) => {
     try {
 
@@ -1045,6 +1042,20 @@ export const adminGetOrderInTables1 = async (req, res,next) => {
 
 export const adminGetOrderInTables = async (req, res, next) => {
     try {
+
+      // // ===== Start: Yesterday 00:00:00.000 =====
+      // const startOfDay = new Date();
+      // startOfDay.setDate(startOfDay.getDate() - 1);
+      // startOfDay.setHours(0, 0, 0, 0);
+
+      // // ===== End: Today 23:59:59.999 =====
+      // const endOfDay = new Date();
+      // endOfDay.setHours(23, 59, 59, 999);
+
+      // console.log("From:", startOfDay);
+      // console.log("To  :", endOfDay);
+
+
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
@@ -1064,6 +1075,9 @@ export const adminGetOrderInTables = async (req, res, next) => {
             order: [['createdAt', 'DESC']],
             raw: true,
         });
+
+        // console.log('=============orderData=========',orderData);
+        
 
         const buyCount = await Order.count({
             where: {
@@ -1484,6 +1498,10 @@ export const adminGetTradeInTables = async (req, res, next) => {
       raw: true,
     });
 
+
+    // console.log('============buy=======',orderData);
+    
+
     const buyCount = await Order.count({
       where: {
         transactiontype: "SELL",
@@ -1526,6 +1544,10 @@ export const adminGetTradeInTables = async (req, res, next) => {
         client_data: groups[uniqueKey] || [],
       });
     }
+
+
+    console.log(unique,'============unique===========');
+    
 
     return res.json({
       status: true,

@@ -88,14 +88,6 @@ async function fetchKiteTrades(user, req) {
 export const adminFetchBuyOrdersAndUpdateManual = async (req, res) => {
   try {
 
-            // 🔹 Today range in UTC
-        const startOfDay = new Date();
-        startOfDay.setUTCHours(0, 0, 0, 0);
-
-        const endOfDay = new Date();
-        endOfDay.setUTCHours(23, 59, 59, 999);
-
-
     logSuccess(req, { msg: "Admin fetch & update manual started" });
 
     // 1️⃣ Fetch OPEN BUY orders
@@ -103,12 +95,7 @@ export const adminFetchBuyOrdersAndUpdateManual = async (req, res) => {
       where: {
         orderstatuslocaldb: "OPEN",
         transactiontype: "BUY",
-         status: {
-      [Op.in]: ["OPEN", "PENDING"],
-    },
-    createdAt: {
-      [Op.between]: [startOfDay, endOfDay],
-    },
+        status:"COMPLETE",
       },
       raw: true,
     });
@@ -168,7 +155,25 @@ export const adminFetchBuyOrdersAndUpdateManual = async (req, res) => {
 
   let tradebook = angelTradeCache.get(user.id);
   if (!tradebook) {
+
     tradebook = await fetchAngelTradebook(user, req);
+
+  logSuccess(req, {
+    msg: "AngelOne trade  result",
+    userId: user.id,
+    localDbId: o.id,
+    orderid: o.orderid,
+    tradebookCount: tradebook.length,
+     tradebooks: tradebook,
+  });
+
+    if (!tradebook.length) {
+    skipped++;
+    return { orderDbId: o.id, result: "NO_TRADE_FOUND" };
+  }
+
+    console.log('==============tradebook===============',tradebook);
+    
     angelTradeCache.set(user.id, tradebook);
   }
 
@@ -196,6 +201,9 @@ export const adminFetchBuyOrdersAndUpdateManual = async (req, res) => {
   // Use the first trade's timestamps and IDs for reference
   const firstTrade = matchedTrades[0];
 
+  console.log('=================firstTrade===============',firstTrade);
+  
+
   await Order.update(
     {
       fillid: firstTrade.fillid ? String(firstTrade.fillid) : null,
@@ -221,10 +229,7 @@ export const adminFetchBuyOrdersAndUpdateManual = async (req, res) => {
   });
 
   return { orderDbId: o.id, broker: "angelone", result: "UPDATED" };
-}
-
-
-       if (brokerName === "kite") {
+} if (brokerName === "kite") {
   let trades = kiteTradeCache.get(user.id);
   if (!trades) {
     trades = await fetchKiteTrades(user, req);
@@ -519,6 +524,201 @@ export const adminFetchSellOrdersAndUpdateManual = async (req, res) => {
     });
   } catch (err) {
     logError(req, err, { msg: "adminFetchSellOrdersAndUpdateManual failed" });
+    return res.status(500).json({
+      status: false,
+      message: "Something went wrong",
+      error: safeErr(err),
+    });
+  }
+};
+
+
+/**
+ * ✅ Refresh button API
+ * It updates only those SELL orders which were placed as SL/SL-M/squareoff and now executed.
+ */
+export const refreshTriggeredSellExecutions = async (req, res) => {
+  try {
+
+    logSuccess(req, { msg: "Refresh Triggered SELL executions started" });
+
+    // 1) Find OPEN SELL orders which are trigger based (triggerprice/stoploss/squareoff)
+    // ✅ IMPORTANT: This is the pool you want to refresh.
+    const pendingSellOrders = await Order.findAll({
+      where: {
+        orderstatuslocaldb: "OPEN",
+        transactiontype: "SELL",
+        status: { [Op.in]: ["OPEN", "PENDING"] }, // keep based on your stored values
+      },
+      raw: true,
+    });
+
+    if (!pendingSellOrders.length) {
+      return res.json({
+        status: true,
+        message: "No pending trigger-based SELL orders found",
+        summary: { updated: 0, skipped: 0, failed: 0 },
+        data: [],
+      });
+    }
+
+    // caches
+    const userCache = new Map();       // userId -> user
+    const angelTradeCache = new Map(); // userId -> tradebook[]
+    const kiteTradeCache = new Map();  // userId -> trades[]
+
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    const results = await Promise.allSettled(
+      pendingSellOrders.map(async (sellOrder) => {
+        try {
+          // 2) user fetch
+          let user = userCache.get(sellOrder.userId);
+          if (!user) {
+            user = await User.findOne({ where: { id: sellOrder.userId }, raw: true });
+            userCache.set(sellOrder.userId, user);
+          }
+          if (!user) {
+            skipped++;
+            return { orderDbId: sellOrder.id, result: "NO_USER" };
+          }
+
+          const brokerName = String(user.brokerName || sellOrder.broker || "").toLowerCase();
+
+          // 3) Find linked BUY order (for pnl & closing)
+          // ✅ You already use sellOrder.buyOrderId in your code, keep same
+          const buyOrder = sellOrder.buyOrderId
+            ? await Order.findOne({
+                where: {
+                  userId: sellOrder.userId,
+                  transactiontype: "BUY",
+                  orderid: sellOrder.buyOrderId,
+                },
+                raw: true,
+              })
+            : null;
+
+          // 4) Broker trade match
+          let matchedTrades = [];
+
+          if (brokerName === "angelone") {
+            if (!user.authToken) {
+              skipped++;
+              return { orderDbId: sellOrder.id, result: "NO_TOKEN" };
+            }
+
+            let tradebook = angelTradeCache.get(user.id);
+            if (!tradebook) {
+              tradebook = await fetchAngelTradebook(user, req);
+              angelTradeCache.set(user.id, tradebook);
+            }
+
+            matchedTrades = tradebook.filter(
+              (t) => String(t.orderid) === String(sellOrder.orderid)
+            );
+
+          } else if (brokerName === "kite") {
+            let trades = kiteTradeCache.get(user.id);
+            if (!trades) {
+              trades = await fetchKiteTrades(user.id);
+              kiteTradeCache.set(user.id, trades);
+            }
+
+            matchedTrades = trades.filter(
+              (t) => String(t.order_id) === String(sellOrder.orderid)
+            );
+          } else {
+            skipped++;
+            return { orderDbId: sellOrder.id, result: "UNSUPPORTED_BROKER", brokerName };
+          }
+
+          // ✅ If trigger not hit yet OR not executed yet -> no trades
+          if (!matchedTrades.length) {
+            skipped++;
+            return { orderDbId: sellOrder.id, result: "NOT_EXECUTED_YET" };
+          }
+
+          // 5) Aggregate fills -> weighted avg
+          const totalQty = matchedTrades.reduce((sum, t) => {
+            const q = Number(t.quantity || 0);
+            return sum + q;
+          }, 0);
+
+          const totalValue = matchedTrades.reduce((sum, t) => {
+            // Angel: fillprice, Kite: average_price / price
+            const price = Number(t.fillprice || t.average_price || t.price || 0);
+            const q = Number(t.quantity || 0);
+            return sum + price * q;
+          }, 0);
+
+          const avgPrice = totalQty ? totalValue / totalQty : 0;
+          const firstTrade = matchedTrades[0];
+
+          // 6) pnl if buyOrder exists
+          const buyPrice = Number(buyOrder?.fillprice || buyOrder?.price || 0);
+          const pnl = buyOrder ? (avgPrice * totalQty) - (buyPrice * totalQty) : null;
+
+          // 7) Update SELL order
+          await Order.update(
+            {
+              fillid: String(firstTrade.trade_id || firstTrade.fillid || ""),
+              filltime: toIso(firstTrade.fill_timestamp || firstTrade.exchange_timestamp || firstTrade.filltime),
+              fillprice: avgPrice,
+              fillsize: totalQty,
+              tradedValue: totalValue,
+              price: avgPrice,
+              status: "COMPLETE",
+              orderstatuslocaldb: "COMPLETE",
+              pnl: pnl ?? sellOrder.pnl,
+              buyOrderId: buyOrder?.orderid || sellOrder.buyOrderId || null,
+              buyprice: buyOrder ? buyPrice : sellOrder.buyprice,
+              buysize: buyOrder ? totalQty : sellOrder.buysize,
+              buyvalue: buyOrder ? buyPrice * totalQty : sellOrder.buyvalue,
+              buyTime: buyOrder?.filltime || sellOrder.buyTime || null,
+            },
+            { where: { id: sellOrder.id } }
+          );
+
+          // 8) Close BUY order (if exists)
+          if (buyOrder) {
+            await Order.update(
+              { orderstatuslocaldb: "COMPLETE" },
+              { where: { id: buyOrder.id } }
+            );
+          }
+
+          updated++;
+          return {
+            orderDbId: sellOrder.id,
+            orderid: sellOrder.orderid,
+            broker: brokerName,
+            result: "UPDATED",
+            avgPrice,
+            totalQty,
+            pnl,
+          };
+        } catch (e) {
+          failed++;
+          logError(req, e, { msg: "refreshTriggeredSellExecutions failed order", orderDbId: sellOrder?.id });
+          return { orderDbId: sellOrder?.id, result: "FAILED", error: safeErr(e) };
+        }
+      })
+    );
+
+    const final = results.map((r) =>
+      r.status === "fulfilled" ? r.value : { result: "PROMISE_REJECTED" }
+    );
+
+    return res.json({
+      status: true,
+      message: "Refresh Triggered SELL executions done",
+      summary: { updated, skipped, failed },
+      data: final,
+    });
+  } catch (err) {
+    logError(req, err, { msg: "refreshTriggeredSellExecutions main failed" });
     return res.status(500).json({
       status: false,
       message: "Something went wrong",

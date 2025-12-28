@@ -1841,8 +1841,8 @@ export default function TradeAdmin() {
       {
         headerName: "Symbol",
         field: "tradingsymbol",
-        width: 170,
-        minWidth: 150,
+        width: 190,
+        minWidth: 170,
       },
      
       {

@@ -1521,7 +1521,7 @@ export const getKiteTrades = async (req, res) => {
   try {
 
    
-    const  kite  = await getKiteClientForUserId(13)
+    const  kite  = await getKiteClientForUserId(21)
     //  const  kite  = await getKiteClientForUserId(13)
 
     // const orders = await kite.getOrderHistory("1999368808602804224");
@@ -1530,7 +1530,9 @@ export const getKiteTrades = async (req, res) => {
     //       item => item.status?.toLowerCase() === "complete"
     //     );
 
-        const orders = await kite.getOrders();
+        // const orders = await kite.getOrders();
+              //  const orders = await kite.getOrderTrades("2004398212261355520");
+         const orders = await kite.getOrders();
 
     // const orders = await kite.getHoldings();
     
@@ -1571,7 +1573,6 @@ export const getKiteTrades = async (req, res) => {
 export const getKiteOrders = async (req, res) => {
   try {
 
-  
   const  kite  = await getKiteClientForUserId(21)
 
    const orders = await kite.getOrders();
@@ -1688,6 +1689,52 @@ export const getKitePlacesManual = async (req, res) => {
   }
 };
 
+
+export const kiteHoldingFunApi = async(req,res)=> {
+
+    try {
+      
+      const userId = 21
+
+    const user = await User.findByPk(userId);
+  
+    if (!user) return { ok: false, statusCode: 400, message: "User missing" };
+
+    const apiKey = user?.kite_key;
+    const accessToken = user?.authToken;
+
+    if (!apiKey || !accessToken) {
+      return { ok: false, statusCode: 400, message: "Kite apiKey/accessToken missing" };
+    }
+
+    const url = "https://api.kite.trade/portfolio/positions";
+
+    const resp = await axios.get(url, {
+      timeout: 30000,
+      headers: {
+        "X-Kite-Version": "3",
+        Authorization: `token ${apiKey}:${accessToken}`,
+      },
+    });
+
+    const positions = resp?.data?.data; 
+
+     return res.json({
+      status: true,
+      statusCode: 200,
+      data: positions,
+      message: "Successfully fetched Holding with trades",
+    });
+
+    } catch (error) {
+
+      console.log(error);
+      
+      
+    }
+    
+
+}
 
 
 

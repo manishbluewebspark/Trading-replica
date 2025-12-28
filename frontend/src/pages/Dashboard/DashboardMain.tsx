@@ -176,6 +176,9 @@ export default function DashboardPretty() {
  
 
       const tradeRes = await api.getTodayTrade();
+
+      console.log(tradeRes.data.data,'================tradeRes.data.data==============');
+      
       setTotalTradedData(tradeRes.data.totalTraded || 0);
       setTotalOpenOrderData(tradeRes.data.totalOpen || 0);
       setProfitAndLossData(tradeRes.data.pnl || 0);
@@ -266,6 +269,11 @@ export default function DashboardPretty() {
 
   // ⭐ New: fund color logic (same style idea as P&L)
   const isFundPositive = fundData >= 0;
+
+
+
+  console.log("==============chartData==============",chartData);
+  
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 md:px-6 lg:px-8 py-8 space-y-8">

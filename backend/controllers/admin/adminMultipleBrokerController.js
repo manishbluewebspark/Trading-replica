@@ -1,5 +1,6 @@
 import User from "../../models/userModel.js";
 import Order from "../../models/orderModel.js";
+import OcoGroup from "../../models/ocoGroupModel.js";
 import { placeAngelOrder } from "../../services/placeAngelOrder.js";
 import { placeKiteOrder } from "../../services/placeKiteOrder.js";
 import { placeFyersOrder } from "../../services/placeFyersOrder.js";
@@ -7,7 +8,9 @@ import { emitOrderGet } from "../../services/smartapiFeed.js";
 import { logSuccess, logError } from "../../utils/loggerr.js";
 import { placeFinavasiaOrder } from "../../services/placeFinavasiaOrder.js";
 import { generateStrategyUniqueId } from "../../utils/randomWords.js";
-import { Op, fn, col } from "sequelize";
+import { Op } from "sequelize";
+import { placeTargetAndStoplossAngelOrder } from "../../services/placeTargetAndStoplossAngel.js";
+import { placeTargetAndStoplossKiteOrder } from "../../services/placeTargetAndStoplossKite.js";
 
 
 
@@ -84,8 +87,11 @@ export const getTokenStatusSummary = async (req, res) => {
 
     const notGeneratedUsers = await User.findAll({
       where: {
-        angelLoginUser: false,
         role: "user",
+        [Op.or]: [
+      { angelLoginUser: false },
+      { angelLoginUser: null }
+    ]
       },
       attributes: [
         ["id", "_id"],
@@ -130,14 +136,10 @@ export const getTokenStatusSummary = async (req, res) => {
 const safeErr = (e) => e?.message || e?.response?.data || String(e);
 
 // ==============update logger code ==============================
-
 export const adminPlaceMultiBrokerOrder = async (req, res) => {
   try {
-    const input = req.body;
-
-
-    console.log('=================input================',input);
     
+    const input = req.body;
 
     // 1️⃣ Frontend request log
     logSuccess(req, {
@@ -170,7 +172,6 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       where: { strategyName: input.groupName },
       raw: true,
     });
-
 
     logSuccess(req, {
       msg: "Fetched users for strategy group",
@@ -214,16 +215,12 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
           brokerName: user.brokerName,
         });
 
-    
         try {
           if (user.brokerName.toLowerCase() === "angelone") {
             logSuccess(req, {
               msg: "Routing to AngelOne order",
               userId: user.id,
             });
-
-           
-            
 
             return await placeAngelOrder(user, input, req);
           }
@@ -328,6 +325,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       message: "Orders executed for all brokers",
       data: results,
     });
+
   } catch (err) {
     logError(req, err, {
       msg: "Admin multi-broker order execution failed",
@@ -339,7 +337,6 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     });
   }
 };
-
 
 // ================== update logger code======================
 export const adminMultipleSquareOff = async (req, res) => {
@@ -499,6 +496,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             totalPrice: o.totalPrice,
             actualQuantity: o.actualQuantity,
             userId: user.id,
+            ordertag:"softwaresetu",
             userNameId: user.username,
             angelOneToken: o?.angelOneToken || o.token,
             angelOneSymbol: o?.angelOneSymbol || o?.symbol,
@@ -681,13 +679,11 @@ export const adminMultipleSquareOff = async (req, res) => {
   }
 };
 
-
+// ==============update logger code ==============================
 export const adminGroupSquareOff = async (req, res) => {
   try {
 
-    console.log("===================group req incoming=====================",req.body);
-    
-
+  
     let reqStrategyUniqueId = req.body.strategyUniqueId
 
     const afterUnderscore = reqStrategyUniqueId.split("_").pop();
@@ -1033,7 +1029,6 @@ export const adminGroupSquareOff = async (req, res) => {
   }
 };
 
-
 // ==============update logger code ==============================
 export const adminSingleSquareOff = async (req, res) => {
   try {
@@ -1285,182 +1280,176 @@ logSuccess(req, {
   }
 };
 
+// ==============update logger code ==============================
 
 
+// helper: upsert oco group
+async function upsertOcoGroupRow({
+  userId,
+  broker,
+  symbol,
+  exchange,
+  buyOrderId,
+  targetOrderId,
+  stoplossOrderId,
+  quantity,
+}) {
+
+  
+  // buyOrderId unique rakhna best (you can also add unique index)
+  const [row] = await OcoGroup.upsert(
+    {
+      userId,
+      broker,
+      symbol,
+      exchange,
+      buyOrderId: String(buyOrderId),
+      targetOrderId: targetOrderId ? String(targetOrderId) : null,
+      stoplossOrderId: stoplossOrderId ? String(stoplossOrderId) : null,
+      quantity: Number(quantity || 0),
+      status: "ACTIVE",
+      winner: null,
+    },
+    { returning: true }
+  );
+
+  return row;
+}
 
 
-
-
-
-
-
-
-
-
-export const adminPlaceMultiBrokerOrder1 = async (req, res) => {
-
+export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
   try {
-
-    const input = req.body;
-
-     logSuccess(req, {forntendReqData:input});
     
-    const users = await User.findAll({
-      where: { strategyName: input.groupName },
-      raw: true,
+    logSuccess(req, {
+      msg: "🚀 adminPlaceMultiTargetStoplossOrder called",
+      body: req.body,
     });
 
-    if (!users.length) {
+    const reqStrategyUniqueId = req.body.strategyUniqueId;
+    const afterUnderscore = String(reqStrategyUniqueId || "").split("_").pop();
+
+    const targetPrice = Number(req.body.targetPrice);
+    const stoplossPrice = Number(req.body.stoplossPrice);
+
+    logSuccess(req, {
+      msg: "Parsed input values",
+      reqStrategyUniqueId,
+      afterUnderscore,
+      targetPrice,
+      stoplossPrice,
+    });
+
+    if (!Number.isFinite(targetPrice) || !Number.isFinite(stoplossPrice)) {
+      logError(req, null, {
+        msg: "Invalid target/stoploss received",
+        targetPrice,
+        stoplossPrice,
+      });
 
       return res.json({
         status: false,
-        message: "No users found for this group",
-        error:  "No users found for this group",
+        message: "Invalid targetPrice/stoplossPrice",
       });
     }
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // ================= Strategy ID =================
+    const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
 
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-
-    const settled = await Promise.allSettled(
-      
-      users.map(async (user) => {
-        
-        if (user.brokerName.toLowerCase() === "angelone") {
-
-          return await placeAngelOrder(user, input,req);
-        }
-        if (user.brokerName.toLowerCase() === "kite") {
-         
-           return await placeKiteOrder(user, reqInput, req, true);
-
-        }
-        if (user.brokerName.toLowerCase() === "fyers") {
-          return await placeFyersOrder(user, input,req);
-        }
-         if (user.brokerName.toLowerCase() === "upstox") {
-          // return await placeFyersOrder(user, input,startOfDay, endOfDay,req);
-        }
-        if (user.brokerName.toLowerCase() === "finvasia") {
-          return await placeFinavasiaOrder(user, input,req,true);
-        }
-
-        return {
-          userId: user.id,
-          broker: user.brokerName,
-          result: "UNSUPPORTED",
-        };
-      })
-    );
-
-
-    const results = settled.map((item, idx) => {
-      const user = users[idx];
-
-      if (item.status === "fulfilled") {
-        return item.value; 
-      } else {
-        return {
-          userId: user.id,
-          broker: user.brokerName,
-          result: "REJECTED",
-          message: item.reason?.message || String(item.reason),
-        };
-      }
+    logSuccess(req, {
+      msg: "Generated new strategyUniqueId for OCO",
+      strategyUniqueId,
     });
 
-    await emitOrderGet()
-
-    return res.json({
-      status: true,
-      message: "Orders executed for all brokers",
-      data: results,
+    // ================= Fetch OPEN BUY Orders =================
+    logSuccess(req, {
+      msg: "Fetching OPEN BUY orders",
+      strategyUniqueId: reqStrategyUniqueId,
     });
- 
-  } catch (err) {
 
-   
-    
-    return res.json({
-      status: false,
-      message: err.message,
-    });
-  }
-
-};
-
-
-export const adminMultipleSquareOff1 = async (req, res) => {
-
-  try {
-
-    // 1) Time window for today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // 2) Fetch all OPEN (BUY) orders today
     const openOrders = await Order.findAll({
       where: {
         orderstatuslocaldb: "OPEN",
         transactiontype: "BUY",
-        createdAt: { [Op.between]: [startOfDay, endOfDay] },
+        strategyUniqueId: reqStrategyUniqueId,
       },
       raw: true,
     });
 
+    logSuccess(req, {
+      msg: "OPEN BUY orders fetched",
+      count: openOrders.length,
+      orderIds: openOrders.map((o) => o.orderid),
+    });
+
     if (!openOrders.length) {
+      logSuccess(req, {
+        msg: "No OPEN BUY orders found, exiting",
+      });
+
       return res.json({
         status: false,
-        message: "No OPEN (BUY) orders found today to square off",
+        message: "No OPEN (BUY) orders found",
         data: [],
       });
     }
 
-    // 3) Process each order
+    // ================= Process Each Order =================
     const results = await Promise.allSettled(
-      openOrders.map(async (o) => {
+      openOrders.map(async (o, idx) => {
+        logSuccess(req, {
+          msg: "▶️ Processing order for OCO",
+          index: idx,
+          orderDbId: o.id,
+          buyOrderId: o.orderid,
+          userId: o.userId,
+          order:o
+        });
+
         try {
-          // 3a) Fetch user of the order
+          // ---------- Fetch user ----------
           const user = await User.findOne({
             where: { id: o.userId },
             raw: true,
           });
 
+          logSuccess(req, {
+            msg: "User lookup completed",
+            orderDbId: o.id,
+            userFound: !!user,
+            brokerName: user?.brokerName,
+            role: user?.role,
+            user:user
+          });
+
+         
+
           if (!user) {
-            return {
-              orderId: o.id,
-              result: "NO_USER",
-              message: "User not found",
-            };
+            logSuccess(req, { msg: "Skipping order: user not found", orderDbId: o.id });
+            return { orderId: o.id, result: "NO_USER" };
           }
 
+
+
           if (!user.authToken) {
-            return {
-              orderId: o.id,
-              result: "NO_TOKEN",
-              message: "User does not have broker authToken",
-            };
+            logSuccess(req, { msg: "Skipping order: authToken missing", orderDbId: o.id });
+            return { orderId: o.id, result: "NO_TOKEN" };
           }
 
           if (!user.brokerName) {
-            return {
-              orderId: o.id,
-              result: "NO_BROKER",
-              message: "User broker not selected",
-            };
+            logSuccess(req, { msg: "Skipping order: broker not selected", orderDbId: o.id });
+            return { orderId: o.id, result: "NO_BROKER" };
           }
 
-          const transactiontype = "SELL"; // square off leg
+          const broker = (user.brokerName || "").toLowerCase();
 
-          // Common reqInput format for both services
-          const reqInput = {
+          logSuccess(req, {
+            msg: "Broker resolved",
+            broker,
+            orderDbId: o.id,
+          });
+
+          // ---------- Base reqInput ----------
+          const baseReqInput = {
             variety: o.variety,
             symbol: o.tradingsymbol,
             instrumenttype: o.instrumenttype,
@@ -1470,211 +1459,137 @@ export const adminMultipleSquareOff1 = async (req, res) => {
             quantity: o.quantity,
             productType: o.producttype,
             duration: o.duration,
-            price: o.price,
-            transactiontype,
+            transactiontype: "SELL",
             totalPrice: o.totalPrice,
             actualQuantity: o.actualQuantity,
             userId: user.id,
             userNameId: user.username,
-            angelOneToken:o?.angelOneToken||o.token,
-            angelOneSymbol:o?.angelOneSymbol||o?.symbol,
-            broker: o?.broker,
-            buyOrderId: o?.orderId,
-            
+            angelOneToken: o?.angelOneToken || o.token,
+            angelOneSymbol: o?.angelOneSymbol || o?.symbol,
+            buyOrderId: String(o.orderid),
+            groupName: o?.strategyName || "",
+            strategyUniqueId,
+            kiteSymbol: o.tradingsymbol,
+            kiteToken: o.symboltoken,
           };
 
-          //=============== CALL BROKER SPECIFIC SERVICE ===============//
+          logSuccess(req, {
+            msg: "Prepared baseReqInput",
+            baseReqInput,
+          });
 
-         
+          // ---------- Target Leg ----------
+          const targetReqInput = {
+            ...baseReqInput,
+            orderType: "LIMIT",
+            price: targetPrice,
+            triggerprice: 0,
+          };
 
-          if (user.brokerName.toLowerCase() === "angelone"&&user.role==='user') {
-              await placeAngelOrder(
-              user,
-              reqInput,
-              req
-            );
-          } else if (user.brokerName.toLowerCase() === "kite"&&user.role==='user') {
+          logSuccess(req, {
+            msg: "Prepared TARGET order input",
+            targetReqInput,
+          });
 
-           await placeKiteOrder(user, reqInput, req, false);
+          const triggerPrice = stoplossPrice;     // e.g. 120
+          const limitPrice = stoplossPrice - 0.5; // 119.5
 
-          }else if (user.brokerName.toLowerCase() === "fyers"&&user.role==='user') {
-              
-            await placeFyersOrder( user, reqInput, req );
-             
-          }else if (user.brokerName.toLowerCase() === "finvasia"&&user.role==='user')  {
 
-            await placeFinavasiaOrder(user,reqInput,req,false);
+          // ---------- Stoploss Leg ----------
+          const slReqInput = {
+            ...baseReqInput,
+            orderType: broker === "kite" ? "SL" : "STOPLOSS_LIMIT",
+            price: limitPrice,
+            triggerprice: triggerPrice,
+          };
 
-          }else {
-            return {
-              orderId: o.id,
-              result: "INVALID_BROKER",
-              message: `Unknown broker: ${user.broker}`,
-            };
+          logSuccess(req, {
+            msg: "Prepared STOPLOSS order input",
+            slReqInput,
+          });
+
+          let targetRes, slRes;
+
+          // ---------- Place Orders ----------
+          if (broker === "angelone") {
+            logSuccess(req, { msg: "Placing AngelOne TARGET order", orderDbId: o.id });
+            targetRes = await placeTargetAndStoplossAngelOrder(user, targetReqInput, req);
+
+            logSuccess(req, { msg: "AngelOne TARGET response", targetRes });
+
+            if (!targetRes?.status) return { orderId: o.id, result: "TARGET_FAILED" };
+
+            logSuccess(req, { msg: "Placing AngelOne STOPLOSS order", orderDbId: o.id });
+            slRes = await placeTargetAndStoplossAngelOrder(user, slReqInput, req);
+
+            logSuccess(req, { msg: "AngelOne STOPLOSS response", slRes });
+
+            if (!slRes?.status) return { orderId: o.id, result: "SL_FAILED" };
+          } 
+          else if (broker === "kite") {
+            logSuccess(req, { msg: "Placing Kite TARGET order", orderDbId: o.id });
+            targetRes = await placeTargetAndStoplossKiteOrder(user, targetReqInput, req, false);
+
+            logSuccess(req, { msg: "Kite TARGET response", targetRes });
+
+            if (!targetRes?.status) return { orderId: o.id, result: "TARGET_FAILED" };
+
+            logSuccess(req, { msg: "Placing Kite STOPLOSS order", orderDbId: o.id });
+            slRes = await placeTargetAndStoplossKiteOrder(user, slReqInput, req, false);
+
+            logSuccess(req, { msg: "Kite STOPLOSS response", slRes });
+
+            if (!slRes?.status) return { orderId: o.id, result: "SL_FAILED" };
+          } 
+          else {
+            logSuccess(req, { msg: "Unsupported broker", broker });
+            return { orderId: o.id, result: "INVALID_BROKER" };
           }
 
           return {
             orderId: o.id,
-            broker: user.broker,
+            buyOrderId: o.orderid,
+            broker,
+            targetOrderId: targetRes.orderid,
+            stoplossOrderId: slRes.orderid,
+            result: "OK",
           };
         } catch (e) {
-          return {
-            orderId: o.id,
-            result: "FAILED",
-            message: safeErr(e),
-          };
+          logError(req, e, {
+            msg: "❌ Exception while processing OCO order",
+          });
+
+          return { orderId: o.id, result: "FAILED", message: safeErr(e) };
         }
       })
     );
 
-    // 4) Normalize Promise results
-    const finalOutput = results.map((r, i) => {
-      if (r.status === "fulfilled") return r.value;
-      return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
+    const finalOutput = results.map((r, i) =>
+      r.status === "fulfilled"
+        ? r.value
+        : { orderId: openOrders[i]?.id, result: "PROMISE_REJECTED" }
+    );
+
+    logSuccess(req, {
+      msg: "🎯 adminPlaceMultiTargetStoplossOrder completed",
+      total: finalOutput.length,
+      finalOutput,
     });
 
     return res.json({
       status: true,
-      message: "Bulk square-off complete",
+      message: "Bulk Target+Stoploss placed",
       data: finalOutput,
-    });
-  } catch (error) {
-    return res.json({
-      status: false,
-      message: "Something went wrong",
-      error: safeErr(error),
-    });
-  }
-
-};
-
-
-export const adminSingleSquareOff1 = async (req, res) => {
-
-  try {
-    const { orderId } = req.body; // 👈 ya req.params.orderId agar URL se bhejna ho
-
-    if (!orderId) {
-      return res.json({
-        status: false,
-        message: "orderId is required",
-      });
-    }
-
-    // 1) Optional: Time window for today (agar tum services me chahiye)
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-   
-
-    // 2) Fetch that specific OPEN BUY order
-    const o = await Order.findOne({
-      where: {
-         orderid: String(orderId),   
-        orderstatuslocaldb: "OPEN",   
-        transactiontype: "BUY",      
+      meta: {
+        count: finalOutput.length,
+        strategyUniqueId,
       },
-      raw: true,
-    });
-
-       
-
-    if (!o) {
-      return res.json({
-        status: false,
-        message: "No OPEN BUY order found with this id",
-      });
-    }
-
-    // 3) Fetch user
-    const user = await User.findOne({
-      where: { id: o.userId },
-      raw: true,
-    });
-
-    if (!user) {
-      return res.json({
-        status: false,
-        message: "User not found for this order",
-      });
-    }
-
-    if (!user.authToken) {
-      return res.json({
-        status: false,
-        message: "User does not have broker authToken",
-      });
-    }
-
-    if (!user.brokerName) {
-      return res.json({
-        status: false,
-        message: "User broker not selected",
-      });
-    }
-
-    const transactiontype = "SELL"; // square off leg
-
-    // 4) Common reqInput format
-    const reqInput = {
-      variety: o.variety,
-      symbol: o.tradingsymbol,
-      instrumenttype: o.instrumenttype,
-      token: o.symboltoken,
-      exch_seg: o.exchange,
-      orderType: o.ordertype,
-      quantity: o.quantity,
-      productType: o.producttype,
-      duration: o.duration,
-      price: o.price,
-      transactiontype,
-      totalPrice: o.totalPrice,
-      actualQuantity: o.actualQuantity,
-      userId: user.id,
-      userNameId: user.username,
-      angelOneToken: o?.angelOneToken || o.token,
-      angelOneSymbol: o?.angelOneSymbol || o?.symbol,
-      broker: o?.broker,
-      buyOrderId: String(orderId)
-    };
-
-    if (user.brokerName.toLowerCase() === "angelone" && user.role === "user") {
-
-       await placeAngelOrder(user, endOfDay,req);
-
-
-    } else if (user.brokerName.toLowerCase() === "kite" && user.role === "user") {
-
-       await placeKiteOrder(user, reqInput, req, false);
-
-    
-    } else if (user.brokerName.toLowerCase() === "fyers" && user.role === "user") {
-
-       await placeFyersOrder(user, reqInput,req);
-
-    }else if (user.brokerName.toLowerCase() === "finvasia" && user.role === "user") {
-
-       await placeFinavasiaOrder(user, reqInput, req,false);
-    }
-    else {
-      return res.json({
-        status: false,
-        message: `Unknown or invalid broker: ${user.broker}`,
-      });
-    }
-
-    // 6) Response
-    return res.json({
-      status: true,
-      message: "Single order square-off complete",
     });
   } catch (error) {
+    logError(req, error, {
+      msg: "🔥 adminPlaceMultiTargetStoplossOrder crashed",
+    });
 
-   
-    
     return res.json({
       status: false,
       message: "Something went wrong",
@@ -1682,3 +1597,16 @@ export const adminSingleSquareOff1 = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+

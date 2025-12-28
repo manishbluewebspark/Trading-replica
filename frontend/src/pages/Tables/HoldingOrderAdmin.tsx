@@ -981,6 +981,31 @@ const TransactionBadge = ({ type }: { type: string }) => {
   );
 };
 
+
+const pnlPill = (val: number | null | undefined) => {
+  const n = Number(val);
+  const isPositive = n > 0;
+  const isNegative = n < 0;
+
+  const colorClass = isPositive
+    ? "text-green-700"
+    : isNegative
+    ? "text-red-700"
+    : "text-gray-800";
+
+  const bgClass = isPositive
+    ? "bg-green-100"
+    : isNegative
+    ? "bg-red-100"
+    : "bg-gray-200";
+
+  return (
+    <span className={`px-2.5 py-1 rounded-full font-medium ${colorClass} ${bgClass}`}>
+      {Number.isFinite(n) ? n.toFixed(2) : "—"}
+    </span>
+  );
+};
+
 export default function HoldingOrderAdmin() {
   
   const navigate = useNavigate();
@@ -994,6 +1019,7 @@ export default function HoldingOrderAdmin() {
   const [isMobile, setIsMobile] = useState(false);
   const [paginationPageSize, setPaginationPageSize] = useState(10);
 
+  
   // ✅ SELL handler – top-level, not inside useEffect
   const handleSellClick = useCallback(
     async (item: Order) => {
@@ -1055,12 +1081,13 @@ export default function HoldingOrderAdmin() {
     const socket = getSocket();
 
     const onTick = (tick: Tick) => {
+
+      console.log(tick,'socket admin panel pnl');
+      
       setLtpByToken((prev) => {
-        const tokenKey = String(tick.token);
-        const curr = prev[tokenKey];
+        const curr = prev[tick.token];
         if (curr === tick.ltp) return prev;
-        const next = { ...prev, [tokenKey]: tick.ltp };
-        return next;
+        return { ...prev, [tick.token]: tick.ltp };
       });
     };
 
@@ -1122,7 +1149,7 @@ export default function HoldingOrderAdmin() {
 
     return () => {
       cancelled = true;
-      socket.off("tick", onTick);
+      // socket.off("tick", onTick);
     };
   }, [apiUrl]);
 
@@ -1184,8 +1211,8 @@ export default function HoldingOrderAdmin() {
 {
   headerName: "Sell",
   field: "userNameId",
-  width: 200,
-  minWidth: 180,
+  width: 120,
+  minWidth: 90,
   cellStyle: { borderRight: "1px solid #e2e8f0" },
   cellRenderer: (params: any) => {
     const order = params.data as Order;
@@ -1249,8 +1276,8 @@ export default function HoldingOrderAdmin() {
             </div>
           );
         },
-        width: 200,
-        minWidth: 180,
+        width: 120,
+        minWidth: 80,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       {
@@ -1269,20 +1296,11 @@ export default function HoldingOrderAdmin() {
             </div>
           );
         },
-        width: 200,
-        minWidth: 180,
+        width: 250,
+        minWidth: 200,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
-      {
-        headerName: "Instrument",
-        field: "instrumenttype",
-        cellRenderer: (params: any) => {
-          return <div className="py-2">{params.value}</div>;
-        },
-        width: 120,
-        minWidth: 120,
-        cellStyle: { borderRight: "1px solid #e2e8f0" },
-      },
+      
       {
         headerName: "Type",
         field: "transactiontype",
@@ -1293,48 +1311,64 @@ export default function HoldingOrderAdmin() {
             </div>
           );
         },
-        width: 120,
-        minWidth: 100,
+        width: 100,
+        minWidth: 80,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
-      {
-        headerName: "OrderType",
-        field: "ordertype",
-        cellRenderer: (params: any) => {
-          return <div className="py-2">{params.value}</div>;
-        },
-        width: 140,
-        minWidth: 120,
-        cellStyle: { borderRight: "1px solid #e2e8f0" },
-      },
-      {
-        headerName: "ProductType",
-        field: "producttype",
-        cellRenderer: (params: any) => {
-          return <div className="py-2">{params.value}</div>;
-        },
-        width: 130,
-        minWidth: 120,
-        cellStyle: { borderRight: "1px solid #e2e8f0" },
-      },
+    
       {
         headerName: "Price",
         field: "fillprice",
         cellRenderer: (params: any) => {
           return <div className="py-2">{params.value || "—"}</div>;
         },
-        width: 120,
-        minWidth: 100,
+        width: 80,
+        minWidth: 50,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
+
+{
+        headerName: "CMP",
+        width: 110,
+        sortable: false,
+        filter: false,
+        valueGetter: (p) => {
+          const d: any = p.data;
+          if (d?.__rowType === "DETAIL") return undefined;
+          const t = d?.symboltoken;
+          return t ? ltpByToken[t] : undefined;
+        },
+        cellRenderer: (p: any) => (p.value !== undefined ? p.value : "—"),
+      },
+
+      {
+        headerName: "PnL",
+        width: 140,
+        sortable: false,
+        filter: false,
+        valueGetter: (p) => {
+          const d: any = p.data;
+          if (d?.__rowType === "DETAIL") return null;
+
+          const token = d?.symboltoken;
+          const live = token ? ltpByToken[token] : undefined;
+          const price = Number(d?.price ?? 0);
+          const qty = Number(d?.quantity ?? 0);
+          if (live === undefined || !Number.isFinite(price) || !Number.isFinite(qty)) return null;
+          return (live - price) * qty;
+        },
+        cellRenderer: (p: any) => pnlPill(p.value),
+      },
+ 
+
       {
         headerName: "OrderQty",
         field: "quantity",
         cellRenderer: (params: any) => {
           return <div className="py-2 text-center">{params.value}</div>;
         },
-        width: 100,
-        minWidth: 80,
+         width: 80,
+        minWidth: 50,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       {
@@ -1343,8 +1377,8 @@ export default function HoldingOrderAdmin() {
         cellRenderer: (params: any) => {
           return <div className="py-2 text-center">{params.value}</div>;
         },
-        width: 100,
-        minWidth: 80,
+         width: 80,
+        minWidth: 50,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       {
@@ -1377,6 +1411,36 @@ export default function HoldingOrderAdmin() {
         },
         width: 160,
         minWidth: 140,
+        cellStyle: { borderRight: "1px solid #e2e8f0" },
+      },
+      {
+        headerName: "Instrument",
+        field: "instrumenttype",
+        cellRenderer: (params: any) => {
+          return <div className="py-2">{params.value}</div>;
+        },
+        width: 120,
+        minWidth: 120,
+        cellStyle: { borderRight: "1px solid #e2e8f0" },
+      },
+        {
+        headerName: "OrderType",
+        field: "ordertype",
+        cellRenderer: (params: any) => {
+          return <div className="py-2">{params.value}</div>;
+        },
+        width: 140,
+        minWidth: 120,
+        cellStyle: { borderRight: "1px solid #e2e8f0" },
+      },
+      {
+        headerName: "ProductType",
+        field: "producttype",
+        cellRenderer: (params: any) => {
+          return <div className="py-2">{params.value}</div>;
+        },
+        width: 130,
+        minWidth: 120,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       {

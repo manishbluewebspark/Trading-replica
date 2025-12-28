@@ -253,6 +253,7 @@ export const placeFinavasiaOrder = async (
       producttype: reqInput.productType,
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
+       ordertag:"softwaresetu",
       totalPrice: reqInput.totalPrice,
       actualQuantity: reqInput.actualQuantity,
       userId: user.id,
@@ -286,6 +287,7 @@ export const placeFinavasiaOrder = async (
       prc: String(reqInput.orderType === "MARKET" ? 0 : reqInput.price),
       prd: shoonyaProductType,
       prctyp: shoonyaOrderType,
+      remarks:"softwaresetu",
       trantype: mapTransactionType(reqInput.transactiontype),
       ret: "DAY",
     };
@@ -492,6 +494,7 @@ export const placeFinavasiaOrder = async (
 
       // ✅ NOW trade is confirmed → do SELL pairing safely
       let finalStatus = "OPEN";
+      let positionStatus =  "OPEN";
       let buyOrderId = "NA";
       let buyOrder = null;
 
@@ -513,7 +516,7 @@ export const placeFinavasiaOrder = async (
 
         if (buyOrder) {
           await Order.update(
-            { orderstatuslocaldb: "COMPLETE" },
+            { orderstatuslocaldb: "COMPLETE",positionStatus:"COMPLETE" },
             { where: { id: buyOrder.id } }
           );
           finalStatus = "COMPLETE";
@@ -548,6 +551,7 @@ export const placeFinavasiaOrder = async (
         filltime: iso,
         status: "COMPLETE",
         orderstatuslocaldb: finalStatus,
+        positionStatus:positionStatus,
         buyOrderId: buyOrderId,
         pnl,
         buyTime,

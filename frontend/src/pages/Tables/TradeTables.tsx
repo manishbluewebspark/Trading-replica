@@ -288,7 +288,7 @@ export default function TradeTable() {
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
       {
-  headerName: "LTP",
+  headerName: "CMP",
   field: "symboltoken",
   cellRenderer: (params: any) => {
     const order = params.data as Order;

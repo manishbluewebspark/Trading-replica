@@ -44,6 +44,13 @@ const Order = sequelize.define(
     price: {
       type: DataTypes.FLOAT,
       allowNull: true,
+      set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("price", null);
+    } else {
+      this.setDataValue("price", Number(parseFloat(value).toFixed(2)));
+    }
+  },
     },
     totalPrice:{
       type: DataTypes.FLOAT,
@@ -52,6 +59,13 @@ const Order = sequelize.define(
     triggerprice: {
       type: DataTypes.FLOAT,
       allowNull: true,
+       set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("triggerprice", null);
+    } else {
+      this.setDataValue("triggerprice", Number(parseFloat(value).toFixed(2)));
+    }
+  },
     },
     quantity: {
       type: DataTypes.STRING,
@@ -166,10 +180,26 @@ const Order = sequelize.define(
     tradedValue:{
        type: DataTypes.FLOAT,
       allowNull: true,
+        set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("tradedValue", null);
+    } else {
+      this.setDataValue("tradedValue", Number(parseFloat(value).toFixed(2)));
+    }
+  },
+      
     },
      fillprice: {
       type: DataTypes.FLOAT,
       allowNull: true,
+      set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("fillprice", null);
+    } else {
+      this.setDataValue("fillprice", Number(parseFloat(value).toFixed(2)));
+    }
+  },
+
     },
     fillsize: {
       type: DataTypes.INTEGER,
@@ -179,11 +209,25 @@ const Order = sequelize.define(
         type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 0,
+        set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("buyvalue", null);
+    } else {
+      this.setDataValue("buyvalue", Number(parseFloat(value).toFixed(2)));
+    }
+  },
     },
     buyprice:{
        type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 0,
+       set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("buyprice", null);
+    } else {
+      this.setDataValue("buyprice", Number(parseFloat(value).toFixed(2)));
+    }
+  },
     },
     buysize:{
        type: DataTypes.FLOAT,
@@ -194,6 +238,13 @@ const Order = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 0,
+       set(value) {
+    if (value === null || value === undefined) {
+      this.setDataValue("pnl", null);
+    } else {
+      this.setDataValue("pnl", Number(parseFloat(value).toFixed(2)));
+    }
+  },
     },
     fillid: {
       type: DataTypes.STRING,
@@ -231,6 +282,14 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+     // INTERDAY,HOLDING,
+    positionStatus:{
+        type: DataTypes.STRING,
+        defaultValue:"OPEN",
+       set(value) {
+        this.setDataValue("positionStatus", value ? value.toUpperCase() : null);
+      }
+    }
   },
   {
     tableName: "orders",

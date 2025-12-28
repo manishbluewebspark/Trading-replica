@@ -1,6 +1,6 @@
 import express from 'express';
 import {  authMiddleware } from '../middleware/authMiddleware.js';
-import { angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getAngelTradeBooks, getDeshboardOrdersUpdate, getPerticularTradeBook, getPosition,
+import { angelGetProfileController, angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getAngelTradeBooks, getDeshboardOrdersUpdate, getPerticularTradeBook, getPosition,
    getTradeBook,
    getTradeDataForCommonDeshboardUpdate,
    getTradeDataForDeshboard, loginWithAngelOne, loginWithTOTPInAngelOne, logoutAngelOne,
@@ -45,6 +45,7 @@ router.get('/angelone/credential/get',authMiddleware,getAngelOneCredential)
 // AngelOne Login
 router.get('/angelone', loginWithAngelOne); 
 router.get('/angelone/callback', angelOneCallback);
+router.get('/angelone/profile', angelGetProfileController); 
 
 
 router.post('/regenerate/user/token', authMiddleware,reGenerateTokenWithAngelOne);   // our code 
@@ -67,13 +68,14 @@ router.get('/angeloneorderbyoriderid',getOrderPerticular);
 
 
 // ===================== Angelone Apis  =====================
-router.get('/angelone/online/trade/books',authMiddleware,getAngelTradeBooks)
+router.get('/angelone/online/trade/books',getAngelTradeBooks)
 
 
 
-// working code 
+
 router.get('/agnelone/instrument',getMergedInstruments ) 
 
+// working code 
 router.get('/agnelone/instrumentnew',getMergedInstrumentsNew )
 
 

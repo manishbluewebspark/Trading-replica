@@ -177,6 +177,55 @@ export const loginWithTOTPInAngelOne = async function (req,res,next) {
 }
 
 
+export const angelGetProfileController = async (req, res) => {
+  try {
+
+    let angelAccessToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpnNU9EZzRNQ3dpYm1KbUlqb3hOelkyT0RFeU16QXdMQ0pwWVhRaU9qRTNOalk0TVRJek1EQXNJbXAwYVNJNklqazVOVEZpT1RNeExXTmlPV0V0TkRWaE9DMWhNREF3TFdKaE1ETmxNek5pTURNME15SXNJbFJ2YTJWdUlqb2lJbjAuYjBiNTRXeGhIcFo0Y3J5YmJGM0hmbWVONzFEQkx2V2xHU0tMZ2ROWldhM3lDVkVZWWdJbXcxdUhaUzRWcE45bmJiQXJtZC1zRi1RT2dQbUtDdjBSQmtsaWhhaW5TRnI5aFFSQks2RG1kRzlkYWNGY24yMHRtZWN1TWZGQU8yNXZRRHNpUDV4ZEdoQlhvRHRlbExGVE1lbEtqQWFQNllzaGJrTmdTZ2hSbzNBIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2ODEyNDgwLCJleHAiOjE3NjY4NjAyMDB9.0E7ps6IEGboMRASBaMWmZ3MHjvGKM1Y54ccaQABYmdtMKF4sZp0eQGb-TCumBNLPuILn2QUc-6l7Dqt8KvrKjA'
+    
+    if (!angelAccessToken) {
+     
+      return res.status(400).json({
+        success: false,
+        message: "Angel access token not found",
+      });
+    }
+
+    const config = {
+      method: "get",
+      url: "https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile",
+      headers: {
+        Authorization: `Bearer ${angelAccessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-UserType": "USER",
+        "X-SourceID": "WEB",
+         'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      },
+    };
+
+    const response = await axios(config);
+
+    
+
+    return res.status(200).json({
+      success: true,
+      data: response.data?.data,
+    });
+  } catch (error) {
+    
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch Angel profile",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+
 export const getAngelOneProfileFund1 = async function (req,res,next) {
     try {
 
@@ -262,6 +311,7 @@ export const getAngelOneProfileFund1 = async function (req,res,next) {
 }
 
 
+
 export const getAngelOneProfileFund = async function (req,res,next) {
     try {
  
@@ -321,8 +371,7 @@ export const getAngelOneProfileFund = async function (req,res,next) {
 export const getAngelOneOrder = async (req, res,next) => {
     try {
 
-      const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTkRFME5UWXlOQ3dpYm1KbUlqb3hOelkwTURVNU1EUTBMQ0pwWVhRaU9qRTNOalF3TlRrd05EUXNJbXAwYVNJNklqTXlNREJpWW1FMExUTTBNV1F0TkRJMU15MWlPVEkxTFRsa1lqRXdabVU0TmpkaFpDSXNJbFJ2YTJWdUlqb2lJbjAuZE8zWUUxSXdTRVhJN0ZtemtoMGFGU1lOYjEweGc3cUFlRkNPUXktd2FhX0t3bGc1Y3M2U0FRcllMUHp2WGM0ZWRwMkdPSzNJcVpfVlJCLTVkMHVOcmNkM3h4UW5Xb3dFMFFUSVc0dElPZHUwX3F4Ty16X1VqUElMSU9rRjZHYXdFUWNLbS1qS0FGa3psQVVfYUhuZVotS1JWd3JhcVQwLTVHTmxZeWViQjRvIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY0MDU5MjI0LCJleHAiOjE3NjQwOTU0MDB9.OA0TlacLUm8EuI4jKGblV1teFfxLB1t5RKHpmQZRuqR5Abo_yHyDn_nD5vuu3W_Y0e4iwly5t3xgTK7LdUIBJQ'
-
+    const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpneU9EY3dNU3dpYm1KbUlqb3hOelkyTnpReU1USXhMQ0pwWVhRaU9qRTNOalkzTkRJeE1qRXNJbXAwYVNJNkltVmxORGxoT0RKaUxXUTFOMlV0TkdWaE9TMWhZbU5sTFRWak56TmxaRFkxT1dZM1ppSXNJbFJ2YTJWdUlqb2lJbjAuTVV5S211dEZNUER2a0Y1THF3bV9BSjB5cldkdTI4cGZEZWxpdWVYaGdYTGpjZV9hUHQ3WFVIZkNfRjVheEllWVNIUmNOMFMwdm54Q2xnc2NLRktqSWZoMVB4R09KM002eEVwMkEyRUhERElnbXFCVTZiaUlSdFU0ek1DWkpXQ1MtamJsSGxRbXk1R19WR3VNRWdZcFhNRElZUHhPbTJvcDlrRUtTR3F6TGx3IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2NzQyMzAxLCJleHAiOjE3NjY3NzM4MDB9.9Yro3MmEJt1cuClNhYgtScqWw0Hu68eK7JMLk4QLmvlwVo_c__w3VFJddB5WHNvj0wpkTi79Kh-lzeYFS1GSGA'
   if (!angelToken) {
     
      return res.json({
@@ -1248,8 +1297,8 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
         if (g.totalBuyQty && g.totalSellQty) {
           output.push({
             label: symbol,
-            avgBuy: Number((g.totalBuyValue / g.totalBuyQty).toFixed(2)),
-            avgSell: Number((g.totalSellValue / g.totalSellQty).toFixed(2)),
+            win: Number((g.totalBuyValue / g.totalBuyQty).toFixed(2)),
+            loss: Number((g.totalSellValue / g.totalSellQty).toFixed(2)),
             quantity: Math.min(g.totalBuyQty, g.totalSellQty),
             pnl: Number(g.pnl.toFixed(2)),
           });
@@ -1267,6 +1316,10 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
     /* =====================================================
        ✅ FINAL RESPONSE
     ===================================================== */
+
+
+    console.log(pnlData,'====================pnlData=============');
+    
     return res.json({
       status: true,
       statusCode: 200,
@@ -1289,7 +1342,7 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
 };
 
 // ==============old code ====================================
-export const getTradeDataForCommonDeshboardUpdate121 = async function (req, res) {
+export const getTradeDataForCommonDeshboardUpdate1212 = async function (req, res) {
   try {
 
 
@@ -1506,6 +1559,10 @@ export const getDeshboardOrdersUpdate = async (req, res) => {
     // 4️⃣ Take last 5 orders for dashboard
     const recentFiveOrders = mappedOrders.slice(0, 5);
 
+
+    console.log(mappedOrders,'==============mappedOrders============');
+    
+
     return res.json({
       status: true,
       message: " orders retrieved successfully",
@@ -1525,12 +1582,8 @@ export const getDeshboardOrdersUpdate = async (req, res) => {
 };
 
 
-
-
 export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
   try {
-  
-
     const angelToken = req.headers.angelonetoken;
 
     if (!angelToken) {
@@ -1538,6 +1591,7 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
         status: false,
         statusCode: 401,
         message: "Login In AngelOne Account",
+        onlineTrades: [],
         error: null,
       });
     }
@@ -1565,83 +1619,109 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
         status: false,
         statusCode: 203,
         message: "No Trade in User Position",
-        data: [],
+        onlineTrades: [],
         error: response.data?.message || null,
       });
     }
 
-    const trades = response.data.data; // tradebook array
+    const trades = response.data?.data || [];
 
-    // No trades at all
-    if (!trades || trades.length === 0) {
+    if (!trades.length) {
       return res.json({
         status: true,
-        statusCode: 203,
+        statusCode: 200,
         message: "No Trade in User Position",
-        data: [],
+        onlineTrades: [],
         error: null,
       });
     }
 
-    // 1️⃣ Collect AngelOne orderids from tradebook
-    const angelOrderIds = trades.map((t) => String(t.orderid));
+    // 1) Collect orderids
+    const angelOrderIds = trades.map((t) => String(t.orderid || t.order_id || "")).filter(Boolean);
 
-    // 2️⃣ Find matching orderids in local DB for this user
+    // 2) Find matching in local DB
     const existingOrders = await Order.findAll({
       where: {
         userId: req.userId,
-        orderid: {
-          [Op.in]: angelOrderIds,
-        },
+        orderid: { [Op.in]: angelOrderIds },
       },
       attributes: ["orderid"],
       raw: true,
     });
 
-    const existingIdsSet = new Set(
-      existingOrders.map((o) => String(o.orderid))
-    );
+    const existingIdsSet = new Set(existingOrders.map((o) => String(o.orderid)));
 
-    // 3️⃣ Filter only trades NOT in local DB
-    const newTrades = trades.filter(
-      (t) => !existingIdsSet.has(String(t.orderid))
-    );
+    // 3) Filter only new trades
+    const newTrades = trades.filter((t) => !existingIdsSet.has(String(t.orderid || t.order_id)));
 
     if (!newTrades.length) {
       return res.json({
         status: true,
-        statusCode: 203,
-        message: "No Trade in User Position",
-        data: [],
-        onlineTrades: [], 
+        statusCode: 200,
+        message: "No New Trade in User Position",
+        onlineTrades: [],
         error: null,
       });
     }
 
+    // ✅ FRONTEND-FRIENDLY MAPPING
+    const mappedTrades = newTrades.map((t) => {
+      const orderid = String(t.orderid || t.order_id || "");
+      const tradeid = String(t.tradeid || t.trade_id || t.fillid || "");
+      const qty = Number(t.quantity ?? t.tradedqty ?? t.fillsize ?? 0);
+      const fillPrice = Number(t.fillprice ?? t.tradeprice ?? t.price ?? 0);
+
+      return {
+        // ✅ AG GRID FIELDS (your columnDefs)
+        tradingsymbol: t.tradingsymbol || t.symbolname || "-",
+        exchange: t.exchange || "-",
+        transaction_type: t.transactiontype || t.transaction_type || "-",  // AG Grid uses this
+        product: t.producttype || t.product || "-",                        // AG Grid uses this
+        average_price: Number(t.averageprice ?? t.average_price ?? fillPrice ?? 0), // AG Grid uses this
+        quantity: qty,
+        order_id: orderid,                                                 // AG Grid uses this
+        trade_id: tradeid,                                                 // AG Grid uses this
+
+        // ✅ MOBILE CARD FIELDS (your MobileOrderCard uses these)
+        transactiontype: t.transactiontype || t.transaction_type || "-",
+        ordertype: t.ordertype || "-",
+        producttype: t.producttype || t.product || "-",
+        fillprice: String(fillPrice || ""),
+        fillsize: String(t.fillsize ?? t.tradedqty ?? qty ?? ""),
+        orderid: orderid,
+        status: t.status || t.orderstatus || "-",
+        orderstatus: t.orderstatus || t.status || "-",
+        text: t.text || t.message || "",
+        updatetime: t.updatetime || t.exchorderupdatetime || t.exchtime || "",
+        uniqueorderid: String(t.uniqueorderid || t.unique_order_id || ""),
+        exchangeorderid: String(t.exchangeorderid || t.exchange_order_id || ""),
+
+        // ✅ for your socket ltp mapping
+        symboltoken: String(t.symboltoken || t.token || ""),
+
+        // optional passthrough
+        createdAt: t.createdAt || null,
+        updatedAt: t.updatedAt || null,
+      };
+    });
+
     return res.json({
       status: true,
-      statusCode: 203,
+      statusCode: 200,
       message: "Trade in User Position",
-      onlineTrades: newTrades,    // raw new trades if you want to sync
+      onlineTrades: mappedTrades,
       error: null,
     });
   } catch (error) {
-   
     return res.json({
       status: false,
       statusCode: 500,
       message: "Error getting AngelOne trade data",
-      data: [],
-      onlineTrades: [], 
+      onlineTrades: [],
       error: error?.message || null,
     });
   }
 };
-
-
-
-
-
 
 
 
@@ -1772,8 +1852,42 @@ export const getAngelOneLTP = async (req, res,next) => {
 
 // ===================== Angelone Apis  =====================
 
+//  testing holding code ==================
+export const getCommonUserHolding = async (req, res) => {
+  try {
 
+  
+    // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
+    const localOldOrders = await Order.findAll({
+      where: {
+        userId: req.userId,
+        positionStatus:"HOLDING",
+        orderstatuslocaldb: "OPEN",
+      },
+       raw:true
+    });
 
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: localOldOrders,
+      message:
+        "Successfully fetched holdings matching local COMPLETE orders (excluding today's filltime)",
+    });
+
+  } catch (error) {
+    console.error("❌ getKiteHolding error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+//  working holding code ==================
 export const getAngelUserHolding = async (req, res) => {
   try {
 
@@ -1839,11 +1953,16 @@ export const getAngelUserHolding = async (req, res) => {
 export const getAngelTradeBooks = async (req, res) => {
     try {
 
-    const angelToken = req.headers.angelonetoken
+    // const angelToken = req.headers.angelonetoken
 
-    var config = {
+   const angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpZek5UTTNOeXdpYm1KbUlqb3hOelkyTlRRNE56azNMQ0pwWVhRaU9qRTNOalkxTkRnM09UY3NJbXAwYVNJNkltWXdPRE15TkRneExUWTVaVEV0TkRJNU1pMWlNbVJqTFRRd1lURmxPVGcyT1dZMk5DSXNJbFJ2YTJWdUlqb2lJbjAuRFl6YTFObXNpZmhzMGpPR1g0ZkdtbTBlX2gwblF2eUtkZzA0RjVpQ20yN0UySWZqQUpYVGNvLUdNU3lfSGZJWnVpQXlNamliTFlwNnBjU1dpbGJSNUJ2X0t4SW10ODBTQUU2NFM1dkgxcGZzZl9jMGNGT2VSUWhUVVB3bDVNTDBLd1JpLXBwcjZ2VXNfdk1mSFJSa2N3bDZmWEN6WFhURFo1d3VoT09kblJVIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2NTQ4OTc3LCJleHAiOjE3NjY2MDEwMDB9._dQJWe7RdnOtKD2JV5-YdHCnJzOERxKTLJ2JZgb8VBOpH0YnKd1o2dFp13CrU_bT9PNElOu3LibeigpxgP0eXg"
+   
+   var config = {
         method: 'get',
         url: `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook`,
+
+      //  url: `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook`,
+        
         headers: { 
            'Authorization': `Bearer ${angelToken}`,
             'Content-Type': 'application/json', 

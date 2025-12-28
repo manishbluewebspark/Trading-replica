@@ -1043,8 +1043,8 @@ export const getCloneUserTrade = async (req, res) => {
 
       return {
         label: g.symbol,
-        win: toMoney(avgSell), // avg sell price
-        loss: toMoney(avgBuy), // avg buy price
+        win: toMoney(avgBuy),
+        loss: toMoney(avgSell), // avg sell price, // avg buy price
         quantity: g.totalQty,
         pnl: toMoney(g.totalPnl),
         tradesCount: g.tradesCount,
@@ -1063,7 +1063,7 @@ export const getCloneUserTrade = async (req, res) => {
     const totalTraded = trades.length; // number of completed trades / rows
 
   
-    console.log(tradesOnline,'tradesOnline');
+    console.log(pnlData,'tradesOnline');
     
 
     return res.status(200).json({

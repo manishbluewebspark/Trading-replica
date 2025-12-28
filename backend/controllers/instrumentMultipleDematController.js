@@ -1,4 +1,6 @@
 
+
+
 import axios from "axios";
 import zlib from "zlib";
 import unzipper from "unzipper";
@@ -475,14 +477,6 @@ export const getMergedInstrumentsNew = async (req, res) => {
       // ✅ send JSON string directly (no res.json stringify)
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       return res.status(200).send(payload);
-
-    // return res.json({
-    //   status: true,
-    //   statusCode: 200,
-    //   data: payload,
-    //   cache: false,
-    //   message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
-    // });
 
   } catch (error) {
     logError(req, error, {
