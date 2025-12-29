@@ -11,6 +11,7 @@ import { generateStrategyUniqueId } from "../../utils/randomWords.js";
 import { Op } from "sequelize";
 import { placeTargetAndStoplossAngelOrder } from "../../services/placeTargetAndStoplossAngel.js";
 import { placeTargetAndStoplossKiteOrder } from "../../services/placeTargetAndStoplossKite.js";
+import { checkTargetAndStoplossAngelOrder, checkTargetAndStoplossKiteOrder } from "../../services/checkTargetAndStoplossStatus.js";
 
 
 
@@ -1283,43 +1284,9 @@ logSuccess(req, {
 // ==============update logger code ==============================
 
 
-// helper: upsert oco group
-async function upsertOcoGroupRow({
-  userId,
-  broker,
-  symbol,
-  exchange,
-  buyOrderId,
-  targetOrderId,
-  stoplossOrderId,
-  quantity,
-}) {
-
-  
-  // buyOrderId unique rakhna best (you can also add unique index)
-  const [row] = await OcoGroup.upsert(
-    {
-      userId,
-      broker,
-      symbol,
-      exchange,
-      buyOrderId: String(buyOrderId),
-      targetOrderId: targetOrderId ? String(targetOrderId) : null,
-      stoplossOrderId: stoplossOrderId ? String(stoplossOrderId) : null,
-      quantity: Number(quantity || 0),
-      status: "ACTIVE",
-      winner: null,
-    },
-    { returning: true }
-  );
-
-  return row;
-}
-
-
 export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
   try {
-    
+
     logSuccess(req, {
       msg: "🚀 adminPlaceMultiTargetStoplossOrder called",
       body: req.body,
@@ -1421,14 +1388,10 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
             user:user
           });
 
-         
-
           if (!user) {
             logSuccess(req, { msg: "Skipping order: user not found", orderDbId: o.id });
             return { orderId: o.id, result: "NO_USER" };
           }
-
-
 
           if (!user.authToken) {
             logSuccess(req, { msg: "Skipping order: authToken missing", orderDbId: o.id });
@@ -1463,6 +1426,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
             totalPrice: o.totalPrice,
             actualQuantity: o.actualQuantity,
             userId: user.id,
+            orderId:req.body.orderId,
             userNameId: user.username,
             angelOneToken: o?.angelOneToken || o.token,
             angelOneSymbol: o?.angelOneSymbol || o?.symbol,
@@ -1481,6 +1445,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
           // ---------- Target Leg ----------
           const targetReqInput = {
             ...baseReqInput,
+            orderStatusTag:"TARGET",
             orderType: "LIMIT",
             price: targetPrice,
             triggerprice: 0,
@@ -1499,6 +1464,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
           const slReqInput = {
             ...baseReqInput,
             orderType: broker === "kite" ? "SL" : "STOPLOSS_LIMIT",
+            orderStatusTag:"STOPLOSS",
             price: limitPrice,
             triggerprice: triggerPrice,
           };
@@ -1600,7 +1566,329 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
 
 
 
+// ==============update logger code ==============================
+export const adminCheckTargetAndStoploss = async (req, res) => {
+  try {
 
+    let reqStrategyUniqueId = req.body.strategyUniqueId
+
+    // 1) Time window for today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    logSuccess(req, {
+      msg: "Computed start/end of day for Target and Stoploss check",
+      startOfDay,
+      endOfDay,
+    });
+
+    // 2) Fetch all OPEN (BUY) orders today
+    logSuccess(req, { msg: "Fetching OPEN BUY orders for today in Target and Stoploss check" });
+
+    const openOrders = await Order.findAll({
+      where: {
+        orderstatuslocaldb: "OPEN",
+        transactiontype: "BUY",
+       strategyUniqueId: reqStrategyUniqueId, // optional: null avoid
+      },
+      raw: true,
+    });
+
+    logSuccess(req, {
+      msg: "OPEN BUY orders fetched",
+      openOrdersCount: openOrders.length,
+    });
+
+    if (!openOrders.length) {
+      logSuccess(req, {
+        msg: "No OPEN BUY orders found today to Target and Stoploss check",
+      });
+
+      return res.json({
+        status: false,
+        message: "No OPEN (BUY) orders found today to Target and Stoploss check",
+        data: [],
+      });
+    }
+
+    // 3) Process each order
+    logSuccess(req, {
+      msg: "Starting Target and Stoploss check processing for orders",
+      count: openOrders.length,
+    });
+
+    const results = await Promise.allSettled(
+     
+      openOrders.map(async (o, idx) => {
+
+        // Target orderId nikalna
+          const targetMatch = o?.text?.match(/target_order_id:(\d+)/);
+          const targetOrderId = targetMatch ? targetMatch[1] : null;
+
+          // Stoploss orderId nikalna
+          const stoplossMatch = o?.text?.match(/stoploss_order_id:(\d+)/);
+          const stoplossOrderId = stoplossMatch ? stoplossMatch[1] : null;
+
+        logSuccess(req, {
+          msg: "Processing Target and Stoploss check for order",
+          index: idx,
+          targetOrderId:targetOrderId,
+          stoplossOrderId:stoplossOrderId,
+          orderDbId: o.id,
+          orderid: o.orderid,
+          userId: o.userId,
+          symbol: o.tradingsymbol,
+          exchange: o.exchange,
+        });
+
+        try {
+          // 3a) Fetch user of the order
+          logSuccess(req, {
+            msg: "Fetching user for Target and Stoploss check order",
+            orderDbId: o.id,
+            userId: o.userId,
+          });
+
+          const user = await User.findOne({
+            where: { id: o.userId },
+            raw: true,
+          });
+
+          logSuccess(req, {
+            msg: "User lookup result for Target and Stoploss check order",
+            orderDbId: o.id,
+            userFound: !!user,
+            userId: user?.id,
+            brokerName: user?.brokerName,
+            role: user?.role,
+            hasAuthToken: !!user?.authToken,
+          });
+
+          if (!user) {
+            logSuccess(req, {
+              msg: "Target and Stoploss check skipped: user not found",
+              orderDbId: o.id,
+              userId: o.userId,
+            });
+
+            return {
+              orderId: o.id,
+              result: "NO_USER",
+              message: "User not found",
+            };
+          }
+
+          if (!user.authToken) {
+            logSuccess(req, {
+              msg: "Target and Stoploss check skipped: user missing authToken",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+            return {
+              orderId: o.id,
+              result: "NO_TOKEN",
+              message: "User does not have broker authToken",
+            };
+          }
+
+          if (!user.brokerName) {
+            logSuccess(req, {
+              msg: "Target and Stoploss check skipped: user broker not selected",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+            return {
+              orderId: o.id,
+              result: "NO_BROKER",
+              message: "User broker not selected",
+            };
+          }
+
+          //=============== CALL BROKER SPECIFIC SERVICE ===============//
+          const broker = (user.brokerName || "").toLowerCase();
+
+          logSuccess(req, {
+            msg: "Routing Target and Stoploss check to broker service",
+            orderDbId: o.id,
+            broker,
+            userId: user.id,
+            role: user.role,
+          });
+
+          if (broker === "angelone" && user.role === "user") {
+            logSuccess(req, {
+              msg: "Calling placeAngelOrder for bulk Target and Stoploss check",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+            let isSellOrder = null;
+            let isCencellOrder = null
+
+             if(req.body.reason==='STOPLOSS') {
+
+              isSellOrder = stoplossOrderId
+              isCencellOrder = targetOrderId
+
+             }else{
+                isSellOrder = targetOrderId
+                isCencellOrder = stoplossOrderId
+             }
+
+            await checkTargetAndStoplossAngelOrder(user,isSellOrder,o.orderid,isCencellOrder);
+
+            logSuccess(req, {
+              msg: "AngelOne Target and Stoploss check completed",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+          } else if (broker === "kite" && user.role === "user") {
+            logSuccess(req, {
+              msg: "Calling placeKiteOrder for bulk Target and Stoploss check",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+             if(req.body.reason==='STOPLOSS') {
+
+              isSellOrder = stoplossOrderId
+              isCencellOrder = targetOrderId
+
+             }else{
+                isSellOrder = targetOrderId
+                isCencellOrder = stoplossOrderId
+             }
+
+            await checkTargetAndStoplossKiteOrder(user,isSellOrder,o.orderid,isCencellOrder);
+
+            logSuccess(req, {
+              msg: "Kite Target and Stoploss check completed",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+          } else if (broker === "fyers" && user.role === "user") {
+            logSuccess(req, {
+              msg: "Calling placeFyersOrder for bulk Target and Stoploss check",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+            // await placeFyersOrder(user, req);
+
+            logSuccess(req, {
+              msg: "Fyers square-off completed",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+          } else if (broker === "finvasia" && user.role === "user") {
+            logSuccess(req, {
+              msg: "Calling placeFinavasiaOrder for bulk Target and Stoploss check",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+
+            // await placeFinavasiaOrder(user, req, true);
+
+            logSuccess(req, {
+              msg: "Finvasia Target and Stoploss check completed",
+              orderDbId: o.id,
+              userId: user.id,
+            });
+          } else {
+            logSuccess(req, {
+              msg: "Target and Stoploss check skipped: invalid/unknown broker",
+              orderDbId: o.id,
+              brokerName: user.brokerName,
+              brokerValue: user.broker,
+              userId: user.id,
+            });
+
+            return {
+              orderId: o.id,
+              result: "INVALID_BROKER",
+              message: `Unknown broker: ${user.broker}`,
+            };
+          }
+
+          logSuccess(req, {
+            msg: "Target and Stoploss check processed successfully for order",
+            orderDbId: o.id,
+            broker: user.broker,
+            brokerName: user.brokerName,
+            userId: user.id,
+          });
+
+          return {
+            orderId: o.id,
+            broker: user.broker,
+          };
+        } catch (e) {
+          logError(req, e, {
+            msg: "Target and Stoploss check failed for order",
+            orderDbId: o.id,
+            userId: o.userId,
+          });
+
+          return {
+            orderId: o.id,
+            result: "FAILED",
+            message: safeErr(e),
+          };
+        }
+      })
+    );
+
+    logSuccess(req, {
+      msg: "All Target and Stoploss promises settled",
+      total: results.length,
+    });
+
+    // 4) Normalize Promise results
+    const finalOutput = results.map((r, i) => {
+      if (r.status === "fulfilled") {
+        logSuccess(req, {
+          msg: "Target and Stoploss check promise fulfilled",
+          orderDbId: openOrders[i]?.id,
+          result: r.value?.result || "OK",
+        });
+        return r.value;
+      }
+
+      logError(req, r.reason, {
+        msg: "Target and Stoploss check promise rejected",
+        orderDbId: openOrders[i]?.id,
+      });
+
+      return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
+    });
+
+    logSuccess(req, {
+      msg: "Bulk Target and Stoploss check completed",
+      outputCount: finalOutput.length,
+    });
+
+     console.log("===================group req end=====================");
+
+    return res.json({
+      status: true,
+      message: "Bulk Target and Stoploss check complete",
+      data: finalOutput,
+    });
+  } catch (error) {
+    logError(req, error, { msg: "adminMultipleSquareOff failed unexpectedly" });
+
+    return res.json({
+      status: false,
+      message: "Something went wrong",
+      error: safeErr(error),
+    });
+  }
+};
 
 
 

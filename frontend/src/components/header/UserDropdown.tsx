@@ -15,14 +15,14 @@ export default function UserDropdown() {
     const [userNameId, setUserNameId] = useState("User");
   const [userEmail, setUserEmail] = useState("user@example.com");
 
-   const [userPackageName, setUserPackageName] = useState("");
-  const [userUserPackageDate, setUserPackageDate] = useState("");
+   
+ 
 
-  const [userRole, setUserRole] = useState("U");
+  
   const navigate = useNavigate();
 
 
-  console.log(userPackageName,userUserPackageDate,userRole);
+
   
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function UserDropdown() {
         
         setUserNameId(parsedUser.username || "User");
         setUserEmail(parsedUser.email || "user@example.com");
-        setUserRole(parsedUser.role || "U");
+        // setUserRole(parsedUser.role || "U");
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);
       }
@@ -60,8 +60,8 @@ export default function UserDropdown() {
            let UserNameDb = resData.data.firstName+' '+resData.data.lastName
 
            setUserName(resData.data.username);
-           setUserPackageName(resData.data.packageName)
-           setUserPackageDate(resData.data.packageDate)
+          //  setUserPackageName(resData.data.packageName)
+          //  setUserPackageDate(resData.data.packageDate)
            setUserNameId( UserNameDb);
 
          }else{

@@ -1570,6 +1570,45 @@ export const getKiteTrades = async (req, res) => {
   }
 };
 
+export const placeKiteOnlineOrder = async (req, res) => {
+  try {
+
+    const  kite  = await getKiteClientForUserId(21)
+
+    // 4) Kite payload
+    const orderParams = {
+      exchange:"" ,
+      tradingsymbol:"" ,
+      transaction_type: "SELL",
+      quantity:"",
+      product: "NRML",           // product CNC , NRML , MIS , MTF
+      tag:"softwaresetu",
+      order_type:"MARKET" ,        // MARKET , LIMIT
+      price: "" || 0,
+      market_protection: 5,
+    };
+
+     placeRes = await kite.placeOrder("regular", orderParams);
+   
+    const orders = await kite.getOrders();
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: orders,
+      message: "Successfully Place order ",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
 export const getKiteOrders = async (req, res) => {
   try {
 

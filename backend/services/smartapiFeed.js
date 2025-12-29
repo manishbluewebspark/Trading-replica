@@ -208,7 +208,7 @@ export  function connectSmartSocket(userId,authToken,feedToken,clientId,) {
 
     let ordersData  = await getOrderFunction(authToken)
 
-      console.log(ordersData,'socket inside');
+      // console.log(ordersData,'socket inside');
 
      ordersData.push({ exchangeType: 1, tokens: ["99926009","99926000"] });
           
@@ -261,10 +261,10 @@ export  function connectSmartSocket(userId,authToken,feedToken,clientId,) {
          tick.ltp = tick.ltpPaiseOrRaw/10000000
 
          }else{
-          console.log("📈 LTP:", tick,'full object');
+          // console.log("📈 LTP:", tick,'full object');
          }
 
-         console.log("📈 LTP:", tick,'full object');
+        //  console.log("📈 LTP:", tick,'full object');
         
         // 🔥 ship to your socket clients
         emitTick(tick);

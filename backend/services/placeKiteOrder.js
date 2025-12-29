@@ -136,7 +136,7 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
     newOrder = await Order.findOne({
       where: {
         userId: user.id,
-        tradingsymbol: reqInput.symbol,
+        tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
         transactiontype: reqInput.transactiontype,
         orderstatuslocaldb: ["PENDING", "OPEN"],
       },

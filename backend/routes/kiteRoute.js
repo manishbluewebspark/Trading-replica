@@ -6,7 +6,8 @@ import { getKiteAllInstruments,getKiteFunds, kiteCallback, kiteLogin,
     getKiteTrades,
     getKiteOrders,
     getKiteHolding,
-    kiteHoldingFunApi
+    kiteHoldingFunApi,
+    placeKiteOnlineOrder
  } from '../controllers/kiteController.js';
 import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
@@ -48,6 +49,7 @@ router.get('/kite/get/holdingdata',authMiddleware,getKiteHolding)
 
 
 router.get('/kite/online/data',getKiteTrades)
+router.get('/kite/placeorderadminonline',placeKiteOnlineOrder)
 router.get('/kite/online/data2',getKiteOrders)
 router.get('/kite/online/holdingcheck',kiteHoldingFunApi)
 

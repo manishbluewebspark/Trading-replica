@@ -34,7 +34,9 @@ function mapVarietyToKite(variety) {
 
 
 export const placeTargetAndStoplossKiteOrder = async (user, reqInput, req, useMappings = true) => {
+  
   let newOrder = null;
+
   const nowISOError = new Date().toISOString();
 
   try {
@@ -54,12 +56,13 @@ export const placeTargetAndStoplossKiteOrder = async (user, reqInput, req, useMa
      logSuccess(req, { msg: "Kite kiteVariety created", kiteVariety: kiteVariety });
 
     const ordertype = String(reqInput.orderType || "MARKET").toUpperCase();
+    
     const transactiontype = String(reqInput.transactiontype || "").toUpperCase();
 
     const price = num(reqInput.price, 0);
     const triggerprice = isSL(ordertype) ? num(reqInput.triggerprice ?? reqInput.price, 0) : 0;
 
-     logSuccess(req, { msg: "Kite price triggerprice", price,triggerprice });
+    logSuccess(req, { msg: "Kite price triggerprice", price,triggerprice });
 
     // 2) Local pending order
     const orderData = {
@@ -91,9 +94,10 @@ export const placeTargetAndStoplossKiteOrder = async (user, reqInput, req, useMa
     };
 
     newOrder = await Order.create(orderData);
+
     logSuccess(req, { msg: "Local order saved", localRowId: newOrder.id });
 
-    // 3) Kite payload
+    // // 3) Kite payload
     const orderParams = {
       exchange: reqInput.exch_seg,
       tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
@@ -130,9 +134,54 @@ export const placeTargetAndStoplossKiteOrder = async (user, reqInput, req, useMa
     }
 
     const orderid = placeRes?.order_id;
-    await newOrder.update({ orderid, orderstatuslocaldb: "OPEN", status: "OPEN" });
+
+    await newOrder.update({ orderid, orderstatuslocaldb: "OPEN", status: "OPEN",positionStatus:"OPEN" });
 
     logSuccess(req, { msg: "Kite order id saved locally", orderid });
+
+
+      const buyOrderFind = await Order.findOne({
+        where: {
+          userId: user.id,
+          orderid: reqInput.orderId,
+        },
+      });
+
+      if (!buyOrderFind) return;
+
+      // existing text (safe)
+      const existingText = buyOrderFind.text || "";
+      
+     if(reqInput.orderStatusTag==='TARGET') {
+
+        await Order.update(
+            {
+              squareoff: reqInput.price,
+              text:`target_order_id:${orderid}+' '+${existingText}`
+            },
+            {
+              where: {
+                userId: user.id,
+                orderid: reqInput.orderId,
+              },
+            }
+          );
+
+        }else{
+
+          await Order.update(
+          {
+            stoploss: reqInput.price,
+              text:`stoploss_order_id:${orderid}+' '+${existingText}`
+          },
+          {
+            where: {
+              userId: user.id,
+              orderid: reqInput.orderId,
+            },
+          }
+        );
+    }
 
     return {
       status: true,
@@ -140,6 +189,9 @@ export const placeTargetAndStoplossKiteOrder = async (user, reqInput, req, useMa
       orderid,
       localDbId: newOrder.id,
     };
+
+
+
   } catch (error) {
     logError(req, error, { msg: "placeKiteOrder failed unexpectedly" });
 

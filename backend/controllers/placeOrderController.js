@@ -1065,6 +1065,7 @@ export const adminGetOrderInTables = async (req, res, next) => {
         const orderData = await Order.findAll({
             where: {
                 transactiontype: "BUY",
+                positionStatus: "OPEN",
                 orderstatuslocaldb: {
                     [Op.in]: ["OPEN"],
                 },
@@ -1293,14 +1294,11 @@ export const adminGetTradeInTables1 = async (req, res,next) => {
       });
 
       const formatted = orderData.map(o => ({
-  ...o,
-
-    createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
       updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
       buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
-      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
-
-  
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null, 
 }));
     
      return res.json({
@@ -1643,7 +1641,8 @@ export const userGetTradeInTables = async (req, res,next) => {
       where: {
         userId:req.userId,
          transactiontype: "BUY",
-       orderstatuslocaldb: {
+         positionStatus:"OPEN",
+         orderstatuslocaldb: {
             [Op.in]: ["OPEN"],   // 👈 fetch both
           },
          createdAt: {

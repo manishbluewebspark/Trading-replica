@@ -124,14 +124,6 @@ export const placeTargetAndStoplossAngelOrder = async (user, reqInput, req) => {
 
     logSuccess(req, { msg: "Prepared AngelOne broker payload", brokerPayload });
 
-    return {
-      status: true,
-      broker: "angelone",
-      orderid:"orderid",
-      uniqueorderid: "uniqueOrderId",
-      localDbId: "newOrder.id",
-    };
-
     // 4️⃣ Place order
     let placeRes;
     try {
@@ -139,8 +131,6 @@ export const placeTargetAndStoplossAngelOrder = async (user, reqInput, req) => {
       placeRes = await axios.post(ANGEL_ONE_PLACE_URL, brokerPayload, {
         headers: angelHeaders(user.authToken),
       });
-
-        console.log('==============placeRes done ===========');
 
       logSuccess(req, { msg: "AngelOne placeOrder response received", response: placeRes.data });
     } catch (err) {
@@ -181,9 +171,53 @@ export const placeTargetAndStoplossAngelOrder = async (user, reqInput, req) => {
     
     const uniqueOrderId = placeRes.data?.data?.uniqueorderid;
 
-    await newOrder.update({ orderid, uniqueorderid: uniqueOrderId, orderstatuslocaldb: "OPEN", status: "OPEN" });
+    await newOrder.update({ orderid, uniqueorderid: uniqueOrderId, orderstatuslocaldb: "OPEN", status: "OPEN",positionStatus:"OPEN" });
 
     logSuccess(req, { msg: "AngelOne order placed successfully", orderid, uniqueOrderId });
+
+      const buyOrderFind = await Order.findOne({
+        where: {
+          userId: user.id,
+          orderid: reqInput.orderId,
+        },
+      });
+
+      if (!buyOrderFind) return;
+
+      // existing text (safe)
+      const existingText = buyOrderFind.text || "";
+      
+     if(reqInput.orderStatusTag==='TARGET') {
+
+        await Order.update(
+            {
+              squareoff: reqInput.price,
+              text:`target_order_id:${orderid}+' '+${existingText}`
+            },
+            {
+              where: {
+                userId: user.id,
+                orderid: reqInput.orderId,
+              },
+            }
+          );
+
+        }else{
+
+          await Order.update(
+          {
+            stoploss: reqInput.price,
+              text:`stoploss_order_id:${orderid}+' '+${existingText}`
+          },
+          {
+            where: {
+              userId: user.id,
+              orderid: reqInput.orderId,
+            },
+          }
+        );
+    }
+
 
     return {
       status: true,

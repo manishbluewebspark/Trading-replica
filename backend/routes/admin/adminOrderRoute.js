@@ -9,7 +9,7 @@ import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, upda
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import {  adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminPlaceMultiTargetStoplossOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import {  adminCheckTargetAndStoploss, adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminPlaceMultiTargetStoplossOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 import {  adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
@@ -42,6 +42,7 @@ router.post('/group/squareoff',AdminAuthMiddleware,adminGroupSquareOff)
 router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 
 router.post("/multiple/targetstoploss/order", AdminAuthMiddleware, adminPlaceMultiTargetStoplossOrder);
+router.post("/targetstoplosscheck", AdminAuthMiddleware, adminCheckTargetAndStoploss);
 
 
 
