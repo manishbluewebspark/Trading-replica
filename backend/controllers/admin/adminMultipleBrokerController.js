@@ -1,6 +1,5 @@
 import User from "../../models/userModel.js";
 import Order from "../../models/orderModel.js";
-import OcoGroup from "../../models/ocoGroupModel.js";
 import { placeAngelOrder } from "../../services/placeAngelOrder.js";
 import { placeKiteOrder } from "../../services/placeKiteOrder.js";
 import { placeFyersOrder } from "../../services/placeFyersOrder.js";
@@ -9,8 +8,7 @@ import { logSuccess, logError } from "../../utils/loggerr.js";
 import { placeFinavasiaOrder } from "../../services/placeFinavasiaOrder.js";
 import { generateStrategyUniqueId } from "../../utils/randomWords.js";
 import { Op } from "sequelize";
-import { placeTargetAndStoplossAngelOrder } from "../../services/placeTargetAndStoplossAngel.js";
-import { placeTargetAndStoplossKiteOrder } from "../../services/placeTargetAndStoplossKite.js";
+import {  updateTargetAndStoploss } from "../../services/placeTargetAndStoplossAngel.js";
 import { checkTargetAndStoplossAngelOrder, checkTargetAndStoplossKiteOrder } from "../../services/checkTargetAndStoplossStatus.js";
 
 
@@ -684,8 +682,8 @@ export const adminMultipleSquareOff = async (req, res) => {
 export const adminGroupSquareOff = async (req, res) => {
   try {
 
-  
     let reqStrategyUniqueId = req.body.strategyUniqueId
+     let reason = req.body?.reason ||""
 
     const afterUnderscore = reqStrategyUniqueId.split("_").pop();
 
@@ -848,6 +846,7 @@ export const adminGroupSquareOff = async (req, res) => {
             totalPrice: o.totalPrice,
             actualQuantity: o.actualQuantity,
             userId: user.id,
+            text:`Winner : ${reason}`,
             userNameId: user.username,
             angelOneToken: o?.angelOneToken || o.token,
             angelOneSymbol: o?.angelOneSymbol || o?.symbol,
@@ -855,7 +854,6 @@ export const adminGroupSquareOff = async (req, res) => {
             buyOrderId: String(o.orderid),
             groupName:o?.strategyName||"",
             strategyUniqueId:strategyUniqueId,
-
             kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
             kiteToken: o.symboltoken || o.angelOneToken,
             finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,
@@ -1282,8 +1280,6 @@ logSuccess(req, {
 };
 
 // ==============update logger code ==============================
-
-
 export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
   try {
 
@@ -1293,15 +1289,12 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
     });
 
     const reqStrategyUniqueId = req.body.strategyUniqueId;
-    const afterUnderscore = String(reqStrategyUniqueId || "").split("_").pop();
-
     const targetPrice = Number(req.body.targetPrice);
     const stoplossPrice = Number(req.body.stoplossPrice);
 
     logSuccess(req, {
       msg: "Parsed input values",
       reqStrategyUniqueId,
-      afterUnderscore,
       targetPrice,
       stoplossPrice,
     });
@@ -1318,15 +1311,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
         message: "Invalid targetPrice/stoplossPrice",
       });
     }
-
-    // ================= Strategy ID =================
-    const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
-
-    logSuccess(req, {
-      msg: "Generated new strategyUniqueId for OCO",
-      strategyUniqueId,
-    });
-
+    
     // ================= Fetch OPEN BUY Orders =================
     logSuccess(req, {
       msg: "Fetching OPEN BUY orders",
@@ -1363,6 +1348,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
     // ================= Process Each Order =================
     const results = await Promise.allSettled(
       openOrders.map(async (o, idx) => {
+
         logSuccess(req, {
           msg: "▶️ Processing order for OCO",
           index: idx,
@@ -1379,15 +1365,6 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
             raw: true,
           });
 
-          logSuccess(req, {
-            msg: "User lookup completed",
-            orderDbId: o.id,
-            userFound: !!user,
-            brokerName: user?.brokerName,
-            role: user?.role,
-            user:user
-          });
-
           if (!user) {
             logSuccess(req, { msg: "Skipping order: user not found", orderDbId: o.id });
             return { orderId: o.id, result: "NO_USER" };
@@ -1398,126 +1375,10 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
             return { orderId: o.id, result: "NO_TOKEN" };
           }
 
-          if (!user.brokerName) {
-            logSuccess(req, { msg: "Skipping order: broker not selected", orderDbId: o.id });
-            return { orderId: o.id, result: "NO_BROKER" };
-          }
-
-          const broker = (user.brokerName || "").toLowerCase();
-
-          logSuccess(req, {
-            msg: "Broker resolved",
-            broker,
-            orderDbId: o.id,
-          });
-
-          // ---------- Base reqInput ----------
-          const baseReqInput = {
-            variety: o.variety,
-            symbol: o.tradingsymbol,
-            instrumenttype: o.instrumenttype,
-            token: o.symboltoken,
-            exch_seg: o.exchange,
-            orderType: o.ordertype,
-            quantity: o.quantity,
-            productType: o.producttype,
-            duration: o.duration,
-            transactiontype: "SELL",
-            totalPrice: o.totalPrice,
-            actualQuantity: o.actualQuantity,
-            userId: user.id,
-            orderId:req.body.orderId,
-            userNameId: user.username,
-            angelOneToken: o?.angelOneToken || o.token,
-            angelOneSymbol: o?.angelOneSymbol || o?.symbol,
-            buyOrderId: String(o.orderid),
-            groupName: o?.strategyName || "",
-            strategyUniqueId,
-            kiteSymbol: o.tradingsymbol,
-            kiteToken: o.symboltoken,
-          };
-
-          logSuccess(req, {
-            msg: "Prepared baseReqInput",
-            baseReqInput,
-          });
-
-          // ---------- Target Leg ----------
-          const targetReqInput = {
-            ...baseReqInput,
-            orderStatusTag:"TARGET",
-            orderType: "LIMIT",
-            price: targetPrice,
-            triggerprice: 0,
-          };
-
-          logSuccess(req, {
-            msg: "Prepared TARGET order input",
-            targetReqInput,
-          });
-
-          const triggerPrice = stoplossPrice;     // e.g. 120
-          const limitPrice = stoplossPrice - 0.5; // 119.5
-
-
-          // ---------- Stoploss Leg ----------
-          const slReqInput = {
-            ...baseReqInput,
-            orderType: broker === "kite" ? "SL" : "STOPLOSS_LIMIT",
-            orderStatusTag:"STOPLOSS",
-            price: limitPrice,
-            triggerprice: triggerPrice,
-          };
-
-          logSuccess(req, {
-            msg: "Prepared STOPLOSS order input",
-            slReqInput,
-          });
-
-          let targetRes, slRes;
-
-          // ---------- Place Orders ----------
-          if (broker === "angelone") {
-            logSuccess(req, { msg: "Placing AngelOne TARGET order", orderDbId: o.id });
-            targetRes = await placeTargetAndStoplossAngelOrder(user, targetReqInput, req);
-
-            logSuccess(req, { msg: "AngelOne TARGET response", targetRes });
-
-            if (!targetRes?.status) return { orderId: o.id, result: "TARGET_FAILED" };
-
-            logSuccess(req, { msg: "Placing AngelOne STOPLOSS order", orderDbId: o.id });
-            slRes = await placeTargetAndStoplossAngelOrder(user, slReqInput, req);
-
-            logSuccess(req, { msg: "AngelOne STOPLOSS response", slRes });
-
-            if (!slRes?.status) return { orderId: o.id, result: "SL_FAILED" };
-          } 
-          else if (broker === "kite") {
-            logSuccess(req, { msg: "Placing Kite TARGET order", orderDbId: o.id });
-            targetRes = await placeTargetAndStoplossKiteOrder(user, targetReqInput, req, false);
-
-            logSuccess(req, { msg: "Kite TARGET response", targetRes });
-
-            if (!targetRes?.status) return { orderId: o.id, result: "TARGET_FAILED" };
-
-            logSuccess(req, { msg: "Placing Kite STOPLOSS order", orderDbId: o.id });
-            slRes = await placeTargetAndStoplossKiteOrder(user, slReqInput, req, false);
-
-            logSuccess(req, { msg: "Kite STOPLOSS response", slRes });
-
-            if (!slRes?.status) return { orderId: o.id, result: "SL_FAILED" };
-          } 
-          else {
-            logSuccess(req, { msg: "Unsupported broker", broker });
-            return { orderId: o.id, result: "INVALID_BROKER" };
-          }
+          await updateTargetAndStoploss(user,o,targetPrice,stoplossPrice,req)
 
           return {
             orderId: o.id,
-            buyOrderId: o.orderid,
-            broker,
-            targetOrderId: targetRes.orderid,
-            stoplossOrderId: slRes.orderid,
             result: "OK",
           };
         } catch (e) {
@@ -1530,26 +1391,10 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
       })
     );
 
-    const finalOutput = results.map((r, i) =>
-      r.status === "fulfilled"
-        ? r.value
-        : { orderId: openOrders[i]?.id, result: "PROMISE_REJECTED" }
-    );
-
-    logSuccess(req, {
-      msg: "🎯 adminPlaceMultiTargetStoplossOrder completed",
-      total: finalOutput.length,
-      finalOutput,
-    });
-
     return res.json({
       status: true,
       message: "Bulk Target+Stoploss placed",
-      data: finalOutput,
-      meta: {
-        count: finalOutput.length,
-        strategyUniqueId,
-      },
+      data: null,
     });
   } catch (error) {
     logError(req, error, {
@@ -1567,7 +1412,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
 
 
 // ==============update logger code ==============================
-export const adminCheckTargetAndStoploss = async (req, res) => {
+export const adminCheckTargetAndStoploss121 = async (req, res) => {
   try {
 
     let reqStrategyUniqueId = req.body.strategyUniqueId
@@ -1592,7 +1437,7 @@ export const adminCheckTargetAndStoploss = async (req, res) => {
       where: {
         orderstatuslocaldb: "OPEN",
         transactiontype: "BUY",
-       strategyUniqueId: reqStrategyUniqueId, // optional: null avoid
+        strategyUniqueId: reqStrategyUniqueId, // optional: null avoid
       },
       raw: true,
     });

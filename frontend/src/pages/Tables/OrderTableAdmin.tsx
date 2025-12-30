@@ -805,16 +805,16 @@ const DetailRowRenderer = (props: any) => {
 
   };
 
-  // //  test code start 
-  // ltpByTokenRef.current["84195"] = 238;
+  //  test code start 
+  // ltpByTokenRef.current["40446"] = 238;
 
   //  callAutoExitAPI({
-  //       orderId:"2005501645257187328",
-  //       strategyUniqueId: "6e8152e0_jetha12",
+  //       orderId:"2005856046572380160",
+  //       strategyUniqueId: "193fe21d_jetha12",
   //       reason: "STOPLOSS",
   //     });
 
-  // //  test end 
+  //  test end 
     
   socket.on("tick", onTick);
   // return () => socket.off("tick", onTick);

@@ -121,6 +121,9 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
           } else if (broker === "kite") {
             logSuccess(req, { msg: "Calling kiteHoldingFun", userId, broker });
             out = await kiteHoldingFun({ user, req });
+
+            console.log('===================out kite ============',out);
+            
             logSuccess(req, { msg: "kiteHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
           } else if (broker === "fyers") {
             logSuccess(req, { msg: "Calling fyersHoldingFun", userId, broker });

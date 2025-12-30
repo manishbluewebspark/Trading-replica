@@ -204,16 +204,20 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     logSuccess(req, { msg: "Prepared local AngelOne order", orderData });
 
 
-    // 2️⃣ Check existing OPEN/PENDING order for same symbol
-    newOrder = await Order.findOne({
-      where: {
-        userId: user.id,
-        tradingsymbol: reqInput.symbol,
-        transactiontype: reqInput.transactiontype,
-        orderstatuslocaldb: ["PENDING", "OPEN"],
-      },
-    });
+    if((reqInput.transactiontype || "").toUpperCase()==='BUY') {
 
+      // 2️⃣ Check existing OPEN/PENDING order for same symbol
+      newOrder = await Order.findOne({
+        where: {
+          userId: user.id,
+          ordertype: reqInput.orderType,
+          producttype: reqInput.productType,
+          tradingsymbol: reqInput.symbol,
+          transactiontype: "BUY",
+          orderstatuslocaldb: ["PENDING", "OPEN"],
+        },
+      });
+  }
     if (newOrder) {
       // ✅ UPDATE instead of CREATE
       const newQty = Number(newOrder.quantity || 0) + Number(reqInput.quantity);
@@ -324,7 +328,9 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     const orderid = placeRes.data.data.orderid;
     const uniqueOrderId = placeRes.data.data.uniqueorderid;
 
-    await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
+    if(!orderExitstingOrNot) {
+
+     await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
 
     logSuccess(req, {
       msg: "AngelOne order placed successfully",
@@ -332,6 +338,8 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       uniqueOrderId,
     });
 
+  }
+  
     // 5️⃣ Details polling
     let detData = null;
     try {
@@ -565,7 +573,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
 
        const newQty = totalQty
       //  const newPrice = avgPrice
-       const newFillId = matched.fillid
+      //  const newFillId = matched.fillid
        const newTradeValue = avgPrice*totalQty
 
         const UpdateNewQty = existingFillSize + newQty
@@ -580,7 +588,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         fillprice:UpdateNewPrice,
         fillsize: UpdateNewQty,
         quantity:UpdateNewQty,
-        fillid: newFillId,
+        // fillid: newFillId,
       });
 
       logSuccess(req, { msg: "Trade matched & order finalized", pnl });

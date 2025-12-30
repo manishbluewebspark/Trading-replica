@@ -1,5 +1,5 @@
 import express from 'express';
-import { adminFetchOrder, adminFetchOrderHolding, adminGetCloneUserHolding, AdminGetHoldingMultiple, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
+import {  adminFetchOrderHolding, adminGetCloneUserHolding, AdminGetHoldingMultiple, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
 import { getTokens, storeTokens } from '../../controllers/testController.js';
 import {AdminAuthMiddleware, authMiddleware} from '../../middleware/authMiddleware.js';
 import { adminGetUserAngelToken } from '../../controllers/userController.js';
@@ -9,14 +9,14 @@ import { createStrategy, deleteStrategy, getAllStrategies, getStrategyById, upda
 import { createBroker, deleteBroker, getAllBrokers, getBrokerById, updateBroker } from '../../controllers/admin/brokerControler.js';
 import { createCloneUser, deleteCloneUser, getCloneAllUsers, getCloneUserFund, getCloneUserTrade, loginCloneUserDemat, updateCloneUser, uploadOrderExcel } from '../../controllers/admin/cloneUserController.js';
 import { upload } from '../../middleware/upload.js';
-import {  adminCheckTargetAndStoploss, adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminPlaceMultiTargetStoplossOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
+import {   adminGroupSquareOff, adminMultipleSquareOff, adminPlaceMultiBrokerOrder, adminPlaceMultiTargetStoplossOrder, adminSingleSquareOff, getTokenStatusSummary } from '../../controllers/admin/adminMultipleBrokerController.js';
 import { createManualOrder, createManualOrderWithBrokerPrice } from '../../controllers/admin/orderManualController.js';
 import {  adminFetchSellOrdersAndUpdateManual, getUsersPnlData } from '../../controllers/admin/adminFetchOrder.js';
 import { getDeshboardOrdersUpdate } from '../../controllers/angelController.js';
 import { clearMergedInstrumentsCache, getMergedInstrumentsCacheTTL } from '../../controllers/instrumentMultipleDematController.js';
 import { testingInstrument } from '../../controllers/admin/testingController.js';
 import { syncHoldingsAllBrokers } from '../../services/baseBrokerHoldings.js';
-import { reconcileOrdersAllScenarios } from '../../controllers/admin/reconcileOrders.controller.js';
+
 import { angelTradeWebhookController, kiteTradeWebhookController } from '../../controllers/admin/webhook/adminWHController.js';
 import { GetOrderStatusPerticularSymbol } from '../../controllers/admin/refreshController.js';
 
@@ -40,9 +40,8 @@ router.post('/multiple/place/order',AdminAuthMiddleware,adminPlaceMultiBrokerOrd
 router.get('/sequareoff',AdminAuthMiddleware,adminMultipleSquareOff)
 router.post('/group/squareoff',AdminAuthMiddleware,adminGroupSquareOff)
 router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
-
 router.post("/multiple/targetstoploss/order", AdminAuthMiddleware, adminPlaceMultiTargetStoplossOrder);
-router.post("/targetstoplosscheck", AdminAuthMiddleware, adminCheckTargetAndStoploss);
+router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
 
 
 

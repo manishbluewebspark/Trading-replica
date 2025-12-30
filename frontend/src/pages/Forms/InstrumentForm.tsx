@@ -7,6 +7,8 @@ import { ModuleRegistry } from "ag-grid-community";
 import { AllCommunityModule } from "ag-grid-community";
 ModuleRegistry.registerModules([AllCommunityModule]); // ✅ REQUIRED
 
+
+
 import { AgGridReact } from "ag-grid-react";
 import type {
   ColDef,
@@ -16,11 +18,17 @@ import type {
 } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
+import { useInstrumentStore } from "../../instrumentStore";
 // ----------------------------------------------------------
+
+
+
 
 export default function InstrumentForm() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
+
+  const { dataRedish, setDataRedish, shouldFetchRedish } = useInstrumentStore();
 
   // const [fundData, setFundData] = useState<number>(0);
 
@@ -105,7 +113,14 @@ export default function InstrumentForm() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.get(`${apiUrl}/order/mongodb/instrument`,  {
+
+
+      if (!dataRedish || shouldFetchRedish()) {
+
+        console.log('============backend api hit==========');
+        
+
+           const res = await axios.get(`${apiUrl}/order/mongodb/instrument`,  {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                 "AngelOneToken": localStorage.getItem("angel_token") || "",
@@ -118,47 +133,21 @@ export default function InstrumentForm() {
 
       let allData = res?.data?.data || [];
 
-    // allData = allData.filter((item: any) => {
-    //   const name = String(item.name || item.symbol || "").toUpperCase();
-    //   // return name.includes("NIFTY") || name.includes("BANK");
-
-    //    return name.includes("NIFTY")
-    // });
-
-      // allData = allData
-      //   // .filter((item:any) => {
-      //   //   const name = String( item.symbol || "").toUpperCase();
-      //   //   return name.startsWith("NIFTY") || name.startsWith("BANKNIFTY");
-      //   // })
-      //   .map((item:any) => {
-
-      //     const symbol = String(item.symbol || "").toUpperCase();
-
-      //     const formattedName = formatOptionSymbol(symbol);
-
-      //     let optionSymbol = "-";
-
-      //      if (symbol.endsWith("CE")) optionSymbol = "CE";
-      //     else if (symbol.endsWith("PE")) optionSymbol = "PE";
-      //     else if (symbol.endsWith("FUT")) optionSymbol = "FUT";
-      //     else if (symbol.endsWith("-EQ")) optionSymbol = "EQ";
-
-
-      //     return { ...item, formattedName,optionSymbol };
-      //   });
-
-
-       
-          
+   
+      
 
             setDataExcel(allData)
             setData(allData);
+            setDataRedish(allData);
 
        }else{
 
          toast.error(res?.data?.message || "Something went wrong");
 
        }
+
+      }
+   
 
  
     } catch (err: any) {

@@ -1534,6 +1534,9 @@ export const getKiteTrades = async (req, res) => {
               //  const orders = await kite.getOrderTrades("2004398212261355520");
          const orders = await kite.getOrders();
 
+         console.log(orders,'==========orders===========');
+         
+
     // const orders = await kite.getHoldings();
     
     
@@ -1597,6 +1600,39 @@ export const placeKiteOnlineOrder = async (req, res) => {
       statusCode: 200,
       data: orders,
       message: "Successfully Place order ",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+export const cancellKiteOnlineOrder = async (req, res) => {
+  try {
+
+    const  kite  = await getKiteClientForUserId(39)
+
+    
+    // const response = await kite.cancelOrder("regular", "2005853002329513984");
+
+    // console.log(response,'response cancell');
+    
+   
+    const orders = await kite.getOrders();
+
+    console.log(orders);
+    
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: orders,
+      message: "Successfully Cancell order ",
     });
   } catch (error) {
     return res.json({

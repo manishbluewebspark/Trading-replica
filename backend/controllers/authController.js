@@ -470,7 +470,229 @@ const password = (req.body.password || "").trim();
 
 // Step 2: Get AngelOne Profile
 
+
+
 export const login = async (req, res) => {
+
+const email = (req.body.email || "").trim();
+const password = (req.body.password || "").trim();
+
+  try {
+    
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: email },      // assuming you store emails in lowercase
+          { username: email },    // usernames are case-sensitive or as per your rules
+        ],
+      },
+    });
+
+   
+
+    if (!user) {
+
+      return res.json({
+            status: false,
+            statusCode:401,
+            message: "User not found",
+            error: null,
+        });
+    }
+
+    const originalPass = decrypt(user.password,process.env.CRYPTO_SECRET)
+
+    if (originalPass!==password){
+
+      return res.json({
+            status: false,
+            statusCode:401,
+            message: "Invalid credentials",
+            error: null,
+        });
+
+    } 
+
+
+    const isNormalUser =
+          user.role === "user" || user.role === "clone-user";
+
+        if (isNormalUser) {
+          const activeSession = await UserSession.findOne({
+            where: {
+              userId: user.id,
+              is_active: true,
+            },
+          });
+
+          // ✅ only create if no active session exists
+          if (!activeSession) {
+            await UserSession.create({
+              userId: user.id,
+              login_at: new Date(),
+              is_active: true,
+            });
+          }
+        } else if (user.role === "admin") {
+          // 🔥 admin → always create session
+          await UserSession.create({
+            userId: user.id,
+            login_at: new Date(),
+            is_active: true,
+          });
+}
+     
+    // 2️⃣ Find any user where angelLoginUser = true AND updated today
+      const activeAngelUser = await User.findOne({
+        where: {
+          angelLoginUser: true,
+          brokerName:"angelone",
+          // updatedAt: {
+          //   [Op.between]: [startOfDay, endOfDay],
+          // },
+        },
+        raw:true
+      });
+
+    const token = jwt.sign({ id: user.id,role:user.role,borker:user.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' })
+
+     if(user.role==='admin') {
+
+       if(activeAngelUser) {
+      
+          let adminCren = {
+              authToken:activeAngelUser.authToken,
+              feedToken:activeAngelUser.feedToken,
+              refreshToken:activeAngelUser.refreshToken
+          }
+
+       if (!isSocketReady()) {
+
+          // connectSmartSocket(
+          //   activeAngelUser.authToken,
+          //   activeAngelUser.feedToken,
+          //   angelCrendentialData.clientId
+          // );
+
+        } else {
+          emitOrderGet(user.authToken);
+        }
+
+      return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            message: "User login successfully",
+            angelTokens:adminCren,
+            error: null,
+        });
+
+    }else{
+        return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            message: "User login successfully",
+            angelTokens:{},
+            error: null,
+        });
+    }
+      
+     }else{
+
+        // 2️⃣ Find any user where angelLoginUser = true AND updated today
+      const angelCrendentialData = await AngelOneCredentialer.findOne({
+        where: {
+          userId:user.id ,
+        },
+        raw:true
+      });
+
+       if(angelCrendentialData) {
+
+
+        if (!isSocketReady()) {
+
+          connectSmartSocket(
+            user.authToken,
+            user.feedToken,
+            angelCrendentialData?.clientId
+          );
+          
+        } else {
+          emitOrderGet(user.authToken);
+        }
+
+     let userCren = {
+              authToken:user.authToken,
+              feedToken:user.feedToken,
+              refreshToken:user.refreshToken
+          }
+
+      
+     return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:userCren,
+            message: "User login successfully",
+            error: null,
+        });
+
+
+       }else if(user.brokerName==='kite') {
+
+        return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:{
+              authToken:user.authToken,
+              feedToken:user.feedToken,
+              refreshToken:user.refreshToken
+            },
+            message: "User login successfully",
+            error: null,
+        });
+
+       }else{
+         
+         return res.json({
+            status: true,
+            statusCode:400,
+            token, user,
+            angelTokens:{
+              authToken:"",
+              feedToken:"",
+              refreshToken:""
+            },
+            message: "User login successfully",
+            error: null,
+        });
+
+       }
+
+     }
+  
+  } catch (error) {
+
+    console.log(error);
+    
+
+      return res.json({
+            status: false,
+            statusCode:500,
+            message: "Unexpected error occurred. Please try again.",
+            data:null,
+            error: error.message,
+        });
+  }
+};
+
+
+// =========================working code ========================
+
+export const login121 = async (req, res) => {
 
 const email = (req.body.email || "").trim();
 const password = (req.body.password || "").trim();
@@ -713,51 +935,19 @@ const password = (req.body.password || "").trim();
   }
 };
 
+export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
+    try {
 
-export const login121 = async (req, res) => {
-
-const email = (req.body.email || "").trim();
-const password = (req.body.password || "").trim();
-
-  try {
-
-    // Get start and end of today
+       // Get start and end of today
       const now = new Date();
       const startOfDay = new Date(now.setHours(0, 0, 0, 0)); // Midnight today
       const endOfDay = new Date(now.setHours(23, 59, 59, 999)); // End of today
 
-       console.log(email,password,'llllll');
-    
-
-    // const user = await User.findOne({ where: { email } });
-
-    const user = await User.findOne({
-      where: {
-        [Op.or]: [
-          { email: email },      // assuming you store emails in lowercase
-          { username: email },    // usernames are case-sensitive or as per your rules
-        ],
-      },
-    });
-
-   
-
-    if (!user) {
-
-      return res.json({
-            status: false,
-            statusCode:401,
-            message: "User not found",
-            error: null,
-        });
-    }
-
-    
-     // Count logins for the user today
+    // Count logins for the user today
       const loginCount = await UserSession.count({
         where: {
-          userId: user.id,
-          is_active:true,
+          userId: req.headers.userid,
+            is_active:true,
           login_at: {
             [Op.not]: null, // Ensure login_at is not null
             [Op.between]: [startOfDay, endOfDay], // Check if login_at is today
@@ -765,7 +955,7 @@ const password = (req.body.password || "").trim();
         },
       });
 
-      if(loginCount>=3&&user.role!=='admin') {
+      if(loginCount>=2) {
         
           return res.json({
             status: false,
@@ -773,190 +963,101 @@ const password = (req.body.password || "").trim();
             message: "Only Two User Login Same Crendential",
             error: null,
         });
-      }
+      }  
+        
+    let existing = await AngelOneCredentialer.findOne({ where: { userId:req.headers.userid  } });
 
-      console.log('crypto code start ');
-      
-
-    const originalPass = decrypt(user.password,process.env.CRYPTO_SECRET)
-
-      console.log('crypto code end ');
-
-  
-    if (originalPass!==password){
-
+    if (!existing) {
       return res.json({
-            status: false,
-            statusCode:401,
-            message: "Invalid credentials",
-            error: null,
-        });
+        status: false,
+        statusCode: 404,
+        message: "No credentials found for this user.",
+        data: null,
+      });
+    }
 
-    } 
+   const createdData = existing.dataValues;
 
-
-    // ✅ 3) Only create a UserSession if user has NOT logged in today
-    if (loginCount === 0) {
-    
-      // create a new login session
-       await UserSession.create({
-      userId:  user.id,
-      login_at: new Date(),
-      is_active: true,
+   let totpCode = await generateTOTP(createdData.totpSecret) 
+     
+      var data2 = JSON.stringify({
+      "clientcode":createdData.clientId,
+      "password":createdData.password,
+      "totp":totpCode, 
     });
 
-    } else {
-      console.log(
-        `User ${user.id} already has a session today, not creating new UserSession`
-      );
-    }
+      var config = {
+      method: 'post',
+       url: 'https://apiconnect.angelone.in//rest/auth/angelbroking/user/v1/loginByPassword',
 
+      headers : {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+            'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+            'X-MACAddress': process.env.MAC_Address, 
+            'X-PrivateKey': process.env.PRIVATE_KEY, 
+      },
+      data:data2
+    };
 
-     
-    // 2️⃣ Find any user where angelLoginUser = true AND updated today
-      const activeAngelUser = await User.findOne({
-        where: {
-          angelLoginUser: true,
-          brokerName:"angelone",
-          // updatedAt: {
-          //   [Op.between]: [startOfDay, endOfDay],
-          // },
-        },
-        raw:true
-      });
+    let {data} = await axios(config);
 
+     if(data.status==true) {
 
-      console.log(activeAngelUser,'activeAngelUser===========');
-      
-      
-    const token = jwt.sign({ id: user.id,role:user.role,borker:user.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' })
+      await User.update( {
+        authToken: data.data.jwtToken,
+        feedToken: data.data.feedToken,
+        refreshToken: data.data.refreshToken,
+        angelLoginUser:true,
+        angelLoginExpiry: new Date(Date.now() + 10 * 60 * 60 * 1000), // 10 hours
+      },
+      {
+        where: { id: req.headers.userid },
+        returning: true, // optional, to get the updated record
+      }
+    );
 
-     if(user.role==='admin') {
-
-       if(activeAngelUser) {
-      
-          let adminCren = {
-              authToken:activeAngelUser.authToken,
-              feedToken:activeAngelUser.feedToken,
-              refreshToken:activeAngelUser.refreshToken
+          if (!isSocketReady()) {
+            connectSmartSocket(
+              data.data.jwtToken,
+              data.data.feedToken,
+             createdData.clientId
+            );
+          } else {
+            emitOrderGet(data.data.jwtToken,);
           }
 
-        if (isSocketReady(user.id)) {
+      return res.status(200).json({
+              status: true,
+              data: data.data
+          });
 
-         emitOrderGet(user.authToken)
-      } else {
-          connectSmartSocket(user.id,activeAngelUser.authToken,activeAngelUser.feedToken,'abc')
-      }
-
-      return res.json({
-            status: true,
-            statusCode:400,
-            token, user,
-            message: "User login successfully",
-            angelTokens:adminCren,
-            error: null,
-        });
-
-    }else{
-        return res.json({
-            status: true,
-            statusCode:400,
-            token, user,
-            message: "User login successfully",
-            angelTokens:{},
-            error: null,
-        });
-    }
-      
      }else{
 
-        // 2️⃣ Find any user where angelLoginUser = true AND updated today
-      const angelCrendentialData = await AngelOneCredentialer.findOne({
-        where: {
-          userId:user.id ,
-        },
-        raw:true
-      });
-
-       if(angelCrendentialData) {
-
-        if (isSocketReady(user.id)) {
-
-            console.log('socket already connection',isSocketReady(user.id));
-
-        emitOrderGet(user.authToken)
-        
-      } else {
-          connectSmartSocket(user.id,user.authToken,user.feedToken,angelCrendentialData?.clientId)
-      }
-
-     let userCren = {
-              authToken:user.authToken,
-              feedToken:user.feedToken,
-              refreshToken:user.refreshToken
-          }
-
-      
-     return res.json({
-            status: true,
-            statusCode:400,
-            token, user,
-            angelTokens:userCren,
-            message: "User login successfully",
-            error: null,
-        });
-
-
-       }else if(user.brokerName==='kite') {
-
-        return res.json({
-            status: true,
-            statusCode:400,
-            token, user,
-            angelTokens:{
-              authToken:user.authToken,
-              feedToken:user.feedToken,
-              refreshToken:user.refreshToken
-            },
-            message: "User login successfully",
-            error: null,
-        });
-
-       }else{
-         
-         return res.json({
-            status: true,
-            statusCode:400,
-            token, user,
-            angelTokens:{
-              authToken:"",
-              feedToken:"",
-              refreshToken:""
-            },
-            message: "User login successfully",
-            error: null,
-        });
-
-       }
-
+          return res.json({
+              status: false,
+              data:null,
+              statusCode:data.errorCode,
+              message:data.message
+          });
      }
-  
+
   } catch (error) {
 
-    console.log(error);
-    
-
-      return res.json({
-            status: false,
-            statusCode:500,
-            message: "Unexpected error occurred. Please try again.",
-            data:null,
-            error: error.message,
-        });
+    return res.json({
+              status: false,
+              data:null,
+              statusCode:401,
+              message:error.message
+          });
   }
-};
+}
 
-export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
+// ===========================working code ==========================
+export const adminloginWithTOTPInAngelOne121 = async function (req,res,next) {
     try {
 
        // Get start and end of today
@@ -1043,6 +1144,9 @@ export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
 
         
 
+
+
+
         if (isSocketReady(req.headers.userid)) {
         console.log('✅ WebSocket is connected!');
       } else {
@@ -1079,107 +1183,6 @@ export const adminloginWithTOTPInAngelOne = async function (req,res,next) {
   }
 }
 
-// Step 2: Get AngelOne Profile
-
-
-// export const loginWithTOTPInAngelOne = async (req, res, next) => {
-//   try {
-//     // 1) Fetch stored Angel creds for this user
-//     const existing = await AngelOneCredentialer.findOne({ where: { userId: req.userId } });
-//     if (!existing) {
-//       return res.status(404).json({
-//         status: false,
-//         statusCode: 404,
-//         message: "No credentials found for this user.",
-//         data: null,
-//       });
-//     }
-
-//     const createdData = existing.dataValues;
-//     const totpCode = await generateTOTP(createdData.totpSecret);
-
-//     // 2) Headers (keep your IPv4 public IP for compatibility)
-//     const headers = {
-//       "Content-Type": "application/json",
-//       "Accept": "application/json",
-//       "X-UserType": "USER",
-//       "X-SourceID": "WEB",
-//       "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP || "127.0.0.1",
-//       "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP || "1.187.216.154",
-//       "X-MACAddress": process.env.MAC_Address || "32:bd:3a:75:8f:62",
-//       "X-PrivateKey": process.env.PRIVATE_KEY, // Angel API key
-//     };
-
-//     // 3) Body (no stringify; axios handles JSON)
-//     const body = {
-//       clientcode: createdData.clientId,
-//       password: createdData.password,
-//       totp: totpCode,
-//     };
-
-//     // 4) Call Angel One Auth (note: single slash path; baseURL covers the host)
-//     const { data } = await angelApi.post(
-//       "/rest/auth/angelbroking/user/v1/loginByPassword",
-//       body,
-//       { headers }
-//     );
-
-//     // 5) Handle response
-//     if (data?.status === true && data?.data?.jwtToken) {
-//       // Persist tokens
-//       await User.update(
-//         {
-//           authToken: data.data.jwtToken,
-//           feedToken: data.data.feedToken,
-//           refreshToken: data.data.refreshToken,
-//         },
-//         { where: { id: req.userId } }
-//       );
-
-//       // Optional: Connect SmartAPI WebSocket using fresh tokens
-//       try {
-//         connectSmartSocket(data.data.jwtToken, data.data.feedToken);
-//       } catch (wsErr) {
-//         // Don't fail login if WS connect fails; just log it
-//         console.warn("SmartAPI WS connect error:", wsErr?.message || wsErr);
-//       }
-
-//       return res.status(200).json({
-//         status: true,
-//         statusCode: 200,
-//         data: data.data,
-//       });
-//     }
-
-//     // Angel returned an application error
-//     return res.status(401).json({
-//       status: false,
-//       statusCode: data?.errorCode || 401,
-//       message: data?.message || "Angel One login failed.",
-//       data: null,
-//     });
-//   } catch (error) {
-//     // Network/timeout/auth parsing etc.
-//     console.error("loginWithTOTPInAngelOne error:", {
-//       code: error?.code,
-//       errno: error?.errno,
-//       syscall: error?.syscall,
-//       address: error?.address,
-//       port: error?.port,
-//       message: error?.message,
-//       responseStatus: error?.response?.status,
-//       responseData: error?.response?.data,
-//     });
-
-//     return res.status(500).json({
-//       status: false,
-//       statusCode: 500,
-//       message: "Unexpected error occurred during Angel One login.",
-//       data: null,
-//       error: error?.message,
-//     });
-//   }
-// };
 
 
 

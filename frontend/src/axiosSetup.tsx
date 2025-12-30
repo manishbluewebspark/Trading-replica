@@ -15,9 +15,26 @@ axios.interceptors.response.use(
 
     const data = err?.response?.data;
 
-    if (data.statusCode === 401 && data?.message === 'Unauthorized') {
-      window.location.href = "/";
+  
+    if (data?.statusCode === 401 && data?.message === 'Unauthorized') {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+             window.location.href = "/";
        return Promise.reject(err);
+    } else if(data==undefined) {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("termsAccepted");
+            localStorage.removeItem("feed_token");
+            localStorage.removeItem("refresh_token");
+             window.location.href = "/";
+       return Promise.reject(err);
+
     }
    
   }

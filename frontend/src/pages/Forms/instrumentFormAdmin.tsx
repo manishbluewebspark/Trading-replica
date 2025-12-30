@@ -15,7 +15,7 @@ import { MdOutlineCancel } from "react-icons/md";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
-
+import { useInstrumentStore } from "../../instrumentStore";
 
 
 // 🔹 Type + Exchange options (Angel share same codes)
@@ -36,6 +36,8 @@ const EXCHANGE_OPTIONS: ExchangeOption[] = [
 export default function InstrumentFormAdmin() {
   
   const apiUrl = import.meta.env.VITE_API_URL;
+
+    const { dataRedish, setDataRedish, shouldFetchRedish } = useInstrumentStore();
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -203,7 +205,15 @@ export default function InstrumentFormAdmin() {
     setError("");
 
     try {
-      const res = await axios.get(`${apiUrl}/agnelone/instrumentnew`, {
+        
+
+        if (!dataRedish || shouldFetchRedish()) {
+
+          console.log("cache state:", dataRedish, "lastFetchedAt:");
+
+         console.log("📡 Fetching instruments from API");
+        
+         const res = await axios.get(`${apiUrl}/agnelone/instrumentnew`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           AngelOneToken: localStorage.getItem("angel_token") || "",
@@ -216,13 +226,23 @@ export default function InstrumentFormAdmin() {
       if (res?.data?.status === true) {
         const rawData = res?.data?.data || [];
 
-        console.log('==============rawData=======',rawData);
+       
         
         const normalized = rawData.map((row: any) => mapAngelToCommon(row));
         setData(normalized);
+
+         setDataRedish(normalized);
       } else {
         toast.error(res?.data?.message || "Something went wrong");
       }
+           
+       }else{
+
+          console.log("💾 Using cached instruments from Zustand");
+              // cache se data lena
+    setData(dataRedish);   // local component me state update
+       }
+     
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Something went wrong");

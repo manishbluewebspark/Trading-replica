@@ -2059,7 +2059,7 @@ export default function UsersTables() {
                 rowSelection="single"
                 suppressRowClickSelection={true}
                 pagination={true}
-                paginationPageSize={15}
+                paginationPageSize={100}
                 domLayout="normal"
                 suppressPaginationPanel={false}
                 suppressScrollOnNewData={true}

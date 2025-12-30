@@ -10,6 +10,12 @@ import {   getMergedInstruments, searchInstrumentPostgre } from '../controllers/
 import { getOrderPerticular } from '../controllers/placeOrderController.js';
 import {  getMergedInstrumentsNew } from '../controllers/instrumentMultipleDematController.js';
 
+import compression from "compression";
+
+const heavyCompression = compression({
+  level: 6,
+  threshold: 1024 * 20,
+});
 
 
 
@@ -76,7 +82,7 @@ router.get('/angelone/online/trade/books',getAngelTradeBooks)
 router.get('/agnelone/instrument',getMergedInstruments ) 
 
 // working code 
-router.get('/agnelone/instrumentnew',getMergedInstrumentsNew )
+router.get('/agnelone/instrumentnew',heavyCompression,getMergedInstrumentsNew )
 
 
 

@@ -290,7 +290,136 @@ function normalizeKitePosition(p) {
   };
 }
 
+function isAfterMarketCloseIST() {
+  const now = new Date();
+  const ist = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  const h = ist.getHours();
+  const m = ist.getMinutes();
+
+  return h > 15 || (h === 15 && m >= 30);
+}
+
 async function syncKitePositionsWithLocalDB({ user, positions, req }) {
+  try {
+    logSuccess(req, {
+      msg: "syncKitePositionsWithLocalDB started",
+      userId: user?.id,
+      broker: "kite",
+    });
+
+    if (!positions?.net?.length) return;
+
+    const afterClose = isAfterMarketCloseIST();
+
+    logSuccess(req, {
+      msg: "Market time check",
+      userId: user?.id,
+      afterClose,
+    });
+
+    // ✅ FILTER HOLDING POSITIONS CORRECTLY
+    const holdingPositions = positions.net
+      .map(normalizeKitePosition)
+      .filter((p) => {
+        if (!p.tradingsymbol || p.quantity <= 0) return false;
+
+        // ⏰ Before 3:30 → only overnight holdings
+        if (!afterClose) {
+          return p.overnightQty > 0;
+        }
+
+        // ⏰ After 3:30 → all open positions
+        return true;
+      });
+
+    logSuccess(req, {
+      msg: "Filtered HOLDING positions",
+      userId: user?.id,
+      count: holdingPositions.length,
+    });
+
+    if (!holdingPositions.length) return;
+
+    // 🔁 Map symbol → position
+    const posMap = new Map();
+    for (const p of holdingPositions) {
+      posMap.set(p.tradingsymbol, p);
+    }
+
+    // 🔁 Fetch local OPEN BUY orders
+    const orders = await Order.findAll({
+      where: {
+        userId: user.id,
+        broker: "kite",
+        transactiontype: "BUY",
+        orderstatuslocaldb: "OPEN",
+      },
+      order: [["createdAt", "ASC"]],
+      raw: true,
+    });
+
+    if (!orders.length) return;
+
+    // 🔁 Group orders by symbol
+    const ordersBySymbol = {};
+    for (const o of orders) {
+      const sym = normSym(o.tradingsymbol);
+      if (!ordersBySymbol[sym]) ordersBySymbol[sym] = [];
+      ordersBySymbol[sym].push(o);
+    }
+
+    // 🔁 FIFO allocation
+    for (const [sym, pos] of posMap.entries()) {
+      let remainingQty = pos.quantity;
+      const tokenOrders = ordersBySymbol[sym] || [];
+
+      for (const ord of tokenOrders) {
+        if (remainingQty <= 0) break;
+
+        const orderQty = Number(ord.quantity || 0);
+        if (orderQty <= 0) continue;
+
+        const allocatedQty = Math.min(orderQty, remainingQty);
+
+        await Order.update(
+          {
+            positionStatus: "HOLDING",
+          },
+          {
+            where: { id: ord.id },
+          }
+        );
+
+        remainingQty -= allocatedQty;
+
+        logSuccess(req, {
+          msg: "Order marked HOLDING",
+          userId: user?.id,
+          sym,
+          orderId: ord.id,
+          allocatedQty,
+          remainingQty,
+        });
+      }
+    }
+
+    logSuccess(req, {
+      msg: "syncKitePositionsWithLocalDB completed",
+      userId: user?.id,
+    });
+  } catch (e) {
+    logError(req, e, {
+      msg: "syncKitePositionsWithLocalDB failed",
+      userId: user?.id,
+    });
+    throw e;
+  }
+}
+
+async function syncKitePositionsWithLocalDB121({ user, positions, req }) {
   try {
     logSuccess(req, {
       msg: "syncKitePositionsWithLocalDB started",
@@ -305,7 +434,7 @@ async function syncKitePositionsWithLocalDB({ user, positions, req }) {
       return;
     }
 
-    console.log(positions.net, "positions.net==================");
+    console.log(positions, "positions.net==================");
 
     // ✅ only open positions (qty > 0)
     logSuccess(req, { msg: "Normalizing & filtering Kite positions (qty>0)", userId: user?.id });

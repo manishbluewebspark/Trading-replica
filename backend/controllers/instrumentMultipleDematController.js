@@ -196,6 +196,8 @@ async function fetchAllFyersInstruments() {
 // =======================================================
 // =========== node corn used ===============
 export const getMergedInstrumentsNew = async (req, res) => {
+
+    const startTime = Date.now();
  
   // ✅ correlation id for this request
   const requestId =  crypto.randomUUID();
@@ -213,7 +215,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
   //  console.log('redis cache is delete');
    
 
-  const startTime = Date.now();
+
 
   try {
     logSuccess(req, {
@@ -237,6 +239,8 @@ export const getMergedInstrumentsNew = async (req, res) => {
 
     if (cachedData) {
       const endTime = Date.now();
+
+       console.log('==============durationMs Cache response ==============',endTime - startTime);
 
       logSuccess(req, {
         msg: "Merged instruments served from Redis cache",
@@ -473,6 +477,8 @@ export const getMergedInstrumentsNew = async (req, res) => {
       totalDurationMs: Date.now() - startTime,
       mergedCount: finalMerged.length,
     });
+
+    console.log('==============durationMs Normal response==============',Date.now() - startTime);
 
       // ✅ send JSON string directly (no res.json stringify)
       res.setHeader("Content-Type", "application/json; charset=utf-8");
