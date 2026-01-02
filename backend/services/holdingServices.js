@@ -14,6 +14,13 @@ import { logSuccess, logError } from "../utils/loggerr.js";
 const ANGEL_HOLDING_URL =
   "https://apiconnect.angelone.in/rest/secure/angelbroking/portfolio/v1/getAllHolding";
 
+  // ========================
+// ANGELONE POSITION API
+// ========================
+const ANGEL_POSITION_URL =
+  "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition";
+
+
 function buildAngelHeaders({ authToken, req, user }) {
   const localIp =
     user?.clientLocalIp || process.env.CLIENT_LOCAL_IP || req?.ip || "127.0.0.1";
@@ -46,14 +53,74 @@ function normalizeAngelHolding(h) {
   };
 }
 
+// ========================
+// POSITION NORMALIZER
+// ========================
+function normalizeAngelPosition(p) {
+  return {
+    symboltoken: String(p.symboltoken || "").trim(),
+    tradingsymbol: String(p.tradingsymbol || "").toUpperCase(),
+    producttype: p.producttype, // CNC / MIS
+    buyqty: Number(p.buyqty || 0),
+    sellqty: Number(p.sellqty || 0),
+    netqty: Number(p.netqty || 0),
+    avgprice: Number(p.buyavgprice || 0),
+  };
+}
+
+
+function isAfterMarketClose() {
+  const now = new Date();
+  const istTime = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  const hours = istTime.getHours();
+  const minutes = istTime.getMinutes();
+
+  // 15:30 IST
+  return hours > 15 || (hours === 15 && minutes >= 30);
+}
+
+// ========================
+// SYNC POSITION WITH DB
+// ========================
+async function syncAngelPositionsWithDB({ user, positions, req }) {
+  if (!Array.isArray(positions) || !positions.length) {
+    logSuccess(req, { msg: "No angel positions found", userId: user?.id });
+    return;
+  }
+
+  for (const raw of positions) {
+    const p = normalizeAngelPosition(raw);
+
+    // 🔴 Ignore squared-off positions
+    if (p.buyqty <= p.sellqty) continue;
+
+    let positionStatus = "HOLDING";
+
+    await Order.update(
+      {
+        positionStatus,
+        netQuantity: p.buyqty - p.sellqty,
+        avgPrice: p.avgprice,
+      },
+      {
+        where: {
+          userId: user.id,
+          broker: "angelone",
+          symboltoken: p.symboltoken,
+          transactiontype: "BUY",
+          orderstatuslocaldb: "OPEN",
+        },
+      }
+    );
+  }
+}
+
 async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
   try {
-    logSuccess(req, {
-      msg: "syncAngelHoldingsWithLocalDB started",
-      userId: user?.id,
-      broker: "angelone",
-      holdingsCount: Array.isArray(holdings) ? holdings.length : 0,
-    });
+    
 
     if (!Array.isArray(holdings) || !holdings.length) {
       logSuccess(req, { msg: "No holdings to sync (angelone)", userId: user?.id });
@@ -62,22 +129,11 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
 
     const holdingMap = new Map();
 
-    logSuccess(req, { msg: "Normalizing angel holdings", userId: user?.id });
-
     for (const h of holdings.map(normalizeAngelHolding)) {
       if (h.symboltoken) {
         holdingMap.set(h.symboltoken, h);
       }
     }
-
-    logSuccess(req, {
-      msg: "Holding map prepared (angelone)",
-      userId: user?.id,
-      uniqueTokens: holdingMap.size,
-    });
-
-    // 🔥 fetch BUY orders sorted FIFO
-    logSuccess(req, { msg: "Fetching OPEN BUY orders FIFO (angelone)", userId: user?.id });
 
     const orders = await Order.findAll({
       where: {
@@ -89,15 +145,9 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
       order: [["createdAt", "ASC"]],
     });
 
-    logSuccess(req, {
-      msg: "OPEN BUY orders fetched (angelone)",
-      userId: user?.id,
-      openBuyCount: Array.isArray(orders) ? orders.length : 0,
-    });
-
     // 🔥 group orders by symboltoken
     const ordersByToken = {};
-    logSuccess(req, { msg: "Grouping orders by symboltoken (angelone)", userId: user?.id });
+   
 
     for (const o of orders) {
       const token = String(o.symboltoken || "").trim();
@@ -105,14 +155,9 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
       ordersByToken[token].push(o);
     }
 
-    logSuccess(req, {
-      msg: "Orders grouped by token (angelone)",
-      userId: user?.id,
-      tokenGroups: Object.keys(ordersByToken).length,
-    });
+    
 
-    // 🔥 allocate holding quantity FIFO
-    logSuccess(req, { msg: "Starting FIFO allocation (angelone)", userId: user?.id });
+   
 
     let updatedCount = 0;
     let skippedNoOrders = 0;
@@ -123,22 +168,11 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
       const tokenOrders = ordersByToken[token] || [];
       if (!tokenOrders.length) {
         skippedNoOrders++;
-        logSuccess(req, {
-          msg: "No local OPEN BUY orders for holding token (angelone)",
-          userId: user?.id,
-          token,
-          holdingQty: holding.quantity,
-        });
+   
         continue;
       }
 
-      logSuccess(req, {
-        msg: "Allocating token holdings to FIFO orders (angelone)",
-        userId: user?.id,
-        token,
-        holdingQty: holding.quantity,
-        openOrdersForToken: tokenOrders.length,
-      });
+     
 
       for (const order of tokenOrders) {
         if (remainingQty <= 0) break;
@@ -146,15 +180,7 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
         const orderQty = Number(order.quantity || 0);
         const allocatedQty = Math.min(orderQty, remainingQty);
 
-        logSuccess(req, {
-          msg: "Updating order positionStatus => HOLDING (angelone)",
-          userId: user?.id,
-          orderDbId: order.id,
-          token,
-          orderQty,
-          allocatedQty,
-          remainingBefore: remainingQty,
-        });
+       
 
         await Order.update(
           {
@@ -166,22 +192,11 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
         updatedCount++;
         remainingQty -= allocatedQty;
 
-        logSuccess(req, {
-          msg: "Order updated to HOLDING (angelone)",
-          userId: user?.id,
-          orderDbId: order.id,
-          token,
-          remainingAfter: remainingQty,
-        });
+       
       }
     }
 
-    logSuccess(req, {
-      msg: "syncAngelHoldingsWithLocalDB completed (angelone)",
-      userId: user?.id,
-      updatedCount,
-      skippedNoOrders,
-    });
+   
   } catch (e) {
     logError(req, e, {
       msg: "syncAngelHoldingsWithLocalDB failed (angelone)",
@@ -193,63 +208,34 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
 
 export async function angeloneHoldingFun({ user, req, order }) {
   try {
-    logSuccess(req, {
-      msg: "angeloneHoldingFun started",
-      userId: user?.id,
-      broker: "angelone",
-      hasOrderParam: !!order,
-    });
-
+    
     const AUTH = user.authToken;
 
-    logSuccess(req, {
-      msg: "AngelOne token check",
-      userId: user?.id,
-      hasAuthToken: !!AUTH,
-    });
-
     if (!AUTH) {
-      logSuccess(req, { msg: "No AngelOne authToken, returning NO_TOKEN", userId: user?.id });
+     
       return { result: "NO_TOKEN", broker: "angelone", holdings: [] };
     }
 
     const headers = buildAngelHeaders({ authToken: AUTH, req, user });
 
-    logSuccess(req, {
-      msg: "Calling AngelOne holdings API",
-      userId: user?.id,
-      url: ANGEL_HOLDING_URL,
-    });
-
     const resp = await axios.get(ANGEL_HOLDING_URL, { headers });
-
-    logSuccess(req, {
-      msg: "AngelOne holdings API response received",
-      userId: user?.id,
-      status: resp?.data?.status,
-      message: resp?.data?.message,
-      errorcode: resp?.data?.errorcode,
-    });
 
     // ✅ AngelOne response usually: { status, message, errorcode, data: [...] }
     const holdings = resp?.data?.data || resp?.data?.holding || [];
-
-    logSuccess(req, {
-      msg: "AngelOne holdings parsed",
-      userId: user?.id,
-      holdingsCount: Array.isArray(holdings) ? holdings.length : 0,
-    });
-
-    // 🔥 ONLY UPDATE HOLDING VALUES
-    logSuccess(req, { msg: "Syncing AngelOne holdings to local DB", userId: user?.id });
-
+ 
     await syncAngelHoldingsWithLocalDB({ user, holdings, req });
 
-    logSuccess(req, {
-      msg: "angeloneHoldingFun completed",
-      userId: user?.id,
-      broker: "angelone",
-    });
+     const afterMarket = isAfterMarketClose();
+
+      if(afterMarket) {
+
+    const response = await axios.get(ANGEL_POSITION_URL, { headers });
+
+    const positions = response?.data?.data || [];
+
+    await syncAngelPositionsWithDB({ user, positions, req });
+
+  }
 
     return {
       result: "OK",
@@ -278,6 +264,13 @@ export async function angeloneHoldingFun({ user, req, order }) {
 
 // ===============angelone holding code  end ===================
 
+
+
+
+
+
+
+
 // ============== kite code start =========================
 
 const normSym = (s) => String(s || "").toUpperCase().trim();
@@ -304,21 +297,13 @@ function isAfterMarketCloseIST() {
 
 async function syncKitePositionsWithLocalDB({ user, positions, req }) {
   try {
-    logSuccess(req, {
-      msg: "syncKitePositionsWithLocalDB started",
-      userId: user?.id,
-      broker: "kite",
-    });
+   
 
     if (!positions?.net?.length) return;
 
     const afterClose = isAfterMarketCloseIST();
 
-    logSuccess(req, {
-      msg: "Market time check",
-      userId: user?.id,
-      afterClose,
-    });
+  
 
     // ✅ FILTER HOLDING POSITIONS CORRECTLY
     const holdingPositions = positions.net
@@ -335,11 +320,7 @@ async function syncKitePositionsWithLocalDB({ user, positions, req }) {
         return true;
       });
 
-    logSuccess(req, {
-      msg: "Filtered HOLDING positions",
-      userId: user?.id,
-      count: holdingPositions.length,
-    });
+   
 
     if (!holdingPositions.length) return;
 
@@ -395,21 +376,11 @@ async function syncKitePositionsWithLocalDB({ user, positions, req }) {
 
         remainingQty -= allocatedQty;
 
-        logSuccess(req, {
-          msg: "Order marked HOLDING",
-          userId: user?.id,
-          sym,
-          orderId: ord.id,
-          allocatedQty,
-          remainingQty,
-        });
+      
       }
     }
 
-    logSuccess(req, {
-      msg: "syncKitePositionsWithLocalDB completed",
-      userId: user?.id,
-    });
+    
   } catch (e) {
     logError(req, e, {
       msg: "syncKitePositionsWithLocalDB failed",
@@ -811,7 +782,7 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
 
 export async function finavasiaHoldingFun({ user, req }) {
   try {
-    logSuccess(req, { msg: "finavasiaHoldingFun started", userId: user?.id, broker: "finvasia" });
+    
 
     if (!user) {
       logSuccess(req, { msg: "finavasiaHoldingFun user missing", broker: "finvasia" });
@@ -821,12 +792,7 @@ export async function finavasiaHoldingFun({ user, req }) {
     const jKey = user.authToken; // Shoonya session token
     const uid = user.kite_client_id; // Shoonya User ID
 
-    logSuccess(req, {
-      msg: "Finvasia credential check",
-      userId: user?.id,
-      hasJKey: !!jKey,
-      hasUid: !!uid,
-    });
+    
 
     if (!jKey || !uid) {
       return { ok: false, message: "Finvasia credentials missing" };
@@ -834,7 +800,7 @@ export async function finavasiaHoldingFun({ user, req }) {
 
     const url = "https://api.shoonya.com/NorenWClientTP/Holdings";
 
-    logSuccess(req, { msg: "Calling Finvasia Holdings API", userId: user?.id, url });
+   
 
     // ✅ EXACT jData format
     const jData = JSON.stringify({
@@ -855,12 +821,7 @@ export async function finavasiaHoldingFun({ user, req }) {
 
     const data = resp?.data?.[0];
 
-    logSuccess(req, {
-      msg: "Finvasia Holdings API response received",
-      userId: user?.id,
-      stat: data?.stat,
-      emsg: data?.emsg,
-    });
+    
 
     if (data?.stat !== "Ok") {
       return {
@@ -871,23 +832,12 @@ export async function finavasiaHoldingFun({ user, req }) {
 
     const holdings = data?.exch_tsym || [];
 
-    logSuccess(req, {
-      msg: "Finvasia holdings parsed",
-      userId: user?.id,
-      holdingsCount: Array.isArray(holdings) ? holdings.length : 0,
-    });
+    
 
-    // 🔁 FIFO sync
-    logSuccess(req, { msg: "Syncing Finvasia holdings to local DB", userId: user?.id });
-
+   
     await syncFinvasiaHoldingsWithLocalDB({ user, holdings, req });
 
-    logSuccess(req, {
-      msg: "finavasiaHoldingFun completed",
-      userId: user?.id,
-      broker: "finvasia",
-      count: Array.isArray(holdings) ? holdings.length : 0,
-    });
+   
 
     return {
       ok: true,

@@ -38,7 +38,7 @@ export async function fetchGooglFromSerpApi(req,res,next) {
         // api_key: SERPAPI_KEY,
       },
     });
-
+    
       return res.json({
               status: true,
               data:response.data,
@@ -48,6 +48,10 @@ export async function fetchGooglFromSerpApi(req,res,next) {
     
 
   } catch (err) {
+
+
+    console.log(err,'hn');
+    
 
     return res.json({
               status: true,

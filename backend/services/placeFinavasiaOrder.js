@@ -71,14 +71,9 @@ export const placeFinavasiaOrder = async (
   req,
   isLocalDbFlow = true
 ) => {
+
   try {
     const nowISOError = new Date().toISOString();
-
-    logSuccess(req, {
-      msg: "Finvasia order flow started",
-      userId: user?.id,
-      reqInput,
-    });
 
     // ✅ helpers
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -511,10 +506,7 @@ export const placeFinavasiaOrder = async (
             { where: { id: buyOrder.id } }
           );
           finalStatus = "COMPLETE";
-        } else {
-          // if not found, still mark SELL complete but keep logs
-          finalStatus = "COMPLETE";
-        }
+        } 
       }
 
       const tradePrice = avgPrice

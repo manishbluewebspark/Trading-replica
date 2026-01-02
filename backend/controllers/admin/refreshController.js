@@ -1,32 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import axios from "axios";
 import Order from "../../models/orderModel.js";
 import Trade from "../../models/tradeModel.js";

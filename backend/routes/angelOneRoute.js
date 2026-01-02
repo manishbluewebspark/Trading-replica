@@ -58,13 +58,14 @@ router.post('/regenerate/user/token', authMiddleware,reGenerateTokenWithAngelOne
 router.get('/angelone/logout/user',authMiddleware, logoutAngelOne);   // our code 
 
 
-router.get('/angelone/position',authMiddleware,getPosition)
+
+
 
  
 
 
 // not used Routes
-
+router.get('/angelone/position',getPosition)
 router.get('/angelone/cancel/order',cancelOrder)
 router.get('/angelone/get/order',getAngelOneOrder);
 router.get('/angelone/get/trade/book',getTradeBook)

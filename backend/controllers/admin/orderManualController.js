@@ -63,10 +63,12 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     if (data.transactiontype === "BUY") {
 
       data.orderstatuslocaldb = "OPEN";
+      data.positionStatus = "OPEN";
 
     } else if (data.transactiontype === "SELL") {
 
       data.orderstatuslocaldb = "COMPLETE";
+       data.positionStatus = "COMPLETE";
 
     }
 
@@ -130,10 +132,6 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
 
     if (data.transactiontype === "SELL") {
 
-    pnlData =   (data.fillsize * data.price) - 
-          (buyOrder.fillsize * buyOrder.fillprice);
-
-
       buyOrder = await Order.findOne({
         where: {
           userId: data.userId,
@@ -155,7 +153,9 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
         buyOrder.orderstatuslocaldb = "COMPLETE";
 
        await Order.update(
-          { orderstatuslocaldb: "COMPLETE" },
+          { orderstatuslocaldb: "COMPLETE",
+            positionStatus: "COMPLETE"
+           },
           { where: { id: buyOrder.id } }
         );
 
@@ -168,6 +168,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
         data.buyTime = buyOrder.filltime;
         data.buysize = buyOrder.fillsize;
         data.buyvalue = buyOrder.tradedValue;
+        data.buyOrderId = buyOrder.orderid;
       }
     }
 
@@ -245,6 +246,7 @@ export const createManualOrder = async (req, res) => {
       status: "COMPLETE",
       orderstatus: "COMPLETE",
       orderstatuslocaldb: "COMPLETE",
+      positionStatus: "COMPLETE",
       parentorderid: data.parentorderid || "",
       strikeprice: data.strikeprice || 0,
       optiontype: data.optiontype || "",

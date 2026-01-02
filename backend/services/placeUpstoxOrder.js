@@ -1,566 +1,280 @@
 import axios from "axios";
-import { Op } from "sequelize";
 import Order from "../models/orderModel.js";
 
+// =======================
+// UPSTOX CONSTANTS
+// =======================
+const UPSTOX_BASE = "https://api-hft.upstox.com/v3";
 
-// Helper: map your productType to Upstox product code: I / D / MTF
-async function getUpstoxProductCode(productType) {
-  // Reuse your existing mapping if same as Kite (I / D etc.)
-  // Example:
-  switch ((productType || "").toUpperCase()) {
-    case "INTRADAY":
-    case "MIS":
-    case "I":
-      return "I";
-    case "DELIVERY":
-    case "CNC":
-    case "D":
-      return "D";
-    case "MTF":
-      return "MTF";
-    default:
-      return "D";
-  }
-}
+// =======================
+// HELPERS
+// =======================
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// If you want to store variety-style info, you can still map it
-function mapVarietyToUpstox(variety) {
-  // Upstox doesn’t have "regular / amo" in the same way as Kite.
-  // Keep as tag or internal field if you want.
-  return variety || "REGULAR";
-}
+const upstoxHeaders = (token) => ({
+  Authorization: `Bearer ${token}`,
+  Accept: "application/json",
+  "Content-Type": "application/json",
+});
 
-
-//
-export const placeUpstoxOrder = async (user, reqInput, startOfDay, endOfDay, ) => {
-  try {
-
-    let upstoxAccessToken = await user.accessToken
-   
-    // 1) Map product / variety
-    const upstoxProductType = await getUpstoxProductCode(reqInput.productType);
-    const upstoxVariety = await mapVarietyToUpstox(reqInput.variety);
-
-
-
-    // 2) CREATE LOCAL PENDING ORDER (same as Kite, broker=upstox)
-    const instrumentToken =  `${reqInput.exch_seg || "NSE"}|${reqInput.token}`;
-     
-
-    const orderData = {
-      symboltoken: reqInput.kiteToken || reqInput.token,
-      variety: upstoxVariety,
-      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-      instrumenttype: reqInput.instrumenttype,
-      transactiontype: reqInput.transactiontype, // BUY / SELL
-      exchange: reqInput.exch_seg,
-      ordertype: reqInput.orderType,            // MARKET / LIMIT / SL / SL-M
-      quantity: reqInput.quantity,
-      producttype: upstoxProductType,           // I / D / MTF
-      price: reqInput.price,
-      orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice,
-      actualQuantity: reqInput.actualQuantity,
-      userId: user.id,
-      broker: "upstox",
-      upstoxInstrumentToken: instrumentToken,
-      upstoxSymbol: reqInput.kiteSymbol || reqInput.symbol,
-      angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol, // keep if useful for your UI
-      angelOneToken: reqInput.angelOneToken || reqInput.token,
-      userNameId: user.username,
-    };
-
-    const newOrder = await Order.create(orderData);
-
-    // 3) UPSTOX ORDER PAYLOAD (HFT V3)
-    const placePayload = {
-      quantity: Number(reqInput.quantity),
-      product: upstoxProductType,           // I / D / MTF
-      validity: "DAY",                      // or IOC if you support
-      price: Number(reqInput.price) || 0,   // for MARKET, can be 0
-      tag: `${user.id}_${Date.now()}`,      // optional tracking tag
-      instrument_token: instrumentToken,    // e.g. "NSE_FO|43919"
-      order_type: reqInput.orderType,       // MARKET / LIMIT / SL / SL-M
-      transaction_type: 'BUY', // BUY / SELL
-      disclosed_quantity: 0,
-      trigger_price: 0,
-      is_amo: false,                        // ignored by Upstox in live hours
-      slice: true,                          // enable auto-slicing
-    };
-
-
-    const upstoxUrl = "https://api-hft.upstox.com/v3";
-
-    const headersHft = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${upstoxAccessToken}`,
-    };
-
-    const headersV2 = {
-      Accept: "application/json",
-      Authorization: `Bearer ${upstoxAccessToken}`,
-    };
-
-    // 4) PLACE ORDER IN UPSTOX
-    let placeRes;
-    try {
-      const placeResp = await axios.post(
-        `${upstoxUrl}/order/place`,
-        placePayload,
-        { headers: headersHft }
-      );
-
-      placeRes = placeResp.data;
-
-      console.log(placeRes, "upstox place order");
-    } catch (err) {
-      console.log(
-        "Upstox place order error:",
-        err?.response?.data || err.message
-      );
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-        status: "FAILED",
-        text: err?.response?.data?.errors?.[0]?.message || err.message,
-        buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
-      });
-
-      return {
-        userId: user.id,
-        broker: "Upstox",
-        result: "BROKER_REJECTED",
-        message: err?.response?.data?.errors?.[0]?.message || err.message,
-      };
-    }
-
-    const orderid =
-      placeRes?.data?.order_ids?.[0] || placeRes?.data?.order_id;
-
-    if (!orderid) {
-      throw new Error("Upstox did not return order_id");
-    }
-
-    // save order id
-    await newOrder.update({ orderid });
-
-    // 5) GET ORDER DETAILS FROM UPSTOX (v2 /order/details)
-    let detailsData = {};
-    try {
-      const detailResp = await axios.get(
-        `${upstoxUrl}/order/details`,
-        {
-          headers: headersV2,
-          params: { order_id: orderid },
-        }
-      );
-
-      detailsData = detailResp.data?.data || {};
-      console.log(detailsData, "Upstox order details");
-    } catch (e) {
-      console.log(e?.response?.data || e.message, "get order details (upstox)");
-      // details optional
-    }
-
-    // 6) HANDLE BUY / SELL LOGIC (same as Kite)
-    let finalStatus = "OPEN";
-    let buyOrder;
-
-    if (reqInput.transactiontype === "SELL") {
-      buyOrder = await Order.findOne({
-        where: {
-          userId: user.id,
-          tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-          exchange: reqInput.exch_seg,
-          quantity: reqInput.quantity,
-          transactiontype: "BUY",
-          status: "COMPLETE",
-          orderstatuslocaldb: "OPEN",
-          // createdAt: { [Op.between]: [startOfDay, endOfDay] },
-        },
-        raw: true,
-      });
-
-      if (buyOrder) {
-        await Order.update(
-          { orderstatuslocaldb: "COMPLETE" },
-          { where: { id: buyOrder.id } }
-        );
-      }
-
-      finalStatus = "COMPLETE";
-    }
-
-    // 7) UPDATE LOCAL ORDER WITH BASIC DETAILS
-    await newOrder.update({
-      uniqueorderid: detailsData.exchange_order_id || null,
-      averageprice: detailsData.average_price || detailsData.price || 0,
-      lotsize: detailsData.quantity || Number(reqInput.quantity),
-      symboltoken: instrumentToken,
-      triggerprice: detailsData.trigger_price || 0,
-      price: detailsData.price || Number(reqInput.price) || 0,
-      orderstatuslocaldb: finalStatus,
-      status: (detailsData.status || finalStatus).toUpperCase(),
-      // keep timestamps as strings; Upstox uses "03-Aug-2017 15:03:42"
-      exchorderupdatetime: detailsData.exchange_timestamp || null,
-      exchtime: detailsData.exchange_timestamp || null,
-      updatetime: detailsData.order_timestamp || null,
-    });
-
-    console.log("update in local db 2 (upstox)");
-
-    // 8) TRADES FETCH (v2 /order/trades?order_id=)
-    try {
-      const tradesResp = await axios.get(
-        `${upstoxBaseUrl}/order/trades`,
-        {
-          headers: headersV2,
-          params: { order_id: orderid },
-        }
-      );
-
-      const trades = tradesResp.data?.data || [];
-      console.log(trades, "upstox trades");
-
-      if (Array.isArray(trades) && trades.length > 0) {
-        const t = trades[0];
-
-        console.log(t, "t (upstox)");
-
-        const buyPrice = buyOrder?.fillprice || 0;
-        const buySize = buyOrder?.fillsize || 0;
-        const buyValue = buyOrder?.tradedValue || 0;
-        let buyTime = buyOrder?.filltime || 0;
-
-        let pnl =
-          Number(reqInput.quantity) * Number(t.average_price || 0) -
-          buyPrice * buySize;
-
-        if (t.transaction_type === "BUY") {
-          pnl = 0;
-          buyTime = "NA";
-        }
-
-        await newOrder.update({
-          tradedValue: Number(t.average_price || 0) * Number(reqInput.quantity),
-          fillprice: Number(t.average_price || 0),
-          fillsize: Number(reqInput.quantity),
-          fillid: t.trade_id,
-          price: Number(t.average_price || 0),
-          filltime: t.exchange_timestamp || t.order_timestamp || null,
-          status: "COMPLETE",
-          pnl: pnl,
-          buyTime: buyTime,
-          buyprice: buyPrice,
-          buysize: buySize,
-          buyvalue: buyValue,
-        });
-
-        console.log("update in local db 3 (upstox)");
-      } else {
-        console.log(trades, "no trades for upstox order");
-      }
-    } catch (e) {
-      console.log(e?.response?.data || e.message, "get order trade (upstox)");
-    }
-
-    return {
-      userId: user.id,
-      broker: "Upstox",
-      result: "SUCCESS",
-      orderid,
-    };
-  } catch (err) {
-    console.log(err, "err (upstox)");
-
-    return {
-      userId: user.id,
-      broker: "Upstox",
-      result: "ERROR",
-      message: err.message,
-    };
+const getProduct = (p) => {
+  switch ((p || "").toUpperCase()) {
+    case "INTRADAY":return "I";
+    case "DELIVERY":return "D";
+    case "I": return "I";
+    case "D": return "D";
+    default: return "D";
   }
 };
 
+// =======================
+// POLL ORDER DETAILS
+// =======================
+async function pollUpstoxDetails(token, orderId) {
+  for (let i = 0; i < 6; i++) {
+    try {
+      const r = await axios.get(
+        `${UPSTOX_BASE}/order/details`,
+        { headers: upstoxHeaders(token), params: { order_id: orderId } }
+      );
 
+      const st = r?.data?.data?.status;
+      if (["complete", "rejected", "cancelled"].includes(st)) {
+        return r.data.data;
+      }
+      await sleep(400 + i * 200);
+    } catch (e) {
+      await sleep(500);
+    }
+  }
+  return null;
+}
 
-export const placeUpstoxOrderLocalDb = async ( user,reqInput,startOfDay,endOfDay) => {
+// =======================
+// FETCH TRADES
+// =======================
+async function fetchUpstoxTrades(token, orderId) {
+  const r = await axios.get(
+    `${UPSTOX_BASE}/order/trades`,
+    { headers: upstoxHeaders(token), params: { order_id: orderId } }
+  );
+  return r?.data?.data || [];
+}
+
+// =======================
+// MAIN FUNCTION
+// =======================
+export const placeUpstoxOrder = async (user, reqInput,req) => {
+  let tempOrder = null;
+  let existingBuy = null;
+
   try {
+    const product = getProduct(reqInput.productType);
+    const instrumentToken = `${reqInput.exch_seg}|${reqInput.token}`;
 
-    // 1) Access token (from arg or user)
-    const accessToken =  await user.accessToken
+    // ====================================================
+    // 1️⃣ READ EXISTING BUY (MERGE CASE)
+    // ====================================================
+    if (reqInput.transactiontype === "BUY") {
+      existingBuy = await Order.findOne({
+        where: {
+          userId: user.id,
+          tradingsymbol: reqInput.symbol,
+          ordertype: reqInput.orderType,
+          producttype: product,
+          transactiontype: "BUY",
+          orderstatuslocaldb: "OPEN",
+          broker: "upstox",
+        },
+      });
+    }
 
-    const upstoxUrl = "https://api-hft.upstox.com/v3";
-
-    const headersHft = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    const headersV2 = {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    // ----------------------------------------
-    // 2) CREATE LOCAL PENDING ORDER
-    // ----------------------------------------
-    const instrumentToken =
-      reqInput.upstoxInstrumentToken ||
-      reqInput.instrument_token ||
-      `${reqInput.exch_seg || "NSE"}|${reqInput.token || reqInput.kiteToken}`;
-
-    const orderData = {
-      symboltoken: reqInput.kiteToken || reqInput.token,
-      variety: reqInput.variety || "regular",
-      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+    // ====================================================
+    // 2️⃣ CREATE TEMP ORDER
+    // ====================================================
+    tempOrder = await Order.create({
+      variety: reqInput.variety || "NORMAL",
+      tradingsymbol: reqInput.symbol,
       instrumenttype: reqInput.instrumenttype,
-      transactiontype: reqInput.transactiontype, // BUY / SELL
+      symboltoken: reqInput.token,
+      transactiontype: reqInput.transactiontype,
       exchange: reqInput.exch_seg,
-      ordertype: reqInput.orderType, // MARKET / LIMIT / SL / SL-M
-      quantity: reqInput.quantity,
-      producttype: reqInput.productType, // you can map to I/D/MTF if needed
-      price: reqInput.price,
+      ordertype: reqInput.orderType,
+      quantity: String(reqInput.quantity),
+      producttype: product,
+      duration: reqInput.duration,
+      price: reqInput.price || "0",
+      triggerprice: reqInput.triggerprice || 0,
+      squareoff: reqInput.squareoff || 0,
+      stoploss: reqInput.stoploss || 0,
       orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice,
-      actualQuantity: reqInput.actualQuantity,
+      totalPrice: reqInput.totalPrice ?? null,
+      actualQuantity: reqInput.actualQuantity ?? null,
       userId: user.id,
-      broker: "upstox",
+      userNameId: user.username,
+      ordertag: "softwaresetu",
+      broker: "angelone",
+      buyOrderId: reqInput?.buyOrderId || null,
+      strategyName: reqInput?.groupName || "",
+      strategyUniqueId: reqInput?.strategyUniqueId || "",
+      text: "",
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
-      userNameId: user.username,
-      buyOrderId: reqInput?.buyOrderId,
-      upstoxInstrumentToken: instrumentToken,
-    };
+    });
 
-    console.log(orderData, "orderData (upstox)");
+    // ====================================================
+    // 3️⃣ PLACE UPSTOX ORDER
+    // ====================================================
+    const placeRes = await axios.post(
+      `${UPSTOX_BASE}/order/place`,
+      {
+        instrument_token: instrumentToken,
+        quantity: Number(reqInput.quantity),
+        order_type: reqInput.orderType,
+        transaction_type: reqInput.transactiontype,
+        product,
+        price: reqInput.price || 0,
+        validity: "DAY",
+        slice: false,
+      },
+      { headers: upstoxHeaders(user.accessToken) }
+    );
 
-    const newOrder = await Order.create(orderData);
+    const orderId =
+      placeRes?.data?.data?.order_ids?.[0] ||
+      placeRes?.data?.data?.order_id;
 
-    // ----------------------------------------
-    // 3) UPSTOX HFT PAYLOAD
-    // ----------------------------------------
-    const orderParams = {
-      quantity: Number(reqInput.quantity),
-      product: reqInput.productType, // you can ensure it's I / D / MTF from frontend
-      validity: "DAY",
-      price: Number(reqInput.price) || 0, // MARKET can be 0
-      tag: `${user.id}_${Date.now()}`,
-      instrument_token: instrumentToken, // e.g. "NSE_FO|43919"
-      order_type: reqInput.orderType, // MARKET / LIMIT / SL / SL-M
-      transaction_type: reqInput.transactiontype, // BUY / SELL
-      disclosed_quantity: 0,
-      trigger_price: 0,
-      is_amo: false,
-      slice: true,
-    };
+    const orderIds = placeRes?.data?.data?.order_ids||placeRes?.data?.data?.order_id;
 
-    console.log(orderParams, "db orderParams done (upstox)");
+    if (!orderId) throw new Error("Upstox order_id missing");
 
-    // ----------------------------------------
-    // 4) PLACE ORDER IN UPSTOX
-    // ----------------------------------------
-    let placeRes;
-    try {
-      const resp = await axios.post(
-        `${upstoxUrl}/order/place`,
-        orderParams,
-        { headers: headersHft }
-      );
+    await tempOrder.update({ orderid: orderId });
 
-      placeRes = resp.data;
-      console.log(placeRes, "upstox place order");
-    } catch (err) {
-      console.log(err?.response?.data || err.message, "upstox place order");
+    // ====================================================
+    // 4️⃣ DETAILS POLLING
+    // ====================================================
+    const details = await pollUpstoxDetails(user.accessToken, orderId);
 
-      const msg =
-        err?.response?.data?.errors?.[0]?.message ||
-        err?.response?.data?.message ||
-        err.message;
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
+    if (!details || ["rejected", "cancelled"].includes(details.status)) {
+      await tempOrder.update({
+        orderstatuslocaldb: details?.status?.toUpperCase() || "FAILED",
         status: "FAILED",
-        text: msg,
-        buyTime: new Date().toISOString().replace(/\.\d+Z$/, ".000Z"),
       });
-
-      return {
-        userId: user.id,
-        broker: "Upstox",
-        result: "BROKER_REJECTED",
-        message: msg,
-      };
+      return { result: "BROKER_REJECTED" };
     }
 
-    const orderid =
-      placeRes?.data?.order_ids?.[0] || placeRes?.data?.order_id;
-
-    if (!orderid) {
-      throw new Error("Upstox did not return order_id");
+    // ====================================================
+    // 5️⃣ FETCH TRADES
+    // ====================================================
+      let trades = [];
+      for (const oid of orderIds) {
+      const t = await fetchUpstoxTrades(user.accessToken, oid);
+      trades.push(...t);
     }
 
-    // save order id
-    await newOrder.update({ orderid });
 
-    // ----------------------------------------
-    // 5) GET ORDER TRADES (USED AS DETAILS)
-    //    Upstox: GET /v2/order/trades?order_id=...
-    // ----------------------------------------
-    let detailsData = {};
-    try {
-      const tradesResp = await axios.get(
-        `${upstoxUrl}/order/trades`,
-        {
-          headers: headersV2,
-          params: { order_id: orderid },
-        }
-      );
-
-      const trades = tradesResp.data?.data || [];
-
-      if (Array.isArray(trades) && trades.length > 0) {
-        detailsData = trades[0]; // first trade as "details"
-      }
-    } catch (e) {
-      console.log(
-        e?.response?.data || e.message,
-        "get order history (upstox)"
-      );
-      // details optional
+    if (!trades.length) {
+      await tempOrder.update({ orderstatuslocaldb: "OPEN" });
+      return { result: "PENDING" };
     }
 
-    // ----------------------------------------
-    // 6) HANDLE BUY / SELL LOGIC
-    // ----------------------------------------
+    // ====================================================
+    // 6️⃣ AVG PRICE CALCULATION
+    // ====================================================
+    let totalQty = 0;
+    let totalValue = 0;
+
+    trades.forEach(t => {
+      totalQty += Number(t.quantity);
+      totalValue += Number(t.quantity) * Number(t.average_price);
+    });
+
+    const avgPrice = totalValue / totalQty;
+    const fill = trades[0];
+
+    // ====================================================
+    // 7️⃣ SELL PAIRING
+    // ====================================================
     let finalStatus = "OPEN";
-    let buyOrder;
+    let buyOrder = null;
+    let positionStatus = "OPEN"
 
     if (reqInput.transactiontype === "SELL") {
       buyOrder = await Order.findOne({
-        where: {
-          userId: user.id,
-          tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-          exchange: reqInput.exch_seg,
-          quantity: reqInput.quantity,
-          transactiontype: "BUY",
-          status: "COMPLETE",
-          orderstatuslocaldb: "OPEN",
-          // createdAt: { [Op.between]: [startOfDay, endOfDay] },
-        },
-        raw: true,
+        where: { orderid: reqInput.buyOrderId },
       });
 
       if (buyOrder) {
-        await Order.update(
-          { orderstatuslocaldb: "COMPLETE" },
-          { where: { id: buyOrder.id } }
-        );
+        await buyOrder.update({ 
+           positionStatus: "COMPLETE",
+          orderstatuslocaldb: "COMPLETE"
+         });
       }
-
       finalStatus = "COMPLETE";
+      positionStatus = "COMPLETE";
     }
 
-    console.log(detailsData, "detailRes (upstox)");
-
-    // ----------------------------------------
-    // 7) UPDATE LOCAL ORDER WITH FINAL STATUS
-    // ----------------------------------------
-    const avgPrice = Number(detailsData.average_price || reqInput.price || 0);
-    const qty = Number(detailsData.quantity || reqInput.quantity || 0);
-    const exchTime =
-      detailsData.exchange_timestamp ||
-      detailsData.order_timestamp ||
-      null;
-
-    await newOrder.update({
-      ...detailsData, // optional: only if you’re okay storing raw fields
-      uniqueorderid: detailsData.exchange_order_id || null,
-      exchorderupdatetime: exchTime,
-      exchtime: exchTime,
-      updatetime: exchTime,
-      averageprice: avgPrice,
-      lotsize: qty,
-      symboltoken: instrumentToken,
-      triggerprice: Number(detailsData.trigger_price || 0),
+    // ====================================================
+    // 8️⃣ FINAL UPDATE TEMP ORDER
+    // ====================================================
+    await tempOrder.update({
+      tradedValue: totalValue,
+      fillsize: totalQty,
+      fillprice: avgPrice,
       price: avgPrice,
+      fillid: fill.trade_id,
+      filltime: fill.exchange_timestamp,
+      pnl:
+        reqInput.transactiontype === "SELL"
+          ? totalValue - Number(buyOrder?.tradedValue || 0)
+          : 0,
+      status: "COMPLETE",
       orderstatuslocaldb: finalStatus,
+      positionStatus:positionStatus
     });
 
-    // ----------------------------------------
-    // 8) (OPTIONAL) TRADES FETCH FOR PNL (again)
-    // ----------------------------------------
-    try {
-      const tradesResp = await axios.get(
-        `${upstoxUrl}/order/trades`,
-        {
-          headers: headersV2,
-          params: { order_id: orderid },
-        }
-      );
+    // ====================================================
+    // 🔥 9️⃣ BUY MERGE (DELETE TEMP)
+    // ====================================================
+    if (reqInput.transactiontype === "BUY" && existingBuy) {
+      const mergedQty = existingBuy.fillsize + totalQty;
+      const mergedValue = existingBuy.tradedValue + totalValue;
+      const mergedAvg = mergedValue / mergedQty;
 
-      const trades = tradesResp.data?.data || [];
-      console.log(trades, "trades (upstox)");
+      await existingBuy.update({
+        fillsize: mergedQty,
+        quantity: mergedQty,
+        tradedValue: mergedValue,
+        price: mergedAvg,
+        fillprice: mergedAvg,
+      });
 
-      if (Array.isArray(trades) && trades.length > 0) {
-        const t = trades[0];
+      await tempOrder.destroy();
 
-        const tradeAvg = Number(t.average_price || avgPrice || 0);
-
-        const buyPrice = buyOrder?.fillprice || 0;
-        const buySize = buyOrder?.fillsize || 0;
-        const buyValue = buyOrder?.tradedValue || 0;
-        let buyTime = buyOrder?.filltime || 0;
-
-        let pnl =
-          Number(reqInput.quantity) * tradeAvg - buyPrice * buySize;
-
-        if (t.transaction_type === "BUY") {
-          pnl = 0;
-          buyTime = "NA";
-        }
-
-        console.log(t, "trade data (upstox)");
-
-        await newOrder.update({
-          tradedValue: tradeAvg * Number(reqInput.quantity),
-          fillprice: tradeAvg,
-          fillsize: Number(reqInput.quantity),
-          fillid: t.trade_id,
-          filltime: t.exchange_timestamp || t.order_timestamp || exchTime,
-          status: "COMPLETE",
-          pnl: pnl,
-          buyTime: buyTime,
-          buyprice: buyPrice,
-          buysize: buySize,
-          buyvalue: buyValue,
-        });
-      } else {
-        console.log(trades, "no trades (upstox)");
-      }
-    } catch (e) {
-      console.log(
-        e?.response?.data || e.message,
-        "get order trade (upstox)"
-      );
+      return {
+        result: "SUCCESS",
+        broker: "Upstox",
+        orderid: existingBuy.id,
+      };
     }
 
+    // ====================================================
+    // 10️⃣ NORMAL SUCCESS
+    // ====================================================
     return {
-      userId: user.id,
-      broker: "Upstox",
       result: "SUCCESS",
-      orderid,
-    };
-  } catch (err) {
-    console.log(err, "err (upstox)");
-
-    return {
-      userId: user.id,
       broker: "Upstox",
-      result: "ERROR",
-      message: err.message,
+      orderid: tempOrder.id,
     };
+
+  } catch (err) {
+    if (tempOrder) {
+      await tempOrder.update({
+        orderstatuslocaldb: "FAILED",
+        status: "FAILED",
+        text: err.message,
+      });
+    }
+    return { result: "ERROR", message: err.message };
   }
 };

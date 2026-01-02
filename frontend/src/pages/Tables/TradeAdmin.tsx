@@ -2255,6 +2255,7 @@ export default function TradeAdmin() {
             context={{ toggleRow }}
             pagination={true}
             paginationPageSize={20}
+             paginationPageSizeSelector={[20, 50, 100, 500, 1000]}
             suppressCellFocus={true}
             animateRows={true}
             rowSelection="single"

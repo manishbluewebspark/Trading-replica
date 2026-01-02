@@ -218,20 +218,11 @@ export const getMergedInstrumentsNew = async (req, res) => {
 
 
   try {
-    logSuccess(req, {
-      msg: "Merged instruments request started",
-      requestId,
-      redisKey: MERGED_REDIS_KEY,
-    });
+   
 
     // ✅ TTL + cache check
     const ttl = await redis.ttl(MERGED_REDIS_KEY);
-    logSuccess(req, {
-      msg: "Redis TTL checked for merged instruments",
-      requestId,
-      ttlSeconds: ttl,
-    });
-
+   
     const cachedData = await redis.get(MERGED_REDIS_KEY);
 
     console.log('==============cachedData==============');
@@ -242,13 +233,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
 
        console.log('==============durationMs Cache response ==============',endTime - startTime);
 
-      logSuccess(req, {
-        msg: "Merged instruments served from Redis cache",
-        requestId,
-        cache: true,
-        durationMs: endTime - startTime,
-        payloadSizeBytes: Buffer.byteLength(cachedData, "utf8"),
-      });
+    
 
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       return res.status(200).send(cachedData);
@@ -262,11 +247,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
       // });
     }
 
-    logSuccess(req, {
-      msg: "Cache miss for merged instruments; fetching all sources",
-      requestId,
-      cache: false,
-    });
+    
 
     // =======================================================
     // 1️⃣ Fetch all sources (with timing)
@@ -282,18 +263,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
         fetchAllFyersInstruments(),
       ]);
 
-    logSuccess(req, {
-      msg: "Fetched instruments from all sources",
-      requestId,
-      durationMs: Date.now() - tFetch0,
-      counts: {
-        angelone: angeloneData?.length || 0,
-        kite: kiteData?.length || 0,
-        finvasia: finvasiaList?.length || 0,
-        upstox: upstoxData?.length || 0,
-        fyers: fyersData?.length || 0,
-      },
-    });
+ 
 
     // =======================================================
     // 2️⃣ Build lookup maps (with timing)
@@ -332,20 +302,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
       if (fyKey) fyBySymbolKey.set(fyKey, f);
     }
 
-    logSuccess(req, {
-      msg: "Lookup maps built for all sources",
-      requestId,
-      durationMs: Date.now() - tMap0,
-      mapSizes: {
-        kiteTokenMap: kiteTokenMap.size,
-        finByToken: finByToken.size,
-        finBySymbolKey: finBySymbolKey.size,
-        upsByToken: upsByToken.size,
-        upsBySymbolKey: upsBySymbolKey.size,
-        fyByToken: fyByToken.size,
-        fyBySymbolKey: fyBySymbolKey.size,
-      },
-    });
+   
 
     // =======================================================
     // 3️⃣ Merge AngelOne rows
@@ -390,13 +347,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
       };
     });
 
-    logSuccess(req, {
-      msg: "AngelOne rows merged with other sources",
-      requestId,
-      durationMs: Date.now() - tMerge0,
-      mergedAngelCount: mergedAngel.length,
-    });
-
+  
     // =======================================================
     // 4️⃣ Finvasia-only rows
     // =======================================================
@@ -435,13 +386,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
         };
       });
 
-    logSuccess(req, {
-      msg: "Finvasia-only rows prepared",
-      requestId,
-      durationMs: Date.now() - tFinOnly0,
-      finvasiaOnlyCount: finvasiaOnlyRows.length,
-    });
-
+   
     // =======================================================
     // 5️⃣ Combine + cache
     // =======================================================
@@ -462,21 +407,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
 
     await redis.set(MERGED_REDIS_KEY, payload, "EX", TEN_HOURS_IN_SECONDS);
 
-    logSuccess(req, {
-      msg: "Merged instruments cached in Redis",
-      requestId,
-      durationMs: Date.now() - tCache0,
-      ttlSeconds: TEN_HOURS_IN_SECONDS,
-      mergedCount: finalMerged.length,
-      payloadSizeBytes: Buffer.byteLength(payload, "utf8"),
-    });
-
-    logSuccess(req, {
-      msg: "Merged instruments request completed",
-      requestId,
-      totalDurationMs: Date.now() - startTime,
-      mergedCount: finalMerged.length,
-    });
+   
 
     console.log('==============durationMs Normal response==============',Date.now() - startTime);
 

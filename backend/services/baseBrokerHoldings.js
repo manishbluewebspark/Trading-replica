@@ -77,12 +77,14 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
           let out;
 
           if (broker === "angelone") {
+
+           
+            
           
             out = await angeloneHoldingFun({ user, req });
            
           } else if (broker === "kite") {
-            logSuccess(req, { msg: "Calling kiteHoldingFun", userId, broker });
-
+           
             out = await kiteHoldingFun({ user, req });
 
           } else if (broker === "fyers") {
@@ -117,21 +119,7 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
         }
       })
     );
-
-    
-
-    const finalOutput = results.map((r, idx) => {
-      if (r.status === "fulfilled") {
-       
-        return r.value;
-      }
-      logError(req, r.reason, { msg: "User promise rejected", idx });
-      return { result: "PROMISE_REJECTED" };
-    });
-
-    
-    console.log(results,'==================results==============');
-
+  
     req.results = results
     
     next();
@@ -153,16 +141,9 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
 
 export const syncMyHoldings = async (req, res, next) => {
   try {
-    logSuccess(req, {
-      msg: "syncMyHoldings started",
-      path: req?.originalUrl,
-      method: req?.method,
-      reqUserId: req?.userId,
-    });
+    
 
     const userId = req.userId; // 👈 authMiddleware se
-
-    logSuccess(req, { msg: "Resolved userId from req", userId });
 
     if (!userId) {
       logSuccess(req, { msg: "Unauthorized (userId missing) in syncMyHoldings" });
@@ -173,22 +154,12 @@ export const syncMyHoldings = async (req, res, next) => {
       });
     }
 
-    // 🔥 DB se fresh user fetch
-    logSuccess(req, { msg: "Fetching user from DB (syncMyHoldings)", userId });
-
     const user = await User.findOne({
       where: { id: userId },
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "User lookup result (syncMyHoldings)",
-      userId,
-      userFound: !!user,
-      role: user?.role,
-      brokerName: user?.brokerName,
-      hasAuthToken: !!user?.authToken,
-    });
+   
 
     if (!user) {
       logSuccess(req, { msg: "User not found (syncMyHoldings)", userId });
@@ -200,12 +171,7 @@ export const syncMyHoldings = async (req, res, next) => {
     }
 
     if (!user.authToken || !user.brokerName) {
-      logSuccess(req, {
-        msg: "Broker not connected (missing authToken/brokerName)",
-        userId,
-        hasAuthToken: !!user.authToken,
-        hasBrokerName: !!user.brokerName,
-      });
+     
 
       return res.json({
         status: false,
@@ -216,39 +182,38 @@ export const syncMyHoldings = async (req, res, next) => {
     let out;
     const broker = String(user.brokerName || "").toLowerCase();
 
-    logSuccess(req, { msg: "Resolved broker (syncMyHoldings)", userId, broker });
+   
 
     if (broker === "angelone") {
-      logSuccess(req, { msg: "Calling angeloneHoldingFun (syncMyHoldings)", userId, broker });
+      
       out = await angeloneHoldingFun({ user, req });
-      logSuccess(req, { msg: "angeloneHoldingFun completed (syncMyHoldings)", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+     
     } else if (broker === "kite") {
-      logSuccess(req, { msg: "Calling kiteHoldingFun (syncMyHoldings)", userId, broker });
+     
       out = await kiteHoldingFun({ user, req });
-      logSuccess(req, { msg: "kiteHoldingFun completed (syncMyHoldings)", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
-    } else if (broker === "fyers") {
-      logSuccess(req, { msg: "Calling fyersHoldingFun (syncMyHoldings)", userId, broker });
-      out = await fyersHoldingFun({ user, req });
-      logSuccess(req, { msg: "fyersHoldingFun completed (syncMyHoldings)", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+
+    }  
+    else if (broker === "fyers") {
+     
+       out = await fyersHoldingFun({ user, req });
+ 
     } else if (broker === "finvasia") {
-      logSuccess(req, { msg: "Calling finavasiaHoldingFun (syncMyHoldings)", userId, broker });
+      
       out = await finavasiaHoldingFun({ user, req });
-      logSuccess(req, { msg: "finavasiaHoldingFun completed (syncMyHoldings)", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
-    } else if (broker === "upstox") {
-      logSuccess(req, { msg: "Calling upstoxHoldingFun (syncMyHoldings)", userId, broker });
+     
+    
       out = await upstoxHoldingFun({ user, req });
-      logSuccess(req, { msg: "upstoxHoldingFun completed (syncMyHoldings)", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+   
     } else {
-      logSuccess(req, { msg: "Invalid broker (syncMyHoldings)", userId, broker });
+     
       return res.json({ status: false, message: "Invalid broker" });
     }
 
-    logSuccess(req, {
-      msg: "syncMyHoldings completed, calling next()",
-      userId,
-      broker,
-      outSummary: { result: out?.result, count: out?.count, ok: out?.ok },
-    });
+    req.result = out
+
+    console.log('=============out========',out);
+    
+    
 
     next();
   } catch (err) {

@@ -1731,7 +1731,7 @@ export const getPosition = async (req, res,next) => {
 
       // let token = req.headers.angelonetoken
 
-       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTlRrME5qSTBNeXdpYm1KbUlqb3hOelkxT0RVNU5qWXpMQ0pwWVhRaU9qRTNOalU0TlRrMk5qTXNJbXAwYVNJNkltWTVaREJpTXpsbUxURmpNalF0TkRka1pTMDVZV05pTFRneE16UXpNV1UyTjJJNU9DSXNJbFJ2YTJWdUlqb2lJbjAuR0RFc0ZSNHpqOVhMNzRJUkFRQjltOXV1aGpPQzdyQkk1RFUyR0hPbWNxSGhQNlN6UTdEZDg2MzM1Q3hBT0J1dlowTU94dlU1WW14Qmx5SkJ5WmtkSmZKX1pTb0tfMlV2VjVzdzYwOEh5eXdNSnd5OTAwb3UtYmVXVHpvVS1odjhfYnZQNnhKYlV5RmxSMnpnUDdEVGZ6cnk0Q1JwWkcyZXZsSnA1dVEtRF93IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY1ODU5ODQzLCJleHAiOjE3NjU5MDk4MDB9.PxI5lVkEJBgdJqfIV5uVHWDDGxM0vGc-GGBW6rEOfYjpjbKSnOVA7DoWGes9tvDveNE4WYb6SzOPndNbQOiefg"
+       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkExMzcyODYiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrRXhNemN5T0RZaUxDSmxlSEFpT2pFM05qYzBNVE01T1RNc0ltNWlaaUk2TVRjMk56TXlOelF4TXl3aWFXRjBJam94TnpZM016STNOREV6TENKcWRHa2lPaUpoT1RrNU9UY3dPQzAxWXprNUxUUmhZV1F0T1RNNU9TMHhNVFF4Wm1RNU5HSTJZV1FpTENKVWIydGxiaUk2SWlKOS55WE53bE5JOGVzU2FyZEdrenh6TUpOdHJUVGkyaTZ6bnh0OE1zOGtHb09mNURMUnJYdGhLQXdVTjRWRUZhaTFBNkJpNl9kREFwVzV0NExrX1pNekVIb1B5VV9RdmZHSGMtYy1IbDNzWjVrOUF2ZUJqTGhHS1F1OUMxanQ1eldSYUdtTmRiNkFqX2E2QTZBNnpNQmxnLUMxQUY4T1l6OXRnelNZZlN5SEJtb0kiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjczMjc1OTMsImV4cCI6MTc2NzM3ODYwMH0.Pb9_TIxssxdwQxc9MjDH_23EhfFy8LOjjgD6Yp0i9rFUXvWVQH_ipY0Oz7__ZQFL3nOuTak0TpPjKsYvGnf0_w"
 
       var config = {
         method: 'get',
@@ -1856,7 +1856,18 @@ export const getAngelOneLTP = async (req, res,next) => {
 export const getCommonUserHolding = async (req, res) => {
   try {
 
-  
+     if(req.result.ok===false) {
+         
+      return res.json({
+      status: true,
+      statusCode: 200,
+      data: [],
+      message:
+        "User is not Login !",
+    });
+  }
+    
+
     // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
     const localOldOrders = await Order.findAll({
       where: {

@@ -10,29 +10,14 @@ import { generateStrategyUniqueId } from "../../utils/randomWords.js";
 import { Op } from "sequelize";
 import {  updateTargetAndStoploss } from "../../services/placeTargetAndStoplossAngel.js";
 import { checkTargetAndStoplossAngelOrder, checkTargetAndStoplossKiteOrder } from "../../services/checkTargetAndStoplossStatus.js";
-
-
+import { placeUpstoxOrder } from "../../services/placeUpstoxOrder.js";
 
 
 export const getTokenStatusSummary = async (req, res) => {
   try {
     const now = new Date();
 
-    // 1️⃣ Entry log
-    logSuccess(req, {
-      msg: "Token status summary request received",
-      now,
-    });
-
-    // 2️⃣ Auto-expire users whose Angel login is expired
-    logSuccess(req, {
-      msg: "Auto-expiring AngelOne login users if expiry passed",
-      criteria: {
-        angelLoginUser: true,
-        role: "user",
-        expiryLtNow: now,
-      },
-    });
+    
 
     const [expiredCount] = await User.update(
       {
@@ -51,15 +36,8 @@ export const getTokenStatusSummary = async (req, res) => {
       }
     );
 
-    logSuccess(req, {
-      msg: "AngelOne login auto-expire update completed",
-      expiredCount,
-    });
-
-    // 3️⃣ Fetch users with active Angel login
-    logSuccess(req, {
-      msg: "Fetching users with active AngelOne login",
-    });
+   
+   
 
     const generatedUsers = await User.findAll({
       where: {
@@ -72,16 +50,6 @@ export const getTokenStatusSummary = async (req, res) => {
         "lastName",
         "angelLoginExpiry",
       ],
-    });
-
-    logSuccess(req, {
-      msg: "Fetched generated users",
-      count: generatedUsers.length,
-    });
-
-    // 4️⃣ Fetch users without active Angel login
-    logSuccess(req, {
-      msg: "Fetching users without AngelOne login",
     });
 
     const notGeneratedUsers = await User.findAll({
@@ -99,17 +67,6 @@ export const getTokenStatusSummary = async (req, res) => {
       ],
     });
 
-    logSuccess(req, {
-      msg: "Fetched non-generated users",
-      count: notGeneratedUsers.length,
-    });
-
-    // 5️⃣ Final response log
-    logSuccess(req, {
-      msg: "Token status summary prepared successfully",
-      generatedCount: generatedUsers.length,
-      notGeneratedCount: notGeneratedUsers.length,
-    });
 
     return res.json({
       status: true,
@@ -203,7 +160,8 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
           }
 
           if (user.brokerName.toLowerCase() === "upstox") {
-           
+
+              return await placeUpstoxOrder(user, input, req, true)
           }
 
           if (user.brokerName.toLowerCase() === "finvasia") {
@@ -287,30 +245,12 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
 export const adminMultipleSquareOff = async (req, res) => {
   try {
 
-    // ✅ Entry log
-    logSuccess(req, { msg: "Admin multiple square-off started" });
-
-          // ✅ Strategy log
-      logSuccess(req, {
-        msg: "Strategy Unique ID generated",
-        strategyUniqueId:"",
-      });
-
     // 1) Time window for today
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
-
-    logSuccess(req, {
-      msg: "Computed start/end of day for bulk square-off",
-      startOfDay,
-      endOfDay,
-    });
-
-    // 2) Fetch all OPEN (BUY) orders today
-    logSuccess(req, { msg: "Fetching OPEN BUY orders for today" });
 
     const openOrders = await Order.findAll({
       where: {
@@ -321,11 +261,7 @@ export const adminMultipleSquareOff = async (req, res) => {
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "OPEN BUY orders fetched",
-      openOrdersCount: openOrders.length,
-    });
-
+    
     if (!openOrders.length) {
       logSuccess(req, {
         msg: "No OPEN BUY orders found today to square off",
@@ -338,53 +274,21 @@ export const adminMultipleSquareOff = async (req, res) => {
       });
     }
 
-    // 3) Process each order
-    logSuccess(req, {
-      msg: "Starting bulk square-off processing for orders",
-      count: openOrders.length,
-    });
-
+   
     const results = await Promise.allSettled(
       openOrders.map(async (o, idx) => {
-        logSuccess(req, {
-          msg: "Processing square-off for order",
-          index: idx,
-          orderDbId: o.id,
-          orderid: o.orderid,
-          userId: o.userId,
-          symbol: o.tradingsymbol,
-          exchange: o.exchange,
-        });
-
+        
         try {
-          // 3a) Fetch user of the order
-          logSuccess(req, {
-            msg: "Fetching user for square-off order",
-            orderDbId: o.id,
-            userId: o.userId,
-          });
+          
 
           const user = await User.findOne({
             where: { id: o.userId },
             raw: true,
           });
 
-          logSuccess(req, {
-            msg: "User lookup result for square-off order",
-            orderDbId: o.id,
-            userFound: !!user,
-            userId: user?.id,
-            brokerName: user?.brokerName,
-            role: user?.role,
-            hasAuthToken: !!user?.authToken,
-          });
-
+         
           if (!user) {
-            logSuccess(req, {
-              msg: "Square-off skipped: user not found",
-              orderDbId: o.id,
-              userId: o.userId,
-            });
+            
 
             return {
               orderId: o.id,
@@ -394,12 +298,7 @@ export const adminMultipleSquareOff = async (req, res) => {
           }
 
           if (!user.authToken) {
-            logSuccess(req, {
-              msg: "Square-off skipped: user missing authToken",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-
+           
             return {
               orderId: o.id,
               result: "NO_TOKEN",
@@ -408,12 +307,7 @@ export const adminMultipleSquareOff = async (req, res) => {
           }
 
           if (!user.brokerName) {
-            logSuccess(req, {
-              msg: "Square-off skipped: user broker not selected",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-
+           
             return {
               orderId: o.id,
               result: "NO_BROKER",
@@ -455,92 +349,39 @@ export const adminMultipleSquareOff = async (req, res) => {
             finavasiaToken : o?.symboltoken||o?.angelOneToken,
             FyersSymbol: o.tradingsymbol || o.angelOneSymbol,
             fyersToken: o.symboltoken || o.angelOneToken,
-
           };
-
-          logSuccess(req, {
-            msg: "Prepared reqInput for square-off (SELL leg)",
-            orderDbId: o.id,
-            brokerName: user.brokerName,
-            reqInput,
-          });
 
           //=============== CALL BROKER SPECIFIC SERVICE ===============//
           const broker = (user.brokerName || "").toLowerCase();
 
-          logSuccess(req, {
-            msg: "Routing square-off to broker service",
-            orderDbId: o.id,
-            broker,
-            userId: user.id,
-            role: user.role,
-          });
-
           if (broker === "angelone" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeAngelOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-
+          
             await placeAngelOrder(user, reqInput, req);
 
-            logSuccess(req, {
-              msg: "AngelOne square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
           } else if (broker === "kite" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeKiteOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-
+            
             await placeKiteOrder(user, reqInput, req, false);
 
-            logSuccess(req, {
-              msg: "Kite square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
           } else if (broker === "fyers" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeFyersOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
 
             await placeFyersOrder(user, reqInput, req);
 
-            logSuccess(req, {
-              msg: "Fyers square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+            
           } else if (broker === "finvasia" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeFinavasiaOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
 
             await placeFinavasiaOrder(user, reqInput, req, true);
 
-            logSuccess(req, {
-              msg: "Finvasia square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-          } else {
-            logSuccess(req, {
-              msg: "Square-off skipped: invalid/unknown broker",
-              orderDbId: o.id,
-              brokerName: user.brokerName,
-              brokerValue: user.broker,
-              userId: user.id,
-            });
+          }else if (broker === "upstox" && user.role === "user") {
+    
+            await placeUpstoxOrder(user, reqInput, req, true);
 
+          }
+          
+          else {
+      
             return {
               orderId: o.id,
               result: "INVALID_BROKER",
@@ -548,13 +389,7 @@ export const adminMultipleSquareOff = async (req, res) => {
             };
           }
 
-          logSuccess(req, {
-            msg: "Square-off processed successfully for order",
-            orderDbId: o.id,
-            broker: user.broker,
-            brokerName: user.brokerName,
-            userId: user.id,
-          });
+          
 
           return {
             orderId: o.id,
@@ -576,10 +411,7 @@ export const adminMultipleSquareOff = async (req, res) => {
       })
     );
 
-    logSuccess(req, {
-      msg: "All bulk square-off promises settled",
-      total: results.length,
-    });
+   
 
     // 4) Normalize Promise results
     const finalOutput = results.map((r, i) => {
@@ -600,10 +432,7 @@ export const adminMultipleSquareOff = async (req, res) => {
       return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
     });
 
-    logSuccess(req, {
-      msg: "Bulk square-off completed",
-      outputCount: finalOutput.length,
-    });
+    
 
     return res.json({
       status: true,
@@ -633,17 +462,8 @@ export const adminGroupSquareOff = async (req, res) => {
 
     const afterUnderscore = reqStrategyUniqueId.split("_").pop();
 
-    // ✅ Entry log
-    logSuccess(req, { msg: "Admin multiple square-off started" });
-
     //  Generate strategyUniqueId
     const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
-
-          // ✅ Strategy log
-      logSuccess(req, {
-        msg: "Strategy Unique ID generated",
-        strategyUniqueId,
-      });
 
     // 1) Time window for today
     const startOfDay = new Date();
@@ -651,15 +471,6 @@ export const adminGroupSquareOff = async (req, res) => {
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
-
-    logSuccess(req, {
-      msg: "Computed start/end of day for bulk square-off",
-      startOfDay,
-      endOfDay,
-    });
-
-    // 2) Fetch all OPEN (BUY) orders today
-    logSuccess(req, { msg: "Fetching OPEN BUY orders for today" });
 
     const openOrders = await Order.findAll({
       where: {
@@ -670,14 +481,6 @@ export const adminGroupSquareOff = async (req, res) => {
       raw: true,
     });
 
-
-    console.log(openOrders,'openOrders');
-    
-
-    logSuccess(req, {
-      msg: "OPEN BUY orders fetched",
-      openOrdersCount: openOrders.length,
-    });
 
     if (!openOrders.length) {
       logSuccess(req, {
@@ -691,11 +494,7 @@ export const adminGroupSquareOff = async (req, res) => {
       });
     }
 
-    // 3) Process each order
-    logSuccess(req, {
-      msg: "Starting bulk square-off processing for orders",
-      count: openOrders.length,
-    });
+    
 
     const results = await Promise.allSettled(
       openOrders.map(async (o, idx) => {
@@ -710,28 +509,14 @@ export const adminGroupSquareOff = async (req, res) => {
         });
 
         try {
-          // 3a) Fetch user of the order
-          logSuccess(req, {
-            msg: "Fetching user for square-off order",
-            orderDbId: o.id,
-            userId: o.userId,
-          });
+          
 
           const user = await User.findOne({
             where: { id: o.userId },
             raw: true,
           });
 
-          logSuccess(req, {
-            msg: "User lookup result for square-off order",
-            orderDbId: o.id,
-            userFound: !!user,
-            userId: user?.id,
-            brokerName: user?.brokerName,
-            role: user?.role,
-            hasAuthToken: !!user?.authToken,
-          });
-
+         
           if (!user) {
             logSuccess(req, {
               msg: "Square-off skipped: user not found",
@@ -809,81 +594,46 @@ export const adminGroupSquareOff = async (req, res) => {
 
           };
 
-          logSuccess(req, {
-            msg: "Prepared reqInput for square-off (SELL leg)",
-            orderDbId: o.id,
-            brokerName: user.brokerName,
-            reqInput,
-          });
+          
 
           //=============== CALL BROKER SPECIFIC SERVICE ===============//
           const broker = (user.brokerName || "").toLowerCase();
 
-          logSuccess(req, {
-            msg: "Routing square-off to broker service",
-            orderDbId: o.id,
-            broker,
-            userId: user.id,
-            role: user.role,
-          });
+          
 
           if (broker === "angelone" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeAngelOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
 
             await placeAngelOrder(user, reqInput, req);
 
-            logSuccess(req, {
-              msg: "AngelOne square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
           } else if (broker === "kite" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeKiteOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+            
 
             await placeKiteOrder(user, reqInput, req, false);
 
-            logSuccess(req, {
-              msg: "Kite square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
           } else if (broker === "fyers" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeFyersOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+           
 
             await placeFyersOrder(user, reqInput, req);
 
-            logSuccess(req, {
-              msg: "Fyers square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
+            
           } else if (broker === "finvasia" && user.role === "user") {
-            logSuccess(req, {
-              msg: "Calling placeFinavasiaOrder for bulk square-off",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-
+           
             await placeFinavasiaOrder(user, reqInput, req, true);
 
-            logSuccess(req, {
-              msg: "Finvasia square-off completed",
-              orderDbId: o.id,
-              userId: user.id,
-            });
-          } else {
+           
+          }else if (broker === "upstox" && user.role === "user") {
+           
+            await placeUpstoxOrder(user, reqInput, req, true);
+
+           
+          }
+           else {
+
+            
+
             logSuccess(req, {
               msg: "Square-off skipped: invalid/unknown broker",
               orderDbId: o.id,
@@ -899,13 +649,7 @@ export const adminGroupSquareOff = async (req, res) => {
             };
           }
 
-          logSuccess(req, {
-            msg: "Square-off processed successfully for order",
-            orderDbId: o.id,
-            broker: user.broker,
-            brokerName: user.brokerName,
-            userId: user.id,
-          });
+          
 
           return {
             orderId: o.id,
@@ -927,10 +671,7 @@ export const adminGroupSquareOff = async (req, res) => {
       })
     );
 
-    logSuccess(req, {
-      msg: "All bulk square-off promises settled",
-      total: results.length,
-    });
+    
 
     // 4) Normalize Promise results
     const finalOutput = results.map((r, i) => {
@@ -943,20 +684,9 @@ export const adminGroupSquareOff = async (req, res) => {
         return r.value;
       }
 
-      logError(req, r.reason, {
-        msg: "Square-off promise rejected",
-        orderDbId: openOrders[i]?.id,
-      });
-
+      
       return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
     });
-
-    logSuccess(req, {
-      msg: "Bulk square-off completed",
-      outputCount: finalOutput.length,
-    });
-
-     console.log("===================group req end=====================");
 
     return res.json({
       status: true,
@@ -981,27 +711,11 @@ export const adminSingleSquareOff = async (req, res) => {
     let orderId = req.body.orderId
     let reqStrategyUniqueId = req.body.strategyUniqueId
 
-    console.log(req.body,'=========== Single Req coming=================');
-    
-
-    // 1️⃣ Request received
-    logSuccess(req, {
-      msg: "Admin single square-off request received",
-      orderId,
-      body: req.body,
-    });
-
      //  Generate strategyUniqueId
     const strategyUniqueId = await generateStrategyUniqueId(reqStrategyUniqueId);
 
-    // ✅ Strategy log
-logSuccess(req, {
-  msg: "Strategy Unique ID generated",
-  strategyUniqueId,
-});
-
     if (!orderId) {
-      logSuccess(req, { msg: "Square-off validation failed: orderId missing" });
+     
       return res.json({
         status: false,
         message: "orderId is required",
@@ -1015,23 +729,6 @@ logSuccess(req, {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    logSuccess(req, {
-      msg: "Computed start/end of day for square-off",
-      startOfDay,
-      endOfDay,
-    });
-
-    // 3️⃣ Fetch OPEN BUY order
-    logSuccess(req, {
-      msg: "Fetching OPEN BUY order for square-off",
-      lookup: {
-        orderid: String(orderId),
-        orderstatuslocaldb: "OPEN",
-        transactiontype: "BUY",
-        strategyUniqueId:strategyUniqueId
-      },
-    });
-
     const o = await Order.findOne({
       where: {
         orderid: String(orderId),
@@ -1040,15 +737,6 @@ logSuccess(req, {
 
       },
       raw: true,
-    });
-
-    logSuccess(req, {
-      msg: "Order lookup result",
-      orderFound: !!o,
-      userId: o?.userId,
-      broker: o?.broker,
-      tradingsymbol: o?.tradingsymbol,
-      exchange: o?.exchange,
     });
 
     if (!o) {
@@ -1063,24 +751,9 @@ logSuccess(req, {
       });
     }
 
-    // 4️⃣ Fetch user
-    logSuccess(req, {
-      msg: "Fetching user for this order",
-      userId: o.userId,
-    });
-
     const user = await User.findOne({
       where: { id: o.userId },
       raw: true,
-    });
-
-    logSuccess(req, {
-      msg: "User lookup result",
-      userFound: !!user,
-      userId: user?.id,
-      brokerName: user?.brokerName,
-      role: user?.role,
-      hasAuthToken: !!user?.authToken,
     });
 
     if (!user) {
@@ -1109,9 +782,6 @@ logSuccess(req, {
 
     // 5️⃣ Build reqInput for SELL leg
     const transactiontype = "SELL";
-
-    console.log(o,'==============0=============');
-    
 
     const reqInput = {
       variety: o.variety,
@@ -1144,70 +814,37 @@ logSuccess(req, {
 
     };
 
-    logSuccess(req, {
-      msg: "Prepared square-off reqInput (SELL leg)",
-      orderId: String(orderId),
-      reqInput,
-    });
-
     // 6️⃣ Route to broker service
     const broker = (user.brokerName || "").toLowerCase();
 
-    logSuccess(req, {
-      msg: "Routing square-off to broker",
-      broker,
-      userId: user.id,
-      role: user.role,
-    });
-
     if (broker === "angelone" && user.role === "user") {
-      logSuccess(req, { msg: "Calling placeAngelOrder for square-off", userId: user.id, orderId: String(orderId) });
 
       // ✅ keeping your existing call exactly (even if args look odd)
       await placeAngelOrder(user, reqInput, req);
 
-      logSuccess(req, { msg: "AngelOne square-off call completed", userId: user.id, orderId: String(orderId) });
     } else if (broker === "kite" && user.role === "user") {
-      logSuccess(req, { msg: "Calling placeKiteOrder for square-off", userId: user.id, orderId: String(orderId) });
-
+      
       await placeKiteOrder(user, reqInput, req, false);
 
-      logSuccess(req, { msg: "Kite square-off call completed", userId: user.id, orderId: String(orderId) });
     } else if (broker === "fyers" && user.role === "user") {
-      logSuccess(req, { msg: "Calling placeFyersOrder for square-off", userId: user.id, orderId: String(orderId) });
-
+      
       await placeFyersOrder(user, reqInput, req);
 
-      logSuccess(req, { msg: "Fyers square-off call completed", userId: user.id, orderId: String(orderId) });
     } else if (broker === "finvasia" && user.role === "user") {
-      logSuccess(req, { msg: "Calling placeFinavasiaOrder for square-off", userId: user.id, orderId: String(orderId) });
-
+      
       await placeFinavasiaOrder(user, reqInput, req, true);
+ 
+    }else if (broker === "upstox" && user.role === "user") {
+      
+     await placeUpstoxOrder(user, reqInput, req, true);
 
-      logSuccess(req, { msg: "Finvasia square-off call completed", userId: user.id, orderId: String(orderId) });
     } else {
-      logSuccess(req, {
-        msg: "Square-off failed: unknown/invalid broker",
-        broker: user.broker,
-        brokerName: user.brokerName,
-        userId: user.id,
-      });
 
       return res.json({
         status: false,
         message: `Unknown or invalid broker: ${user.broker}`,
       });
     }
-
-    // 7️⃣ Response
-    logSuccess(req, {
-      msg: "Single order square-off completed successfully",
-      orderId: String(orderId),
-      userId: user.id,
-      brokerName: user.brokerName,
-    });
-
-      console.log(req.body,'=========== Single Req end =================');
 
     return res.json({
       status: true,
@@ -1229,29 +866,15 @@ logSuccess(req, {
 export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
   try {
 
-    logSuccess(req, {
-      msg: "🚀 adminPlaceMultiTargetStoplossOrder called",
-      body: req.body,
-    });
 
     const reqStrategyUniqueId = req.body.strategyUniqueId;
     const targetPrice = Number(req.body.targetPrice);
     const stoplossPrice = Number(req.body.stoplossPrice);
 
-    logSuccess(req, {
-      msg: "Parsed input values",
-      reqStrategyUniqueId,
-      targetPrice,
-      stoplossPrice,
-    });
+    
 
     if (!Number.isFinite(targetPrice) || !Number.isFinite(stoplossPrice)) {
-      logError(req, null, {
-        msg: "Invalid target/stoploss received",
-        targetPrice,
-        stoplossPrice,
-      });
-
+     
       return res.json({
         status: false,
         message: "Invalid targetPrice/stoplossPrice",
@@ -1259,11 +882,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
     }
     
     // ================= Fetch OPEN BUY Orders =================
-    logSuccess(req, {
-      msg: "Fetching OPEN BUY orders",
-      strategyUniqueId: reqStrategyUniqueId,
-    });
-
+   
     const openOrders = await Order.findAll({
       where: {
         orderstatuslocaldb: "OPEN",
@@ -1273,11 +892,7 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "OPEN BUY orders fetched",
-      count: openOrders.length,
-      orderIds: openOrders.map((o) => o.orderid),
-    });
+    
 
     if (!openOrders.length) {
       logSuccess(req, {
@@ -1312,12 +927,12 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
           });
 
           if (!user) {
-            logSuccess(req, { msg: "Skipping order: user not found", orderDbId: o.id });
+            
             return { orderId: o.id, result: "NO_USER" };
           }
 
           if (!user.authToken) {
-            logSuccess(req, { msg: "Skipping order: authToken missing", orderDbId: o.id });
+           
             return { orderId: o.id, result: "NO_TOKEN" };
           }
 
@@ -1354,7 +969,6 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
     });
   }
 };
-
 
 
 // ==============update logger code ==============================

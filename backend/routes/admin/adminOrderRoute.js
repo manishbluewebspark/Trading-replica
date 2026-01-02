@@ -43,7 +43,7 @@ router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 router.post("/multiple/targetstoploss/order", AdminAuthMiddleware, adminPlaceMultiTargetStoplossOrder);
 
 
-// router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
+router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
 
 
 
@@ -148,12 +148,12 @@ router.post("/manual/create",
 router.get('/getuserclonetrade/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
 router.get("/getuserclone/fund",authMiddleware,getCloneUserFund);
 router.get("/getuserclonetrade", authMiddleware,getCloneUserTrade);
-
+router.get("/chartadmin", authMiddleware,fetchGooglFromSerpApi);
 
 router.get("/getuserclonedematlogin",AdminAuthMiddleware, loginCloneUserDemat);
 
 
-router.get("/chartadmin",AdminAuthMiddleware, fetchGooglFromSerpApi);
+
 router.get("/get/recent/order",AdminAuthMiddleware, adminGetRecentOrder);
 
 

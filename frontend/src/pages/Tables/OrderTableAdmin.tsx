@@ -376,7 +376,7 @@ const shouldAutoExit = ({
 }): false | "TARGET" | "STOPLOSS" => {
 
 
-  console.log('check auto sl and target !');
+
   
 
   if (!Number.isFinite(cmp)) return false;
@@ -418,8 +418,7 @@ const callAutoExitAPI = async ({
   reason: "TARGET" | "STOPLOSS";
 }) => {
   try {
-    console.log(`🚀 AUTO EXIT [${reason}]`, orderId,strategyUniqueId);
-
+    
     await axios.post(
       `${apiUrl}/admin/targetstoplosscheck`, // 👈 tumhara backend endpoint
       { orderId, strategyUniqueId, reason },
@@ -431,6 +430,7 @@ const callAutoExitAPI = async ({
     );
 
     toast.success(`Auto ${reason} executed for Order ${orderId}`);
+    fetchOrders()
   } catch (err: any) {
     console.error("Auto exit failed", err);
   }

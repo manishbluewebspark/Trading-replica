@@ -265,14 +265,7 @@ type MarketItem = {
   price_movement: PriceMovement;
 };
 
-// API response
-type ApiResponse = {
-  status: boolean;
-  data: {
-    region: string;
-    markets: MarketItem[]; // flat array
-  };
-};
+
 
 // grouped by region
 type MarketsByRegion = {
@@ -292,10 +285,15 @@ const GooglChart: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Group market items based on region keyword
-  const groupMarkets = (items: MarketItem[]): MarketsByRegion => {
-    const grouped: MarketsByRegion = { asia: [], europe: [], us: [] };
+  const groupMarkets = (items:any): MarketsByRegion => {
+    const grouped: MarketsByRegion = { asia: items.asia||[], europe:items.europe|| [], us: items.us||[] };
 
-    items.forEach((item) => {
+    
+
+    items.forEach((item:any) => {
+
+      console.log(item,'item');
+      
       const n = item.name.toLowerCase();
 
       if (n.includes("nikkei") || n.includes("asia") || n.includes("nifty"))
@@ -312,9 +310,11 @@ const GooglChart: React.FC = () => {
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
+
+        
         setLoading(true);
 
-        const { data } = await axios.get<ApiResponse>(
+        const { data } = await axios.get(
           `${apiUrl}/admin/chartadmin`,
           {
             headers: {
@@ -323,13 +323,14 @@ const GooglChart: React.FC = () => {
           }
         );
 
-        console.log("API markets:", data.data.markets);
+        console.log("API markets:", data.data);
 
         if (data.status) {
           const grouped = groupMarkets(data.data.markets);
 
           setMarkets(grouped);
-          setRegion(data.data.region || "India");
+          setRegion(data.data.markets[0].asia || "India");
+          // setRegion(data.data.region || "India");
         }
       } catch (err) {
         console.error(err);

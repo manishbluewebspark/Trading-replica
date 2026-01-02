@@ -4,7 +4,6 @@ import User from "../../models/userModel.js";
 import AngelOneToken from "../../models/angelOneToken.js"
 import Credential from "../../models/angelOneCredential.js";
 import { generateTOTP } from "../../utils/generateTOTP.js";
-import { getManyTokensFromSession, setTokensInSession } from "../../utils/sessionUtils.js";
 import FundPNL from "../../models/angelFundAndPNL.js"
 import { Op } from "sequelize";
 import { emitOrderGet } from "../../services/smartapiFeed.js";
@@ -32,11 +31,6 @@ const angelHeaders = (token) => ({
   "X-MACAddress": "00-00-00-00-00-00",
      'X-PrivateKey': process.env.PRIVATE_KEY, 
 });
-
-
-
-
-
 
 /* -------------------------- Controller: bulk place ------------------------- */
 
@@ -2967,7 +2961,6 @@ async function fetchKiteTradesForUser(user,status) {
   }
 }
 
-
 export const adminFetchOrder = async function (req,res,next) {
 
   let users = await User.findAll({
@@ -3018,15 +3011,7 @@ export const adminFetchOrder = async function (req,res,next) {
       tradeCount: allTrades.length,
       data: allTrades,
     });
-  
-  
-
-  
-
-
-  
 }
-
 
 export const adminFetchOrderHolding = async function (req,res,next) {
 
@@ -3080,8 +3065,6 @@ export const adminFetchOrderHolding = async function (req,res,next) {
     });
   
 }
-
-
 
 export const AdminGetHoldingMultiple = async (req, res) => {
   try {
