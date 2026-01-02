@@ -37,6 +37,8 @@ type Tick = {
   ltp: number;
 };
 
+
+
 type ClientOrder = {
   id?: number;
   userId?: number;
@@ -372,6 +374,10 @@ const shouldAutoExit = ({
   target?: number | null;
   stoploss?: number | null;
 }): false | "TARGET" | "STOPLOSS" => {
+
+
+  console.log('check auto sl and target !');
+  
 
   if (!Number.isFinite(cmp)) return false;
 
@@ -805,6 +811,20 @@ const DetailRowRenderer = (props: any) => {
 
   };
 
+
+const handlerTargetAndStoploss = (payload: any) => {
+
+  // 🔁 Simply re-fetch latest orders
+  fetchOrders();   // 👈 tumhari existing API call function
+
+
+  console.log(payload,'========handlerTargetAndStoploss payload============');
+  
+
+};
+
+
+
   //  test code start 
   // ltpByTokenRef.current["40446"] = 238;
 
@@ -817,6 +837,7 @@ const DetailRowRenderer = (props: any) => {
   //  test end 
     
   socket.on("tick", onTick);
+  socket.on("order:oco:update", handlerTargetAndStoploss);
   // return () => socket.off("tick", onTick);
 }, []);
 
@@ -869,6 +890,7 @@ const DetailRowRenderer = (props: any) => {
 
   /** ✅ API: Submit Target+SL together (only on ✅ click) */
   const submitOcoDraft = useCallback(
+
     async (orderIdKey: string) => {
       const d = ocoDraft?.[orderIdKey];
       if (!d?.orderId) return;
@@ -889,6 +911,10 @@ const DetailRowRenderer = (props: any) => {
         userId: d.userId,
         broker: d.broker,
       };  
+
+
+      console.log('=================payload target and stoploss update !',payload);
+      
 
       try {
 
@@ -995,6 +1021,8 @@ const DetailRowRenderer = (props: any) => {
       toast.error(err?.message || "Something went wrong");
     }
   }, [apiUrl, fetchOrders, handleUnauthorized]);
+
+  
 
   const fetchOnlineOrdersDetails = useCallback(async () => {
     try {
@@ -1222,19 +1250,18 @@ const DetailRowRenderer = (props: any) => {
           if (!row || row.__rowType === "DETAIL") return null;
           if (!row?.orderid) return null;
 
-          const isBuy = String(row.transactiontype || "").toUpperCase() === "BUY";
+    
           const key = String(row.orderid);
 
           const draft = ocoDraft?.[key] || {};
           const t = draft.targetPrice ?? null;
           const sl = draft.stoplossPrice ?? null;
 
-          const canSubmit =
-            isBuy &&
-            Number.isFinite(Number(t)) &&
-            Number.isFinite(Number(sl)) &&
-            Number(t) > 0 &&
-            Number(sl) > 0;
+          
+
+          const hasTarget = Number.isFinite(Number(t)) && Number(t) > 0;
+          const hasSL = Number.isFinite(Number(sl)) && Number(sl) > 0;
+          const canSubmit =  (hasTarget || hasSL);
 
           const saving = ocoSavingKey === key;
 
@@ -1502,6 +1529,23 @@ const DetailRowRenderer = (props: any) => {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

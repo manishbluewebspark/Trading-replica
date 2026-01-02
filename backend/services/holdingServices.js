@@ -591,7 +591,6 @@ async function syncKitePositionsWithLocalDB121({ user, positions, req }) {
 
 export async function kiteHoldingFun({ user, req }) {
   try {
-    logSuccess(req, { msg: "kiteHoldingFun started", userId: user?.id, broker: "kite" });
 
     if (!user) {
       logSuccess(req, { msg: "kiteHoldingFun user missing", broker: "kite" });
@@ -599,22 +598,14 @@ export async function kiteHoldingFun({ user, req }) {
     }
 
     const apiKey = user?.kite_key;
-    const accessToken = user?.authToken;
 
-    logSuccess(req, {
-      msg: "Kite credential check",
-      userId: user?.id,
-      hasApiKey: !!apiKey,
-      hasAccessToken: !!accessToken,
-    });
+    const accessToken = user?.authToken;
 
     if (!apiKey || !accessToken) {
       return { ok: false, statusCode: 400, message: "Kite apiKey/accessToken missing" };
     }
 
     const url = "https://api.kite.trade/portfolio/positions";
-
-    logSuccess(req, { msg: "Calling Kite positions API", userId: user?.id, url });
 
     const resp = await axios.get(url, {
       timeout: 30000,
@@ -624,26 +615,9 @@ export async function kiteHoldingFun({ user, req }) {
       },
     });
 
-    logSuccess(req, {
-      msg: "Kite positions API response received",
-      userId: user?.id,
-      hasData: !!resp?.data,
-    });
-
     const positions = resp?.data?.data; // {day:[], net:[]}
 
-    logSuccess(req, {
-      msg: "Kite positions parsed",
-      userId: user?.id,
-      dayLen: Array.isArray(positions?.day) ? positions.day.length : 0,
-      netLen: Array.isArray(positions?.net) ? positions.net.length : 0,
-    });
-
-    logSuccess(req, { msg: "Syncing Kite positions to local DB", userId: user?.id });
-
     await syncKitePositionsWithLocalDB({ user, positions, req });
-
-    logSuccess(req, { msg: "kiteHoldingFun completed", userId: user?.id, broker: "kite" });
 
     return { ok: true, broker: "kite", message: "positions synced to HOLDING" };
   } catch (err) {

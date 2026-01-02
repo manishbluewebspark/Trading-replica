@@ -140,30 +140,11 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     
     const input = req.body;
 
-    // 1️⃣ Frontend request log
-    logSuccess(req, {
-      msg: "Admin multi-broker order request received",
-      frontendReqData: input,
-    });
-
-
     //  Generate strategyUniqueId
     const strategyUniqueId = await generateStrategyUniqueId(input.groupName);
-
-    // ✅ Strategy log
-      logSuccess(req, {
-        msg: "Strategy Unique ID generated",
-        strategyUniqueId,
-      });
-
+    
     //  Add into input object
     input.strategyUniqueId = strategyUniqueId;
-
-    // 1️⃣ Frontend request log
-    logSuccess(req, {
-      msg: "Admin multi-broker order request received after add strategyUniqueId",
-      frontendReqData: input,
-    });
 
 
     // 2️⃣ Fetch users by strategy group
@@ -172,13 +153,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "Fetched users for strategy group",
-      groupName: input.groupName,
-      userCount: users.length,
-       users: users,
-    });
-
+   
     if (!users.length) {
       logSuccess(req, {
         msg: "No users found for strategy group",
@@ -199,11 +174,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    logSuccess(req, {
-      msg: "Computed start and end of day",
-      startOfDay,
-      endOfDay,
-    });
+   
 
     // 4️⃣ Execute orders per broker
     const settled = await Promise.allSettled(
@@ -216,42 +187,27 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
 
         try {
           if (user.brokerName.toLowerCase() === "angelone") {
-            logSuccess(req, {
-              msg: "Routing to AngelOne order",
-              userId: user.id,
-            });
+          
 
             return await placeAngelOrder(user, input, req);
           }
 
           if (user.brokerName.toLowerCase() === "kite") {
-            logSuccess(req, {
-              msg: "Routing to Kite order",
-              userId: user.id,
-            });
+           
             return await placeKiteOrder(user, input, req, true);
           }
 
           if (user.brokerName.toLowerCase() === "fyers") {
-            logSuccess(req, {
-              msg: "Routing to Fyers order",
-              userId: user.id,
-            });
+            
             return await placeFyersOrder(user, input, req);
           }
 
           if (user.brokerName.toLowerCase() === "upstox") {
-            logSuccess(req, {
-              msg: "Upstox broker detected (not implemented)",
-              userId: user.id,
-            });
+           
           }
 
           if (user.brokerName.toLowerCase() === "finvasia") {
-            logSuccess(req, {
-              msg: "Routing to Finvasia order",
-              userId: user.id,
-            });
+            
             return await placeFinavasiaOrder(user, input, req, true);
           }
 
@@ -286,25 +242,20 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     const results = settled.map((item, idx) => {
       const user = users[idx];
 
-      if (item.status === "fulfilled") {
-        logSuccess(req, {
-          msg: "Broker order fulfilled",
-          userId: user.id,
-          broker: user.brokerName,
-          result: item.value?.result,
-        });
-        return item.value;
+      if (item?.status === "fulfilled") {
+       
+        return item?.value;
       } else {
-        logError(req, item.reason, {
+        logError(req, item?.reason||"", {
           msg: "Broker order rejected",
-          userId: user.id,
-          broker: user.brokerName,
+          userId: user?.id||"",
+          broker: user?.brokerName||"",
         });
         return {
-          userId: user.id,
-          broker: user.brokerName,
+          userId: user?.id||"",
+          broker: user?.brokerName||"",
           result: "REJECTED",
-          message: item.reason?.message || String(item.reason),
+          message: item?.reason?.message || String(item?.reason||"")||"",
         };
       }
     });
@@ -313,12 +264,7 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
     logSuccess(req, { msg: "Emitting order update event" });
     await emitOrderGet();
 
-    // 7️⃣ Final response
-    logSuccess(req, {
-      msg: "Admin multi-broker order execution completed",
-      resultCount: results.length,
-    });
-
+  
     return res.json({
       status: true,
       message: "Orders executed for all brokers",

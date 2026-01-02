@@ -3086,10 +3086,27 @@ export const adminFetchOrderHolding = async function (req,res,next) {
 export const AdminGetHoldingMultiple = async (req, res) => {
   try {
 
+    const validUserIds = (req.results || [])
+      .filter(
+        r =>
+          r.status === "fulfilled" &&
+          (r.value?.result === true || r.value?.result === "OK")
+      )
+      .map(r => r.value.userId);
+
+    if (!validUserIds.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        data: [],
+        message: "No valid broker users found",
+      });
+    }
 
     // 3️⃣ Get local COMPLETE orders older than today using filltime (stored as ISO string)
     const localOldOrders = await Order.findAll({
       where: {
+        userId: { [Op.in]: validUserIds },
         orderstatuslocaldb: "OPEN",
         positionStatus:"HOLDING",
       },

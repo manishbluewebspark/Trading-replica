@@ -41,7 +41,9 @@ router.get('/sequareoff',AdminAuthMiddleware,adminMultipleSquareOff)
 router.post('/group/squareoff',AdminAuthMiddleware,adminGroupSquareOff)
 router.post("/single/squareoff", AdminAuthMiddleware, adminSingleSquareOff);
 router.post("/multiple/targetstoploss/order", AdminAuthMiddleware, adminPlaceMultiTargetStoplossOrder);
-router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
+
+
+// router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
 
 
 

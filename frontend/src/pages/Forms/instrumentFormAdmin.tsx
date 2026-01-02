@@ -37,15 +37,15 @@ export default function InstrumentFormAdmin() {
   
   const apiUrl = import.meta.env.VITE_API_URL;
 
-    const { dataRedish, setDataRedish, shouldFetchRedish } = useInstrumentStore();
+  const { dataRedish, setDataRedish, shouldFetchRedish } = useInstrumentStore();
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [duration, setDuration] = useState("DAY");
+
   const [ltp, setLtp] = useState(0);
-  const [orderType, setOrderType] = useState("MARKET");
+
   const [activeTab, setActiveTab] = useState<"Quick" | "Regular" | "Iceberg">("Quick");
 
   // AG Grid Quick Filter ke liye state
@@ -56,16 +56,11 @@ export default function InstrumentFormAdmin() {
   const [selectedStrategyId, setSelectedStrategyId] = useState("");
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [selectedScriptRow, setSelectedScriptRow] = useState<any | null>(null);
-  const [targetPrice, setTargetPrice] = useState(0);
-  const [stoploss, setStopLoss] = useState(0);
-   const [trasectionType, setTrasectionType] = useState("BUY");
-  const [squareoff, setSquareOff] = useState(0);
+
+
   const [scriptProductType, setScriptProductType] = useState<
     "" | "INTRADAY" | "DELIVERY" | "CARRYFORWARD" | "BO" | "MARGIN"
-  >("INTRADAY");
-
-
-  const [varietyType, setvarietyTypeType] = useState< "" | "NORMAL" | "STOPLOSS" | "ROBO" >("NORMAL");
+  >("CARRYFORWARD");
 
   // 🔹 Selected Exchange for filter on top
   const [selectedExchange, setSelectedExchange] = useState<string>("");
@@ -278,7 +273,7 @@ export default function InstrumentFormAdmin() {
     fetchData();
     fetchStrategies();
     setQuickFilterText("");
-    setDuration("")
+   
   }, []);
 
 
@@ -321,6 +316,13 @@ export default function InstrumentFormAdmin() {
       {
         headerName: " Angelone Symbol",
         field: "symbol",
+         minWidth: 300,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '18px' }
+      },
+       {
+        headerName: " Expiry",
+        field: "expiry",
          minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '18px' }
@@ -416,12 +418,7 @@ export default function InstrumentFormAdmin() {
       toast.error("Please Select Strategy !");
       return;
     }
-
-
-    console.log('==============groupName===============',groupName);
     
-    
-
     const payload = {
       token: selectedScriptRow.token,
       symbol: selectedScriptRow.symbol,
@@ -430,16 +427,13 @@ export default function InstrumentFormAdmin() {
       exch_seg: selectedScriptRow.exch_seg,
       lotsize: selectedScriptRow.lotsize,
       quantity: Number(selectedScriptRow.lotsize),
-      // transactiontype: "BUY",
-
-      transactiontype: trasectionType,
-      duration,
-      orderType,
-      variety:varietyType,
+      transactiontype: "BUY",
+      duration:"DAY",
+      orderType:"MARKET",
+      variety:"NORMAL",
       price:ltp,
-      triggerprice:targetPrice,
-      stoploss:stoploss,
-      squareoff:squareoff,
+      stoploss:0,
+      squareoff:0,
       productType: scriptProductType,
       strategyId: selectedStrategyId,
       groupName,
@@ -457,8 +451,6 @@ export default function InstrumentFormAdmin() {
       upstoxSymbol: selectedScriptRow.upstoxSymbol,
       growToken: "",
       growSymbol: "",
-
-
     };
 
     try {
@@ -614,42 +606,7 @@ export default function InstrumentFormAdmin() {
             {/* Body */}
             <div className="p-5">
 
-                {/* Vereity Type */}
-              <div className="flex gap-6 mb-5">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="varietyType"
-                    checked={varietyType === "ROBO"}
-                    onChange={() => setvarietyTypeType("ROBO")}
-                    className="h-4 w-4"
-                  />
-                  ROBO 
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                   name="varietyType"
-                    checked={varietyType === "STOPLOSS"}
-                    onChange={() => setvarietyTypeType("STOPLOSS")}
-                    className="h-4 w-4"
-                  />
-                  STOPLOSS 
-                </label>
-
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                      name="varietyType"
-                    checked={varietyType === "NORMAL"}
-                    onChange={() => setvarietyTypeType("NORMAL")}
-                    className="h-4 w-4"
-                  />
-                  NORMAL 
-                </label>
-
-
-              </div>
+             
 
               
               {/* Product Type */}
@@ -674,6 +631,8 @@ export default function InstrumentFormAdmin() {
                   />
                   Longterm <span className="text-xs text-gray-500">CNC</span>
                 </label>
+              
+                
 
                 <label className="flex items-center gap-2">
                   <input
@@ -723,128 +682,8 @@ export default function InstrumentFormAdmin() {
                     className="border rounded px-3 py-2 w-full text-center bg-gray-100 h-10"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Entry price
-                  </label>
-                  <input
-                    type="number"
-                     value={targetPrice || 0}
-                     onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setTargetPrice(val);
-                    }}
-                    className="border rounded px-3 py-2 w-full text-center bg-gray-100 h-10"
-                  />
-                </div>
-              </div>
-
-                {/* Stoploss and Squareoff  */}
-              <div className="grid grid-cols-3 gap-5 mb-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stoploss Price
-                  </label>
-                  <input
-                    type="number"
-                    value={stoploss || 0}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setStopLoss(val);
-                    }}
-                    className="border rounded px-3 py-2 w-full text-center h-10"
-                  />
-                </div>
-
-                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Target Price
-                  </label>
-                  <input
-                    type="number"
-                    value={squareoff || 0}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setSquareOff(val);
-                    }}
-                    className="border rounded px-3 py-2 w-full text-center h-10"
-                  />
-                </div>
-             
               
               </div>
-
-              {/*  Type */}
-              <div className="flex gap-5 mb-5">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="orderType"
-                    checked={orderType === "MARKET"}
-                    onChange={() => setOrderType("MARKET")}
-                    className="h-4 w-4"
-                  />
-                  Market
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="orderType"
-                    checked={orderType === "LIMIT"}
-                    onChange={() => setOrderType("LIMIT")}
-                    className="h-4 w-4"
-                  />
-                  Limit
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="orderType"
-                    checked={orderType === "STOPLOSS_LIMIT"}
-                    onChange={() => setOrderType("STOPLOSS_LIMIT")}
-                    className="h-4 w-4"
-                  />
-                  SL
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="orderType"
-                    checked={orderType === "STOPLOSS_MARKET"}
-                    onChange={() => setOrderType("STOPLOSS_MARKET")}
-                    className="h-4 w-4"
-                  />
-                  SL-M
-                </label>
-              </div>
-
-                 {/* Trasection Type */}
-              <div className="flex gap-6 mb-5">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="trasectiontype"
-                    checked={trasectionType === "BUY"}
-                    onChange={() => setTrasectionType("BUY")}
-                    className="h-4 w-4"
-                  />
-                  BUY <span className="text-xs text-gray-500">BUY</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                   name="trasectiontype"
-                    checked={trasectionType === "SELL"}
-                    onChange={() => setTrasectionType("SELL")}
-                    className="h-4 w-4"
-                  />
-                  SELl <span className="text-xs text-gray-500">SELL</span>
-                </label>
-
-                
-
-              </div>
-
 
               {/* Strategy Dropdown */}
               <div className="mb-5">

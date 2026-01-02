@@ -1521,7 +1521,7 @@ export const getKiteTrades = async (req, res) => {
   try {
 
    
-    const  kite  = await getKiteClientForUserId(21)
+    const  kite  = await getKiteClientForUserId(39)
     //  const  kite  = await getKiteClientForUserId(13)
 
     // const orders = await kite.getOrderHistory("1999368808602804224");

@@ -13,7 +13,8 @@ router.get('/upstox/callback', upStoxCallback);
 
 
 // deshbaord
-router.get('/upstox/deshbaord/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
+// router.get('/upstox/deshbaord/todayorderdata',authMiddleware,getDeshboardOrdersUpdate)
+router.get('/upstox/deshbaord/todayorderdata',getTradeDataForUpstoxDashboard)
 router.get('/upstox/dummydatatrade', getTradeDataForUpstoxDashboard);
 router.get('/upstox/user/fund', getUpstoxFunds);
 

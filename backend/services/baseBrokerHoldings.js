@@ -21,15 +21,8 @@ const safeErr = (e) => ({
 
 export const syncHoldingsAllBrokers = async (req, res, next) => {
   try {
-    logSuccess(req, {
-      msg: "Holding sync started (USER WISE)",
-      path: req?.originalUrl,
-      method: req?.method,
-    });
-
-    // 🔥 STEP 1: fetch eligible BUY orders
-    logSuccess(req, { msg: "Fetching eligible OPEN BUY orders", where: { orderstatuslocaldb: "OPEN", transactiontype: "BUY" } });
-
+    
+   
     const orders = await Order.findAll({
       where: {
         orderstatuslocaldb: "OPEN",
@@ -38,10 +31,7 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "Eligible BUY orders fetched",
-      totalOrders: Array.isArray(orders) ? orders.length : 0,
-    });
+    
 
     if (!orders.length) {
       logSuccess(req, { msg: "No BUY orders found, exiting early" });
@@ -53,108 +43,72 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
       });
     }
 
-    // 🔥 STEP 2: unique users only
-    logSuccess(req, { msg: "Computing unique userIds from orders" });
-
     const userIds = [...new Set(orders.map((o) => o.userId))];
-
-    logSuccess(req, {
-      msg: "Unique userIds computed",
-      usersCount: userIds.length,
-      userIds,
-    });
-
-    logSuccess(req, { msg: "Starting holdings sync per user (Promise.allSettled)", usersCount: userIds.length });
 
     const results = await Promise.allSettled(
       userIds.map(async (userId) => {
-        logSuccess(req, { msg: "User sync started", userId });
 
         try {
-          logSuccess(req, { msg: "Fetching user row", userId });
-
           const user = await User.findOne({
             where: { id: userId },
             raw: true,
           });
 
-          logSuccess(req, {
-            msg: "User lookup result",
-            userId,
-            userFound: !!user,
-            role: user?.role,
-            brokerName: user?.brokerName,
-            hasAuthToken: !!user?.authToken,
-          });
-
           if (!user) {
-            logSuccess(req, { msg: "User not found, skipping", userId });
+           
             return { userId, result: "NO_USER" };
           }
           if (user.role !== "user") {
-            logSuccess(req, { msg: "Non-user role, skipping", userId, role: user.role });
+           
             return { userId, result: "SKIP_NON_USER" };
           }
           if (!user.authToken) {
-            logSuccess(req, { msg: "Missing authToken, skipping", userId });
+           
             return { userId, result: "NO_TOKEN" };
           }
           if (!user.brokerName) {
-            logSuccess(req, { msg: "Missing brokerName, skipping", userId });
+           
             return { userId, result: "NO_BROKER" };
           }
 
           const broker = String(user.brokerName || "").toLowerCase();
 
-          logSuccess(req, {
-            msg: "Resolved broker for holdings sync",
-            userId,
-            broker,
-          });
 
           let out;
 
           if (broker === "angelone") {
-            logSuccess(req, { msg: "Calling angeloneHoldingFun", userId, broker });
+          
             out = await angeloneHoldingFun({ user, req });
-            logSuccess(req, { msg: "angeloneHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+           
           } else if (broker === "kite") {
             logSuccess(req, { msg: "Calling kiteHoldingFun", userId, broker });
+
             out = await kiteHoldingFun({ user, req });
 
-            console.log('===================out kite ============',out);
-            
-            logSuccess(req, { msg: "kiteHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
           } else if (broker === "fyers") {
-            logSuccess(req, { msg: "Calling fyersHoldingFun", userId, broker });
+            
             out = await fyersHoldingFun({ user, req });
-            logSuccess(req, { msg: "fyersHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+            
           } else if (broker === "finvasia") {
-            logSuccess(req, { msg: "Calling finavasiaHoldingFun", userId, broker });
+            
             out = await finavasiaHoldingFun({ user, req });
-            logSuccess(req, { msg: "finavasiaHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
+           
           } else if (broker === "upstox") {
-            logSuccess(req, { msg: "Calling upstoxHoldingFun", userId, broker });
+            
             out = await upstoxHoldingFun({ user, req });
-            logSuccess(req, { msg: "upstoxHoldingFun completed", userId, broker, outSummary: { result: out?.result, count: out?.count, ok: out?.ok } });
-          } else {
-            logSuccess(req, { msg: "Invalid broker, skipping", userId, broker });
+           
+           
             return { userId, result: "INVALID_BROKER" };
           }
 
           const finalRow = {
             userId,
             broker,
-            result: out?.result || (out?.ok === true ? "OK" : "OK"),
+            result: out?.result || (out?.ok === true ? true : false),
             holdingsCount: out?.count || 0,
           };
 
-          logSuccess(req, {
-            msg: "User holdings sync completed",
-            userId,
-            broker,
-            finalRow,
-          });
+         
 
           return finalRow;
         } catch (e) {
@@ -164,27 +118,22 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
       })
     );
 
-    logSuccess(req, {
-      msg: "All user promises settled (holdings sync)",
-      total: results.length,
-      fulfilled: results.filter((r) => r.status === "fulfilled").length,
-      rejected: results.filter((r) => r.status === "rejected").length,
-    });
+    
 
     const finalOutput = results.map((r, idx) => {
       if (r.status === "fulfilled") {
-        logSuccess(req, { msg: "User promise fulfilled", idx, userId: r.value?.userId, result: r.value?.result });
+       
         return r.value;
       }
       logError(req, r.reason, { msg: "User promise rejected", idx });
       return { result: "PROMISE_REJECTED" };
     });
 
-    logSuccess(req, {
-      msg: "syncHoldingsAllBrokers finished, calling next()",
-      outputCount: finalOutput.length,
-    });
+    
+    console.log(results,'==================results==============');
 
+    req.results = results
+    
     next();
 
     // return res.json({

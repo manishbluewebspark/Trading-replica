@@ -1,6 +1,9 @@
 import { io, Socket } from "socket.io-client";
 
 
+
+
+
 type Tick = {
   mode: 1 | 2 | 3;
   exchangeType: number;
@@ -19,8 +22,15 @@ type ServerToClientEvents = {
   // "tick": Tick; // 👈 add this
 
    tick: (tick: Tick) => void;       
-
   "niftyreal": Tick;
+
+  "order:oco:update": (payload: {
+    orderId: string;
+    targetPrice?: number;
+    stoplossPrice?: number;
+    userId: number;
+    ts: number;
+  }) => void;
 };
 
 type ClientToServerEvents = {
@@ -41,9 +51,6 @@ let wired = false;
 
 export function getSocket(url: string = DEFAULT_URL) {
 
-
-   
-  
   if (!socket) {
     socket = io(url, {
       path: PATH,

@@ -3,6 +3,7 @@ import querystring from "querystring";
 import Order from "../models/orderModel.js";
 import zlib from "zlib";
 import redis from "../utils/redis.js";  // your redis client
+import { UPSTOX_CONFIG } from "../utils/upstox.config.js";
 
 
 
@@ -144,55 +145,60 @@ export const upStoxCallback = async (req, res) => {
   }
 }
 
-
 export const getUpstoxFunds = async (req, res) => {
   try {
-   
-    const accessToken = req.headers.angelonetoken;
+    const accessToken =
+    process.env.UPSTOX_TEST_ACCESS_TOKEN
+      // req.headers.upstoxaccesstoken || UPSTOX_CONFIG.ACCESS_TOKEN;
 
     if (!accessToken) {
       return res.json({
         status: false,
         statusCode: 401,
-        message: "Upstox access token missing in header (upstoxaccesstoken)",
-        error: null,
+        message: "Upstox access token missing",
       });
     }
 
-    console.log(req.userId, "upstox funds");
-
     const headers = {
-      "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
 
-    // 🔄 2) Hit both APIs in parallel
+    const baseURL = UPSTOX_CONFIG.BASE_URL;
+
+    console.log('=============baseURL===========',baseURL);
+    
+
+    
+    
+
+    // 🔁 parallel calls
     const [fundsRes, ordersRes] = await Promise.all([
-      axios.get("https://api.upstox.com/v2/user/get-funds-and-margin?segment=SEC", { headers }),
-      axios.get("https://api.upstox.com/v2/order/retrieve-all", { headers }),
+      axios.get(
+        `${baseURL}/user/get-funds-and-margin?segment=SEC`,
+        { headers }
+      ),
+      axios.get(
+        `${baseURL}/order/retrieve-all`,
+        { headers }
+      ),
     ]);
 
-    // 🎯 3) Parse funds
-    // Response: { status: "success", data: { equity: { available_margin, ... }, commodity: {...} } }
-    const fundsData = fundsRes.data?.data || {};
-    const equity = fundsData.equity || {};
+    console.log('==========UPSTOX baseURL==========',baseURL);
 
-    // similar to Kite: funds?.equity?.net || 0
+    // 💰 Funds
+    const equity = fundsRes.data?.data?.equity || {};
     const availableCash = equity.available_margin ?? 0;
 
-    // 📚 4) Parse orders
-    // retrieve-all returns an ARRAY directly
+    // 📦 Orders
     let orders = Array.isArray(ordersRes.data)
       ? ordersRes.data
       : ordersRes.data?.data || [];
 
-    // Sort → latest first (same as Kite)
     orders.sort(
       (a, b) => new Date(b.order_timestamp) - new Date(a.order_timestamp)
     );
 
-    // 5️⃣ Map Upstox fields → same frontend structure as Kite
     const mappedOrders = orders.map((o) => ({
       tradingsymbol: o.tradingsymbol || o.trading_symbol,
       orderid: o.order_id,
@@ -203,32 +209,31 @@ export const getUpstoxFunds = async (req, res) => {
       ordertime: o.order_timestamp,
     }));
 
-    // 6️⃣ Last 5 for dashboard
-    const recentFiveOrders = mappedOrders.slice(0, 5);
-
-    // ✅ 7) Final response (same shape as getKiteFunds)
     return res.json({
       status: true,
       statusCode: 200,
-      message: "Upstox funds & orders retrieved successfully",
+      message: "Upstox funds & orders fetched",
+      environment: process.env.NODE_ENV, // 🔥 debugging ke liye
       data: {
-        raw: fundsRes.data,      // full raw funds response if you need
         availablecash: availableCash,
       },
       totalOrders: mappedOrders,
-      recentOrders: recentFiveOrders,
+      recentOrders: mappedOrders.slice(0, 5),
     });
-  } catch (error) {
-    console.error("Error fetching upstox funds & orders:", error?.response?.data || error.message);
+  } catch (err) {
 
+    console.log(err);
+    
     return res.json({
       status: false,
       statusCode: 500,
-      message: "Error fetching Upstox funds & orders",
-      error: error?.response?.data || error.message,
+      message: "Upstox API error",
+      error: err?.response?.data || err.message,
     });
   }
 };
+
+
 
 export const getTradeDataForUpstoxDashboard = async function (req, res, next) {
   try {
@@ -237,7 +242,8 @@ export const getTradeDataForUpstoxDashboard = async function (req, res, next) {
 
     // 🔐 1) Get Upstox access token from headers
     // Change header name if you prefer something else
-    const upstoxToken = req.headers.upstoxaccesstoken;
+    // const upstoxToken = req.headers.upstoxaccesstoken;
+    const upstoxToken = process.env.UPSTOX_TEST_ACCESS_TOKEN
 
     if (!upstoxToken) {
       return res.json({
@@ -247,6 +253,7 @@ export const getTradeDataForUpstoxDashboard = async function (req, res, next) {
         error: null,
       });
     }
+
 
     console.log(req.userId, "upstox trades");
 
@@ -258,7 +265,7 @@ export const getTradeDataForUpstoxDashboard = async function (req, res, next) {
 
     // 2️⃣ Fetch trades for the day from Upstox
     const tradesRes = await axios.get(
-      "https://api.upstox.com/v2/order/trades/get-trades-for-day",
+      `${UPSTOX_TEST_BASE_URL}/order/trades/get-trades-for-day`,
       { headers }
     );
 
@@ -421,3 +428,90 @@ export const getUpstoxUserHolding = async (req, res) => {
 };
 
 
+
+
+// ==============OLD CODE===========================
+export const getUpstoxFunds121 = async (req, res) => {
+  try {
+   
+    const accessToken = req.headers.angelonetoken;
+
+    if (!accessToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Upstox access token missing in header (upstoxaccesstoken)",
+        error: null,
+      });
+    }
+
+    console.log(req.userId, "upstox funds");
+
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    // 🔄 2) Hit both APIs in parallel
+    const [fundsRes, ordersRes] = await Promise.all([
+      axios.get("https://api.upstox.com/v2/user/get-funds-and-margin?segment=SEC", { headers }),
+      axios.get("https://api.upstox.com/v2/order/retrieve-all", { headers }),
+    ]);
+
+    // 🎯 3) Parse funds
+    // Response: { status: "success", data: { equity: { available_margin, ... }, commodity: {...} } }
+    const fundsData = fundsRes.data?.data || {};
+    const equity = fundsData.equity || {};
+
+    // similar to Kite: funds?.equity?.net || 0
+    const availableCash = equity.available_margin ?? 0;
+
+    // 📚 4) Parse orders
+    // retrieve-all returns an ARRAY directly
+    let orders = Array.isArray(ordersRes.data)
+      ? ordersRes.data
+      : ordersRes.data?.data || [];
+
+    // Sort → latest first (same as Kite)
+    orders.sort(
+      (a, b) => new Date(b.order_timestamp) - new Date(a.order_timestamp)
+    );
+
+    // 5️⃣ Map Upstox fields → same frontend structure as Kite
+    const mappedOrders = orders.map((o) => ({
+      tradingsymbol: o.tradingsymbol || o.trading_symbol,
+      orderid: o.order_id,
+      transactiontype: o.transaction_type,
+      lotsize: o.quantity,
+      averageprice: o.average_price,
+      orderstatus: o.status,
+      ordertime: o.order_timestamp,
+    }));
+
+    // 6️⃣ Last 5 for dashboard
+    const recentFiveOrders = mappedOrders.slice(0, 5);
+
+    // ✅ 7) Final response (same shape as getKiteFunds)
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "Upstox funds & orders retrieved successfully",
+      data: {
+        raw: fundsRes.data,      // full raw funds response if you need
+        availablecash: availableCash,
+      },
+      totalOrders: mappedOrders,
+      recentOrders: recentFiveOrders,
+    });
+  } catch (error) {
+    console.error("Error fetching upstox funds & orders:", error?.response?.data || error.message);
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Error fetching Upstox funds & orders",
+      error: error?.response?.data || error.message,
+    });
+  }
+};
