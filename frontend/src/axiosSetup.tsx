@@ -25,7 +25,8 @@ axios.interceptors.response.use(
             localStorage.removeItem("refresh_token");
              window.location.href = "/";
        return Promise.reject(err);
-    } else if(data==undefined) {
+    } 
+    else if(data==undefined) {
 
             localStorage.removeItem("token");
             localStorage.removeItem("user");

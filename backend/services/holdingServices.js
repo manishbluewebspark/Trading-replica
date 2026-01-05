@@ -155,10 +155,6 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
       ordersByToken[token].push(o);
     }
 
-    
-
-   
-
     let updatedCount = 0;
     let skippedNoOrders = 0;
 
@@ -222,7 +218,19 @@ export async function angeloneHoldingFun({ user, req, order }) {
 
     // ✅ AngelOne response usually: { status, message, errorcode, data: [...] }
     const holdings = resp?.data?.data || resp?.data?.holding || [];
- 
+
+  if(holdings.length===0) {
+
+    return {
+      result: false,
+      broker: "angelone",
+      holdings, // ✅ raw holdings list
+      count: Array.isArray(holdings) ? holdings.length : 0,
+      // optional: fullResponse: resp.data
+    };
+
+  }
+
     await syncAngelHoldingsWithLocalDB({ user, holdings, req });
 
      const afterMarket = isAfterMarketClose();
@@ -232,6 +240,9 @@ export async function angeloneHoldingFun({ user, req, order }) {
     const response = await axios.get(ANGEL_POSITION_URL, { headers });
 
     const positions = response?.data?.data || [];
+
+    console.log(positions,'positions');
+    
 
     await syncAngelPositionsWithDB({ user, positions, req });
 

@@ -711,8 +711,11 @@ export const adminSingleSquareOff = async (req, res) => {
     let orderId = req.body.orderId
     let reqStrategyUniqueId = req.body.strategyUniqueId
 
-     //  Generate strategyUniqueId
-    const strategyUniqueId = await generateStrategyUniqueId(reqStrategyUniqueId);
+        const afterUnderscore = reqStrategyUniqueId.split("_").pop();
+
+    //  Generate strategyUniqueId
+    const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
+
 
     if (!orderId) {
      
@@ -804,7 +807,7 @@ export const adminSingleSquareOff = async (req, res) => {
       broker: o?.broker,
       buyOrderId: String(orderId),
        groupName:o?.strategyName||"",
-       strategyUniqueId:strategyUniqueId,
+       strategyUniqueId:strategyUniqueId||"",
        kiteSymbol: o.tradingsymbol || o.angelOneSymbol,
        kiteToken: o.symboltoken || o.angelOneToken,
        finavasiaSymbol : o.tradingsymbol || o.angelOneSymbol ,

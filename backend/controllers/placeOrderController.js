@@ -1923,14 +1923,14 @@ export const getRejectsOrdersTable = async (req, res) => {
 
     const orderData = await Order.findAll({
       where: {
-        filltime: { [Op.between]: [startISO, endISO] },
+        createdAt: { [Op.between]: [startISO, endISO] },
 
         [Op.or]: [
           { orderstatuslocaldb: { [Op.in]: badStatuses } },
           { status: { [Op.in]: badStatuses } },
         ],
       },
-      order: [["filltime", "DESC"]],
+      order: [["createdAt", "DESC"]],
       raw: true,
     });
 

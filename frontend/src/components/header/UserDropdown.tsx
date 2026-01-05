@@ -15,6 +15,8 @@ export default function UserDropdown() {
     const [userNameId, setUserNameId] = useState("User");
   const [userEmail, setUserEmail] = useState("user@example.com");
 
+    const [broker, setBroker] = useState("");
+
    
  
 
@@ -32,10 +34,8 @@ export default function UserDropdown() {
 
 
       try {
-        const parsedUser = JSON.parse(storedUser);
-
-       
-        
+        const parsedUser = JSON.parse(storedUser); 
+        setBroker(parsedUser.brokerName)
         setUserNameId(parsedUser.username || "User");
         setUserEmail(parsedUser.email || "user@example.com");
         // setUserRole(parsedUser.role || "U");
@@ -92,6 +92,10 @@ export default function UserDropdown() {
     setIsOpen(false);
   }
 
+
+  console.log(broker,'brokerbroker');
+  
+
   async function handleSignOut() {
 
       try {
@@ -145,17 +149,7 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        {/* <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-gray-200 flex items-center justify-center text-theme-sm font-bold text-gray-700">
-          {userImage ? (
-            <img
-              src={`http://localhost:5000/uploads/${userImage}`}
-              alt="User"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            userInitial
-          )}
-        </span> */}
+       
 
         <span className="block mr-1 font-medium text-theme-sm">{userNameId}</span>
         <svg
@@ -203,7 +197,9 @@ export default function UserDropdown() {
               Edit profile
             </DropdownItem>
           </li>
+           {broker === "angelone" &&
           <li>
+            
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
@@ -213,8 +209,9 @@ export default function UserDropdown() {
               AngelOne Credential
             </DropdownItem>
           </li>
+             }
 
-
+        {broker === "kite" &&
           <li>
             <DropdownItem
               onItemClick={closeDropdown}
@@ -225,7 +222,8 @@ export default function UserDropdown() {
               Kite Credential
             </DropdownItem>
           </li>
-
+          }
+          {broker === "finvasia" &&
              <li>
             <DropdownItem
               onItemClick={closeDropdown}
@@ -236,17 +234,9 @@ export default function UserDropdown() {
               Finavasia Credential
             </DropdownItem>
           </li>
+        }
 
-          {/* <li>
-            <DropdownItem
-              onItemClick={closeDropdown}
-              tag="a"
-              to="/settings"
-              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-            >
-              Account settings
-            </DropdownItem>
-          </li> */}
+         
           <li>
             <DropdownItem
               onItemClick={closeDropdown}

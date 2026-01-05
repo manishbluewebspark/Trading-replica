@@ -1521,7 +1521,7 @@ export const getKiteTrades = async (req, res) => {
   try {
 
    
-    const  kite  = await getKiteClientForUserId(39)
+    const  kite  = await getKiteClientForUserId(11)
     //  const  kite  = await getKiteClientForUserId(13)
 
     // const orders = await kite.getOrderHistory("1999368808602804224");
@@ -1648,11 +1648,11 @@ export const cancellKiteOnlineOrder = async (req, res) => {
 export const getKiteOrders = async (req, res) => {
   try {
 
-  const  kite  = await getKiteClientForUserId(21)
+  const  kite  = await getKiteClientForUserId(11)
 
-   const orders = await kite.getOrders();
+  //  const orders = await kite.getOrders();
 
-    // const orders = await kite.getOrderTrades("1999345550511841280");
+    const orders = await kite.getOrderTrades("2008064113993064448");
     
 
     // console.log(orders,'orders orders');
@@ -1769,7 +1769,7 @@ export const kiteHoldingFunApi = async(req,res)=> {
 
     try {
       
-      const userId = 21
+      const userId = 11
 
     const user = await User.findByPk(userId);
   

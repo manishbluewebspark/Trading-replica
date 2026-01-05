@@ -30,9 +30,10 @@ function mapVarietyToKite(variety) {
 // -------------------- HELPERS --------------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchTradesWithRetry(kite, orderid, req, retries = 3, delayMs = 1200) {
+async function fetchTradesWithRetry121(kite, orderid, req, retries = 3, delayMs = 1200) {
   for (let i = 1; i <= retries; i++) {
     try {
+
       const trades = await kite.getOrderTrades(orderid);
       logSuccess(req, {
         msg: "Kite getOrderTrades retry",
@@ -48,6 +49,55 @@ async function fetchTradesWithRetry(kite, orderid, req, retries = 3, delayMs = 1
   }
   return [];
 }
+
+async function fetchTradesWithRetry(
+  kite,
+  orderid,
+  expectedQty,
+  req,
+  retries = 5,
+  delayMs = 1200
+) {
+  let lastTrades = [];
+
+  for (let i = 1; i <= retries; i++) {
+    try {
+      const trades = await kite.getOrderTrades(orderid);
+
+      const totalQty = Array.isArray(trades)
+        ? trades.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
+        : 0;
+
+      logSuccess(req, {
+        msg: "Kite getOrderTrades retry",
+        attempt: i,
+        orderid,
+        tradesCount: trades?.length || 0,
+        totalQty,
+        expectedQty,
+      });
+
+      // ✅ FULL FILL CONFIRMATION
+      if (totalQty >= expectedQty) {
+        return trades;
+      }
+
+      lastTrades = trades || [];
+    } catch (e) {
+      logError(req, e, {
+        msg: "Kite getOrderTrades failed",
+        attempt: i,
+        orderid,
+      });
+    }
+
+    if (i < retries) await sleep(delayMs);
+  }
+
+  // ❗ retries exhausted → return whatever we got (partial fill)
+  return lastTrades;
+}
+
 
 async function findBuyOrderForSell({ userId, reqInput, req }) {
   if (reqInput?.buyOrderId) {
@@ -173,7 +223,9 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
     await newOrder.update({ orderid });
 
     // ---------------- TRADEBOOK ----------------
-    const trades = await fetchTradesWithRetry(kite, orderid, req);
+    const trades = await fetchTradesWithRetry(kite, orderid, Number(reqInput.quantity), req);
+      // const trades = await fetchTradesWithRetry(kite, orderid, req);
+      
     if (!trades.length) return { result: "SUCCESS", orderid };
 
     const avgPrice = calculateWeightedAveragePrice(trades);
@@ -242,16 +294,17 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
       fillprice: avgPrice,
       fillsize: totalQty,
       quantity: totalQty,
+      uniqueorderid:trades[0]?.exchange_order_id,
       filltime: trades[0]?.fill_timestamp
         ? new Date(trades[0].fill_timestamp).toISOString()
         : nowISOError,
       fillid: trades[0]?.trade_id,
       pnl,
       buyOrderId: buyOrder?.orderid || "NA",
-      buyTime:buyOrder.filltime,
-      buyprice: buyOrder.fillprice,
-      buysize: buyOrder.fillsize,
-      buyvalue: buyOrder.tradedValue,
+      buyTime:buyOrder?.filltime,
+      buyprice: buyOrder?.fillprice,
+      buysize: buyOrder?.fillsize,
+      buyvalue: buyOrder?.tradedValue,
       positionStatus,
       status: "COMPLETE",
       orderstatuslocaldb: finalStatus,

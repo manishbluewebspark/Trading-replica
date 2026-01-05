@@ -104,7 +104,7 @@ async function getDetailsWithPolling(user, uniqueOrderId, req) {
   return null;
 }
 
-async function getTradebookWithRetry(user, req) {
+async function getTradebookWithRetry121(user, req) {
   const maxTry = 4;
 
   for (let i = 0; i < maxTry; i++) {
@@ -139,6 +139,73 @@ async function getTradebookWithRetry(user, req) {
 
   throw new Error("Tradebook rate limited too many times");
 }
+
+async function getTradebookWithRetry(
+  user,
+  expectedQty,
+  req,
+  maxTry = 5
+) {
+  let lastTradebook = null;
+
+  for (let i = 0; i < maxTry; i++) {
+    try {
+      const tradeRes = await axios.get(ANGEL_ONE_TRADE_BOOK_URL, {
+        headers: angelHeaders(user.authToken),
+      });
+
+      const trades = tradeRes?.data?.data || [];
+
+      const totalQty = Array.isArray(trades)
+        ? trades.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
+        : 0;
+
+      logSuccess(req, {
+        msg: "AngelOne tradebook retry",
+        attempt: i + 1,
+        tradesCount: trades.length,
+        totalQty,
+        expectedQty,
+      });
+
+      // ✅ FULL FILL CONFIRMED
+      if (totalQty >= expectedQty) {
+        return tradeRes.data;
+      }
+
+      lastTradebook = tradeRes.data;
+    } catch (err) {
+      const e = extractBrokerError(err);
+
+      logError(req, err, {
+        msg: "AngelOne tradebook retry failed",
+        attempt: i + 1,
+        extracted: e,
+      });
+
+      // rate limit
+      if (e.status === 403 && String(e.msg).includes("exceeding access rate")) {
+        await sleep(800 * Math.pow(2, i));
+        continue;
+      }
+
+      // network error
+      if (!e.status) {
+        await sleep(600 * Math.pow(2, i));
+        continue;
+      }
+
+      throw err;
+    }
+
+    // wait before next poll
+    await sleep(500);
+  }
+
+  // ❗ retries exhausted → return best available snapshot
+  return lastTradebook;
+}
+
 
 
 // =======================
@@ -276,7 +343,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     // ====================================================
     // 5️⃣ TRADEBOOK
     // ====================================================
-    const tradeData = await getTradebookWithRetry(user, req);
+    const tradeData = await getTradebookWithRetry(user,reqInput.quantity, req);
 
     const fills = tradeData?.data?.filter(
       t => String(t.orderid) === String(orderid)

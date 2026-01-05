@@ -1,8 +1,3 @@
-
-
-
-
-
 import { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -201,10 +196,7 @@ export default function InstrumentFormAdmin() {
 
     try {
         
-
         if (!dataRedish || shouldFetchRedish()) {
-
-          console.log("cache state:", dataRedish, "lastFetchedAt:");
 
          console.log("📡 Fetching instruments from API");
         
@@ -320,13 +312,13 @@ export default function InstrumentFormAdmin() {
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '18px' }
       },
-       {
-        headerName: " Expiry",
-        field: "expiry",
-         minWidth: 300,
-        filter: "agTextColumnFilter",
-        cellStyle: { fontSize: '18px' }
-      },
+      //  {
+      //   headerName: " Expiry",
+      //   field: "expiry",
+      //    minWidth: 300,
+      //   filter: "agTextColumnFilter",
+      //   cellStyle: { fontSize: '18px' }
+      // },
       {
         headerName: "Kite Symbol",
         field: "kiteSymbol",

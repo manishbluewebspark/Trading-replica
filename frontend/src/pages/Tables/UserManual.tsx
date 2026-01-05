@@ -19,7 +19,7 @@ const userManualData = [
     title: "Introduction",
     icon: FaBook,
     content: [
-      "Welcome to [Your Platform Name]! This guide will help you navigate the platform and trade efficiently."
+      "Welcome to Softwaresetu. This guide will help you navigate the platform and trade efficiently."
     ]
   },
   {
@@ -70,7 +70,7 @@ const userManualData = [
     title: "Support",
     icon: FaHeadset,
     content: [
-      "For assistance, contact support at support@example.com.",
+      "For assistance, contact support at info@softwaresetu.com.",
       "Check FAQs for common issues."
     ]
   }

@@ -22,7 +22,6 @@ const safeErr = (e) => ({
 export const syncHoldingsAllBrokers = async (req, res, next) => {
   try {
     
-   
     const orders = await Order.findAll({
       where: {
         orderstatuslocaldb: "OPEN",
@@ -30,8 +29,6 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
       },
       raw: true,
     });
-
-    
 
     if (!orders.length) {
       logSuccess(req, { msg: "No BUY orders found, exiting early" });
@@ -78,10 +75,10 @@ export const syncHoldingsAllBrokers = async (req, res, next) => {
 
           if (broker === "angelone") {
 
-           
-            
-          
             out = await angeloneHoldingFun({ user, req });
+
+            // console.log(out,'ggggg out ',user.firstName,user.username);
+            
            
           } else if (broker === "kite") {
            

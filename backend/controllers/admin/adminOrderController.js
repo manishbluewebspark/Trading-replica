@@ -3069,6 +3069,10 @@ export const adminFetchOrderHolding = async function (req,res,next) {
 export const AdminGetHoldingMultiple = async (req, res) => {
   try {
 
+
+    // console.log(req.results,'dvdvdfvdf');
+    
+
     const validUserIds = (req.results || [])
       .filter(
         r =>

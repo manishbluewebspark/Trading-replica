@@ -177,7 +177,7 @@ export default function DashboardPretty() {
 
       const tradeRes = await api.getTodayTrade();
 
-      console.log(tradeRes.data.data,'================tradeRes.data.data==============');
+      
       
       setTotalTradedData(tradeRes.data.totalTraded || 0);
       setTotalOpenOrderData(tradeRes.data.totalOpen || 0);

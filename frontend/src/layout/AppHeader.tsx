@@ -54,6 +54,7 @@ const [bankNifty, setBankNifty] = useState<number | null>(
   // Example: Replace with real API or WebSocket later
   useEffect(() => {
 
+
      // Simulated values for demo
       const socket = getSocket();
       

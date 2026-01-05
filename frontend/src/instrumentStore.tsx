@@ -21,7 +21,7 @@ export const useInstrumentStore = create<InstrumentStoreState>((set, get) => ({
     const { lastFetchedAt } = get();
     if (!lastFetchedAt) return true;
 
-    const THREE_HOURS = 8 * 60 * 60 * 1000;
+    const THREE_HOURS = 15 * 60 * 60 * 1000;
     return Date.now() - lastFetchedAt > THREE_HOURS;
   },
 }));
