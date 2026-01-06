@@ -476,7 +476,7 @@ export const adminGroupSquareOff = async (req, res) => {
       where: {
         orderstatuslocaldb: "OPEN",
         transactiontype: "BUY",
-       strategyUniqueId: reqStrategyUniqueId, // optional: null avoid
+        strategyUniqueId: reqStrategyUniqueId, // optional: null avoid
       },
       raw: true,
     });

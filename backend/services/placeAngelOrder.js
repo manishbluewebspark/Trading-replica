@@ -226,6 +226,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     // 1️⃣ READ existing BUY (NO UPDATE HERE)
     // ====================================================
     if ((reqInput.transactiontype || "").toUpperCase() === "BUY") {
+      
       existingBuyOrder = await Order.findOne({
         where: {
           userId: user.id,
@@ -234,6 +235,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           tradingsymbol: reqInput.symbol,
           transactiontype: "BUY",
           orderstatuslocaldb: "OPEN",
+          status:"COMPLETE"
         },
       });
     }
@@ -407,7 +409,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         (reqInput.transactiontype || "").toUpperCase() === "SELL"
           ? avgPrice * totalQty - Number(buyOrder?.fillprice || 0) * Number(buyOrder?.quantity || 0)
           : 0,
-      buyOrderId: reqInput.buyOrderId,
+      buyOrderId: reqInput?.buyOrderId,
       buyTime: buyOrder?.filltime,
       buyprice: buyOrder?.fillprice,
       buysize: buyOrder?.quantity,

@@ -39,6 +39,9 @@ export default function InstrumentFormAdmin() {
   const [error, setError] = useState("");
 
 
+  const [isPlacing, setIsPlacing] = useState(false);
+
+
   const [ltp, setLtp] = useState(0);
 
   const [activeTab, setActiveTab] = useState<"Quick" | "Regular" | "Iceberg">("Quick");
@@ -397,7 +400,11 @@ export default function InstrumentFormAdmin() {
   // ---------- Save / Place Order ----------
   const handleScriptSave = async () => {
 
+
+
     console.log(selectedScriptRow,'=================selectedScriptRow===============');
+
+     if (isPlacing) return; // 🚫 MULTI CLICK STOP
     
 
     if (!selectedScriptRow) {
@@ -411,6 +418,10 @@ export default function InstrumentFormAdmin() {
       return;
     }
     
+     setIsPlacing(true); // 🔒 LOCK
+
+     const startTime = Date.now(); // ⏱ start time
+
     const payload = {
       token: selectedScriptRow.token,
       symbol: selectedScriptRow.symbol,
@@ -446,8 +457,6 @@ export default function InstrumentFormAdmin() {
     };
 
     try {
-
-      console.log(payload,'==================payload================');
       
       const res = await axios.post(
         `${apiUrl}/admin/multiple/place/order`,
@@ -467,7 +476,17 @@ export default function InstrumentFormAdmin() {
       }
     } catch (err) {
       toast.error("Something went wrong.");
-    }
+    }finally {
+      console.log('=============finaly=================');
+
+      const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, 5000 - elapsed); // 5 sec guarantee
+      
+   setTimeout(() => {
+      setIsPlacing(false); // 🔓 enable after min 5 sec
+    }, remaining);
+
+  }
 
 
   };
@@ -728,12 +747,25 @@ export default function InstrumentFormAdmin() {
                 >
                   Cancel
                 </button>
-                <button
+                {/* <button
                   onClick={handleScriptSave}
+                   disabled={isPlacing}
                   className="bg-blue-600 hover:bg-blue-700 text-white! px-5 py-2 rounded text-sm font-medium h-10"
                 >
                   Buy
-                </button>
+                </button> */}
+
+                <button
+  onClick={handleScriptSave}
+  disabled={isPlacing}
+  className={`px-5 py-2 rounded text-sm font-medium h-10 text-white
+    ${isPlacing
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-600 hover:bg-blue-700"}
+  `}
+>
+  {isPlacing ? "Processing..." : "Buy"}
+</button>
               </div>
             </div>
           </div>

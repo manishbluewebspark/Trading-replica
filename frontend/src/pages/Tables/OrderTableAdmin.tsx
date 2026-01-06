@@ -343,6 +343,8 @@ export default function OrderTableAdmin() {
   const apiUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
+  const exitLocksRef = useRef(new Set<string>());
+
   const gridApiRef = useRef<GridApi | null>(null);
 
   const [rawOrders, setRawOrders] = useState<Order[]>([]);
@@ -414,11 +416,20 @@ const callAutoExitAPI = async ({
   reason,
 }: {
   orderId: string;
-  strategyUniqueId?: string;
+  strategyUniqueId: string;
   reason: "TARGET" | "STOPLOSS";
 }) => {
   try {
-    
+
+     // 🚫 already exiting
+  if (exitLocksRef.current.has(strategyUniqueId)) {
+    console.log("Auto exit already in progress for", strategyUniqueId);
+    return;
+  }
+
+     // 🔒 lock this order
+     exitLocksRef.current.add(strategyUniqueId);
+
     await axios.post(
       `${apiUrl}/admin/targetstoplosscheck`, // 👈 tumhara backend endpoint
       { orderId, strategyUniqueId, reason },
@@ -431,8 +442,12 @@ const callAutoExitAPI = async ({
 
     toast.success(`Auto ${reason} executed for Order ${orderId}`);
     fetchOrders()
+      // ❗ allow retry on failure
+    exitLocksRef.current.delete(strategyUniqueId);
   } catch (err: any) {
     console.error("Auto exit failed", err);
+     // ❗ allow retry on failure
+    exitLocksRef.current.delete(strategyUniqueId);
   }
 };
 
