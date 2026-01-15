@@ -66,6 +66,7 @@ import Userposition from "./pages/Tables/UserPosition";
 import FinavasiaCrendetial from "./pages/Forms/FinavasiaCredential";
 import UserPnlAdmin from "./pages/Tables/UserPnlAdmin";
 import RejectedHistory from "./pages/Tables/RejectedHistory";
+import GrowwCrendetial from "./pages/Forms/growwCrendetial";
 
 export default function App() {
 
@@ -140,6 +141,7 @@ export default function App() {
             <Route path="/kitecredential" element={<ProtectedRoute><KiteCrendential /></ProtectedRoute>} />
 
             <Route path="/finavasiacredential" element={<ProtectedRoute><FinavasiaCrendetial /></ProtectedRoute>} />
+             <Route path="/growwcredential" element={<ProtectedRoute><GrowwCrendetial /></ProtectedRoute>} />
 
 
             <Route path="/userposition" element={<ProtectedRoute><Userposition /></ProtectedRoute>} />

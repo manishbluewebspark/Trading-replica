@@ -1015,6 +1015,9 @@ const UserClone: React.FC = () => {
         },
       });
       if (res.data.status === true) {
+
+        console.log(res.data.data,'sdcsdcsdcsdcsdcsdsccscs');
+        
         setUsers(res.data.data || []);
       } else {
         toast.error(res.data.message || "Failed to fetch users");
@@ -1344,18 +1347,18 @@ const UserClone: React.FC = () => {
 
   // AG Grid column definitions
   const columnDefs: any[] = [
-    {
-      field: "id",
-      headerName: "ID",
-      width: 100,
-      minWidth: 80,
-      cellStyle: {
-        borderRight: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-start'
-      }
-    },
+    // {
+    //   field: "id",
+    //   headerName: "ID",
+    //   width: 100,
+    //   minWidth: 80,
+    //   cellStyle: {
+    //     borderRight: '1px solid #e2e8f0',
+    //     display: 'flex',
+    //     alignItems: 'center',
+    //     justifyContent: 'flex-start'
+    //   }
+    // },
     {
       field: "name",
       headerName: "Name",
@@ -1376,8 +1379,8 @@ const UserClone: React.FC = () => {
     {
       field: "email",
       headerName: "Email",
-      width: 220,
-      minWidth: 180,
+      width: 250,
+      minWidth: 230,
       cellStyle: {
         borderRight: '1px solid #e2e8f0',
         display: 'flex',
@@ -1388,8 +1391,8 @@ const UserClone: React.FC = () => {
     {
       field: "username",
       headerName: "Username",
-      width: 150,
-      minWidth: 130,
+      width: 130,
+      minWidth: 110,
       cellStyle: {
         borderRight: '1px solid #e2e8f0',
         display: 'flex',
@@ -1436,30 +1439,43 @@ const UserClone: React.FC = () => {
         return params.value ? `₹${Number(params.value).toLocaleString('en-IN')}` : '₹0';
       }
     },
-    {
-      field: "role",
-      headerName: "Role",
-      width: 130,
-      minWidth: 110,
+     {
+      field: "brokerName",
+      headerName: "Broker",
+      width: 140,
+      minWidth: 120,
       cellStyle: {
         borderRight: '1px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-start'
-      },
-      cellRenderer: (params: any) => {
-        const roleColors: Record<string, string> = {
-          admin: "bg-purple-100 text-purple-800",
-          user: "bg-blue-100 text-blue-800",
-          "clone-user": "bg-green-100 text-green-800"
-        };
-        return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[params.value] || 'bg-gray-100 text-gray-800'}`}>
-            {params.value}
-          </span>
-        );
       }
     },
+
+    // {
+    //   field: "role",
+    //   headerName: "Role",
+    //   width: 130,
+    //   minWidth: 110,
+    //   cellStyle: {
+    //     borderRight: '1px solid #e2e8f0',
+    //     display: 'flex',
+    //     alignItems: 'center',
+    //     justifyContent: 'flex-start'
+    //   },
+    //   cellRenderer: (params: any) => {
+    //     const roleColors: Record<string, string> = {
+    //       admin: "bg-purple-100 text-purple-800",
+    //       user: "bg-blue-100 text-blue-800",
+    //       "clone-user": "bg-green-100 text-green-800"
+    //     };
+    //     return (
+    //       <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[params.value] || 'bg-gray-100 text-gray-800'}`}>
+    //         {params.value}
+    //       </span>
+    //     );
+    //   }
+    // },
     {
       field: "actions",
       headerName: "Actions",
@@ -1642,6 +1658,11 @@ const UserClone: React.FC = () => {
                   rowData={users}
                   columnDefs={columnDefs}
                   defaultColDef={defaultColDef}
+
+                   // ✅ COPY ENABLE
+  enableCellTextSelection={true}
+  ensureDomOrder={true}
+
                   pagination={true}
                   getRowStyle={getRowStyle}
                   paginationPageSize={20}

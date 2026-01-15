@@ -1,4 +1,5 @@
 
+
 import axios from "axios";
 import Order from "../models/orderModel.js";
 import { logSuccess, logError } from "../utils/loggerr.js";
@@ -22,9 +23,6 @@ const ANGEL_ONE_TRADE_BOOK_URL =
 // -----------------------
 // HEADERS
 // -----------------------
-
-
-
 const angelHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
   "Content-Type": "application/json",
@@ -37,11 +35,7 @@ const angelHeaders = (token) => ({
   'X-PrivateKey': process.env.PRIVATE_KEY, 
 });
 
-const safeErr = (e) => ({
-  message: e?.message,
-  status: e?.response?.status,
-  data: e?.response?.data,
-});
+
 
 // -----------------------
 // HELPERS
@@ -49,6 +43,9 @@ const safeErr = (e) => ({
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function extractBrokerError(err) {
+
+  if (!err) return { status: null, msg: "Unknown error", data: null };
+
   const status = err?.response?.status || null;
   const data = err?.response?.data;
 
@@ -104,44 +101,10 @@ async function getDetailsWithPolling(user, uniqueOrderId, req) {
   return null;
 }
 
-async function getTradebookWithRetry121(user, req) {
-  const maxTry = 4;
-
-  for (let i = 0; i < maxTry; i++) {
-    try {
-      const tradeRes = await axios.get(ANGEL_ONE_TRADE_BOOK_URL, {
-        headers: angelHeaders(user.authToken),
-      });
-      return tradeRes.data;
-    } catch (err) {
-      const e = extractBrokerError(err);
-      logError(req, err, {
-        msg: "AngelOne tradebook retry",
-        attempt: i + 1,
-        extracted: e,
-      });
-
-      // rate limit => backoff
-      if (e.status === 403 && String(e.msg).includes("exceeding access rate")) {
-        await sleep(800 * Math.pow(2, i)); // 800, 1600, 3200...
-        continue;
-      }
-      // network -> retry
-      if (!e.status) {
-        await sleep(600 * Math.pow(2, i));
-        continue;
-      }
-
-      // other -> throw
-      throw err;
-    }
-  }
-
-  throw new Error("Tradebook rate limited too many times");
-}
 
 async function getTradebookWithRetry(
   user,
+  orderid,
   expectedQty,
   req,
   maxTry = 5
@@ -156,9 +119,9 @@ async function getTradebookWithRetry(
 
       const trades = tradeRes?.data?.data || [];
 
-      const totalQty = Array.isArray(trades)
-        ? trades.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
-        : 0;
+      const orderTrades = trades.filter(t => String(t.orderid) === String(orderid));
+
+      const totalQty = orderTrades.reduce((sum, t) => sum + Number(t?.fillsize || t?.quantity || 0), 0);
 
       logSuccess(req, {
         msg: "AngelOne tradebook retry",
@@ -211,22 +174,22 @@ async function getTradebookWithRetry(
 // =======================
 // SINGLE placeAngelOrder (FULL UPDATED)
 // =======================
- 
-
-
-
-// ======================= update code first 31-dec  4:30 pm new   ===============================
-export const placeAngelOrder = async (user, reqInput, req) => {
-  let tempOrder = null;          // NEW BUY temp row
-  let existingBuyOrder = null;  // OLD OPEN BUY
+export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial = 0) => {
+  let tempOrder = null;          // NEW TEMP ORDER (BUY/SELL)
+  let existingBuyOrder = null;   // OLD OPEN BUY
   const nowISOError = new Date().toISOString();
 
+   logSuccess(req, {
+      msg: `incoming data`,
+      body:reqInput
+    });
+
   try {
+    
     // ====================================================
     // 1️⃣ READ existing BUY (NO UPDATE HERE)
     // ====================================================
     if ((reqInput.transactiontype || "").toUpperCase() === "BUY") {
-      
       existingBuyOrder = await Order.findOne({
         where: {
           userId: user.id,
@@ -235,9 +198,17 @@ export const placeAngelOrder = async (user, reqInput, req) => {
           tradingsymbol: reqInput.symbol,
           transactiontype: "BUY",
           orderstatuslocaldb: "OPEN",
-          status:"COMPLETE"
+          status:"COMPLETE",
+
         },
       });
+
+      if (existingBuyOrder) {
+        logSuccess(req, {
+          msg: "Found existing OPEN BUY order for potential merge",
+          orderid: existingBuyOrder.id,
+        });
+      }
     }
 
     // ====================================================
@@ -274,6 +245,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     };
 
     tempOrder = await Order.create(orderData);
+    logSuccess(req, {
+      msg: `Temp ${reqInput.transactiontype} order created in DB`,
+      tempOrderId: tempOrder.id,
+      quantity: tempOrder.quantity,
+    });
 
     // ====================================================
     // 3️⃣ PLACE BROKER ORDER
@@ -300,12 +276,22 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         },
         { headers: angelHeaders(user.authToken) }
       );
+      logSuccess(req, {
+        msg: "AngelOne API call success: order placed",
+        orderType: reqInput.transactiontype,
+        tempOrderId: tempOrder.id,
+      });
     } catch (err) {
       await tempOrder.update({
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         positionStatus: "FAILED",
         text: extractBrokerError(err).msg,
+      });
+      logSuccess(req, {
+        msg: "AngelOne API call failed: order rejected",
+        error: extractBrokerError(err).msg,
+        tempOrderId: tempOrder.id,
       });
       return { result: "BROKER_REJECTED" };
     }
@@ -317,6 +303,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         positionStatus: "FAILED",
         text: placeRes.data?.message,
       });
+      logSuccess(req, {
+        msg: "AngelOne order rejected by broker",
+        brokerMessage: placeRes.data?.message,
+        tempOrderId: tempOrder.id,
+      });
       return { result: "BROKER_REJECTED" };
     }
 
@@ -324,6 +315,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     const uniqueOrderId = placeRes.data.data.uniqueorderid;
 
     await tempOrder.update({ orderid, uniqueorderid: uniqueOrderId });
+    logSuccess(req, {
+      msg: "AngelOne order successfully registered in DB",
+      orderid,
+      uniqueOrderId,
+    });
 
     // ====================================================
     // 4️⃣ DETAILS POLLING
@@ -332,12 +328,24 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     const detailsStatus = detData?.data?.status;
     const detailsText = detData?.data?.text || "";
 
-    if (["rejected", "cancelled"].includes(detailsStatus)) {
+    if ([ 
+        "open",
+        "trigger pending",
+        "rejected",
+        "cancelled",
+        "pending",
+      ].includes(detailsStatus)) {
       await tempOrder.update({
         orderstatuslocaldb: detailsStatus.toUpperCase(),
         status: detailsStatus.toUpperCase(),
         positionStatus: detailsStatus.toUpperCase(),
         text: detailsText,
+      });
+      logSuccess(req, {
+        msg: `AngelOne order ${detailsStatus.toUpperCase()}`,
+        orderid,
+        tempOrderId: tempOrder.id,
+        brokerMessage: detailsText,
       });
       return { result: detailsStatus.toUpperCase() };
     }
@@ -345,24 +353,25 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     // ====================================================
     // 5️⃣ TRADEBOOK
     // ====================================================
-    const tradeData = await getTradebookWithRetry(user,reqInput.quantity, req);
-
-    const fills = tradeData?.data?.filter(
-      t => String(t.orderid) === String(orderid)
-    );
+    const tradeData = await getTradebookWithRetry(user, orderid,reqInput.quantity, req);
+    const fills = tradeData?.data?.filter(t => String(t.orderid) === String(orderid));
 
     if (!fills?.length) {
       await tempOrder.update({
-        orderstatuslocaldb: "PENDING",
+        orderstatuslocaldb: "OPEN",
+        positionStatus: "OPEN",
         status: detailsStatus === "complete" ? "COMPLETE" : "OPEN",
-        text: "TRADE_NOT_FOUND_YET",
+        text: "TRADE_NOT_FOUND_YET ,MAYBE ORDER IS REJECTED !",
+      });
+      logSuccess(req, {
+        msg: "Trade not found yet in AngelOne tradebook",
+        tempOrderId: tempOrder.id,
       });
       return { result: "PENDING" };
     }
 
     let totalQty = 0;
     let totalValue = 0;
-
     fills.forEach(f => {
       totalQty += Number(f.fillsize);
       totalValue += Number(f.fillsize) * Number(f.fillprice);
@@ -372,7 +381,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
     const matched = fills[0];
 
     // ====================================================
-    // 6️⃣ SELL PAIRING (UNCHANGED)
+    // 6️⃣ SELL PAIRING + PARTIAL (SAFE)
     // ====================================================
     let finalStatus = "OPEN";
     let positionStatus = "OPEN";
@@ -383,56 +392,151 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         where: { userId: user.id, orderid: reqInput.buyOrderId },
       });
 
-      if (buyOrder && buyOrder.orderstatuslocaldb === "OPEN") {
+        const originalQty = Number(buyOrder.fillsize || buyOrder.quantity);
+        const usedQty = totalQty;
+        const remainingBuyQty = originalQty - usedQty;
+
+      // SELL success → finalize temp SELL
+      finalStatus = "COMPLETE";
+      positionStatus = "COMPLETE";
+
+      await tempOrder.update({
+        fillsize: totalQty,
+        quantity: totalQty,
+        tradedValue: avgPrice * totalQty,
+        price: avgPrice,
+        fillprice: avgPrice,
+        filltime: nowISOError,
+        fillid: matched.fillid,
+        pnl: (avgPrice - Number(buyOrder?.fillprice || 0)) * totalQty||0,
+        buyOrderId: reqInput?.buyOrderId||buyOrder.orderid,
+        buyTime: buyOrder?.filltime,
+        buyprice: buyOrder?.fillprice,
+        buysize:totalQty|| buyOrder?.quantity,
+        buyvalue: buyOrder?.tradedValue,
+        positionStatus,
+        status: "COMPLETE",
+        orderstatuslocaldb: finalStatus,
+      });
+
+
+      logSuccess(req, {
+        msg: "SELL order executed successfully, temp SELL updated",
+        tempOrderId: tempOrder.id,
+        sellQty: totalQty,
+      });
+
+      // PARTIAL SELL → update original BUY + insert BUY clone
+      if (remainingBuyQty > 0) {
+        const remainingQty = Number(buyOrder.fillsize || buyOrder.quantity) - totalQty;
+
+        // UPDATE ORIGINAL BUY
         await buyOrder.update({
+          fillsize: remainingQty,
+          quantity: remainingQty,
+          tradedValue: Number(buyOrder.tradedValue || 0) - Number(buyOrder.fillprice || buyOrder.price) * totalQty,
+        });
+        logSuccess(req, {
+          msg: "Original BUY order reduced after partial SELL",
+          originalBuyId: buyOrder.id,
+          remainingQty,
+        });
+
+        // Compute used qty & remaining qty
+        const usedQty = totalQty;
+        const buyFillPrice = Number(buyOrder.fillprice || buyOrder.price);
+
+          // INSERT BUY CLONE FOR PARTIAL SELL
+          await Order.create({
+          variety: buyOrder.variety,
+          tradingsymbol: buyOrder.tradingsymbol,
+          instrumenttype: buyOrder.instrumenttype,
+          symboltoken: buyOrder.symboltoken,
+          transactiontype: "BUY",
+          exchange: buyOrder.exchange,
+          ordertype: buyOrder.ordertype,
+          producttype: buyOrder.producttype,
+          duration: buyOrder.duration,
+
+          // qty split		
+          quantity: usedQty,
+          fillsize: usedQty,
+          price: buyFillPrice,
+          fillprice: buyFillPrice,
+
+          // recompute values
+          tradedValue: buyFillPrice * usedQty,
+          buyvalue: 0,
+
+          // meta copy		
+          userId: buyOrder.userId,
+          userNameId: buyOrder.userNameId,
+          broker: buyOrder.broker,
+          angelOneSymbol: buyOrder.angelOneSymbol,
+          angelOneToken: buyOrder.angelOneToken,
+          strategyName: buyOrder.strategyName,
+          strategyUniqueId: buyOrder.strategyUniqueId,
+          filltime: buyOrder.filltime,
+          uniqueorderid: buyOrder.uniqueorderid,
+
+          // status		
+          orderstatuslocaldb: "COMPLETE",
+          status: "COMPLETE",
+          positionStatus: "COMPLETE",
+          text: "BUY_SPLIT_FOR_SELL",
+      });
+
+        logSuccess(req, {
+          msg: "BUY clone inserted for corresponding partial SELL",
+          cloneQty: totalQty,
+        });
+        
+    return {
+        result: "SUCCESS",
+        orderid: "",
+        uniqueOrderId: "",
+        userId: user.id,
+        broker: "AngelOne",
+      };
+      }else{
+
+         logSuccess(req, {
+          msg: "Updating Full BUY Quantity with !",
           orderstatuslocaldb: "COMPLETE",
           positionStatus: "COMPLETE",
         });
-      }
 
-      finalStatus = "COMPLETE";
-      positionStatus = "COMPLETE";
+          // =================================
+           // Uodate Full Quantity 
+           // =================================
+         await buyOrder.update({
+          orderstatuslocaldb: "COMPLETE",
+          positionStatus: "COMPLETE",
+          
+        });
+
+         logSuccess(req, {
+          msg: "Updated Full BUY Quantity with !",
+          orderstatuslocaldb: "COMPLETE",
+          positionStatus: "COMPLETE",
+        });
+
+    return {
+        result: "SUCCESS",
+        orderid: "",
+        uniqueOrderId: "",
+        userId: user.id,
+        broker: "AngelOne",
+      };
+      }
     }
 
     // ====================================================
-    // 7️⃣ FINALIZE TEMP ORDER (FULL FIELDS)
+    // 7️⃣ SAFE BUY MERGE (LAST STEP)
     // ====================================================
-    await tempOrder.update({
-      tradedValue: avgPrice * totalQty,
-      price: avgPrice,
-      fillprice: avgPrice,
-      fillsize: totalQty,
-      quantity: totalQty,
-      filltime: nowISOError,
-      fillid: matched.fillid,
-      pnl:
-        (reqInput.transactiontype || "").toUpperCase() === "SELL"
-          ? avgPrice * totalQty - Number(buyOrder?.fillprice || 0) * Number(buyOrder?.quantity || 0)
-          : 0,
-      buyOrderId: reqInput?.buyOrderId,
-      buyTime: buyOrder?.filltime,
-      buyprice: buyOrder?.fillprice,
-      buysize: buyOrder?.quantity,
-      buyvalue: buyOrder?.tradedValue,
-      positionStatus,
-      status: "COMPLETE",
-      orderstatuslocaldb: finalStatus,
-    });
-
-    // ====================================================
-    // 🔥 8️⃣ SAFE BUY MERGE (LAST STEP)
-    // ====================================================
-    if (
-      (reqInput.transactiontype || "").toUpperCase() === "BUY" &&
-      existingBuyOrder
-    ) {
-      const mergedQty =
-        Number(existingBuyOrder.fillsize || 0) + totalQty;
-
-      const mergedValue =
-        Number(existingBuyOrder.tradedValue || 0) +
-        avgPrice * totalQty;
-
+    if ((reqInput.transactiontype || "").toUpperCase() === "BUY" && existingBuyOrder) {
+      const mergedQty = Number(existingBuyOrder.fillsize || 0) + totalQty;
+      const mergedValue = Number(existingBuyOrder.tradedValue || 0) + avgPrice * totalQty;
       const mergedAvg = mergedValue / mergedQty;
 
       await existingBuyOrder.update({
@@ -444,18 +548,52 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       });
 
       await tempOrder.destroy();
+      logSuccess(req, {
+        msg: "Existing BUY merged with new BUY",
+        existingBuyId: existingBuyOrder.id,
+        mergedQty,
+      });
 
       return {
-         result: "SUCCESS",
-         orderid: existingBuyOrder.id,
-         uniqueOrderId:existingBuyOrder.uniqueorderid,
-         userId: user.id,
-         broker: "AngelOne",
+        result: "SUCCESS",
+        orderid: existingBuyOrder.id,
+        uniqueOrderId: existingBuyOrder.uniqueorderid,
+        userId: user.id,
+        broker: "AngelOne",
       };
     }
 
+
+     const pnl =
+      tempOrder.transactiontype === "SELL" && buyOrder
+        ? avgPrice * totalQty - Number(buyOrder?.fillprice) * totalQty
+        : 0;
+
+     // =================== FINAL UPDATE FOR THIS ORDER ==================
+    await tempOrder.update({
+      tradedValue: avgPrice * totalQty,
+      fillprice: avgPrice,
+      price: avgPrice,
+      fillsize: totalQty,
+      quantity: totalQty,
+      filltime: firstFill?.fill_timestamp
+        ? new Date(firstFill.fill_timestamp).toISOString()
+        : nowISOError,
+
+      fillid: matched?.fillid,
+      pnl,
+      buyOrderId: buyOrder?.orderid || 0,
+      buyprice: buyOrder?.fillprice||0,
+      buyTime: buyOrder?.filltime||null,
+      buysize: tempOrder?.transactiontype === "SELL" ? totalQty :0,
+      buyvalue: totalQty*buyOrder?.fillprice||0,
+      positionStatus,
+      status: "COMPLETE",
+      orderstatuslocaldb: finalStatus,
+    });
+
     // ====================================================
-    // 9️⃣ NORMAL SUCCESS
+    // 8️⃣ NORMAL SUCCESS
     // ====================================================
     return {
       userId: user.id,
@@ -464,7 +602,6 @@ export const placeAngelOrder = async (user, reqInput, req) => {
       orderid,
       uniqueOrderId,
     };
-
   } catch (err) {
     if (tempOrder?.id) {
       await tempOrder.update({
@@ -474,6 +611,11 @@ export const placeAngelOrder = async (user, reqInput, req) => {
         text: err.message,
       });
     }
+    logSuccess(req, {
+      msg: "placeAngelOrder failed with error",
+      error: err.message,
+      tempOrderId: tempOrder?.id,
+    });
 
     return {
       broker: "AngelOne",
@@ -485,537 +627,7 @@ export const placeAngelOrder = async (user, reqInput, req) => {
 
 
 
-// ======================= update code first 31-dec  4:30 pm   old ===============================
-export const placeAngelOrder121 = async (user, reqInput, req) => {
-  let newOrder = null;
-  let orderExitstingOrNot = false
-  const nowISOError = new Date().toISOString();
-
-  try {
-    
-
-    // 1️⃣ Prepare local order
-    const orderData = {
-      variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput.symbol,
-      instrumenttype: reqInput.instrumenttype,
-      symboltoken: reqInput.token,
-      transactiontype:reqInput.transactiontype,
-      text:"",
-      exchange: reqInput.exch_seg,
-      ordertype: reqInput.orderType,
-      quantity: String(reqInput.quantity),
-      producttype: reqInput.productType,
-      duration: reqInput.duration,
-      price: reqInput.price || "0",
-      triggerprice:reqInput.triggerprice||0,
-      squareoff: reqInput.squareoff||0,
-      stoploss: reqInput.stoploss||0,
-      orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice ?? null,
-      actualQuantity: reqInput.actualQuantity ?? null,
-      userId: user.id,
-      userNameId: user.username,
-      ordertag:"softwaresetu",
-      broker: "angelone",
-      angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
-      angelOneToken: reqInput.angelOneToken || reqInput.token,
-      buyOrderId: reqInput?.buyOrderId || null,
-      strategyName: reqInput?.groupName || "",
-      strategyUniqueId: reqInput?.strategyUniqueId || "",
-    };
-
-
-
-
-    if((reqInput.transactiontype || "").toUpperCase()==='BUY') {
-
-      // 2️⃣ Check existing OPEN/PENDING order for same symbol
-      newOrder = await Order.findOne({
-        where: {
-          userId: user.id,
-          ordertype: reqInput.orderType,
-          producttype: reqInput.productType,
-          tradingsymbol: reqInput.symbol,
-          transactiontype: "BUY",
-          orderstatuslocaldb: "OPEN",
-        },
-      });
-  }
-    if (newOrder) {
-      // ✅ UPDATE instead of CREATE
-      const newQty = Number(newOrder.quantity || 0) + Number(reqInput.quantity);
-      const newTradeValue =
-        Number(newOrder.tradedValue || 0) +
-        Number(reqInput.quantity) * Number(reqInput.price || 0);
-
-      const newAvgPrice =
-        newQty > 0 ? newTradeValue / newQty : newOrder.price;
-
-      await newOrder.update({
-        totalPrice: newTradeValue,
-      });
-
-      logSuccess(req, {
-        msg: "Existing order updated (same tradingsymbol)",
-        orderId: newOrder.id,
-        newQty,
-        newAvgPrice,
-      });
-      orderExitstingOrNot = true
-    } else {
-      //  Only here CREATE
-      newOrder = await Order.create(orderData);
-
-      logSuccess(req, {
-        msg: "New local order created",
-        localOrderId: newOrder.id,
-      });
-    }
-
-    // // 2️⃣ Save locally
-    // newOrder = await Order.create(orderData);
-
-    logSuccess(req, { msg: "Local order saved", localOrderId: newOrder.id });
-
-    //  Place AngelOne Order
-    let placeRes;
-    try {
-      const brokerPayload = {
-        variety: (reqInput.variety || "NORMAL").toUpperCase(),
-        tradingsymbol: reqInput.symbol, // ex: YESBANK (or YESBANK-EQ if you want)
-        symboltoken: String(reqInput.token),
-        transactiontype: (reqInput.transactiontype || "").toUpperCase(),
-        ordertag:"softwaresetu",
-        exchange: reqInput.exch_seg,
-        ordertype: (reqInput.orderType || "").toUpperCase(),
-        producttype: (reqInput.productType || "").toUpperCase(),
-        duration: "DAY",
-        price:reqInput.price|| 0,
-        triggerprice:reqInput.triggerprice||0,
-        squareoff: reqInput.squareoff||0,
-        stoploss: reqInput.stoploss||0,
-        quantity: Number(reqInput.quantity),
-      };
-
-      placeRes = await axios.post(ANGEL_ONE_PLACE_URL, brokerPayload, {
-        headers: angelHeaders(user.authToken),
-      });
-
-      logSuccess(req, {
-        msg: "AngelOne placeOrder response received",
-        response: placeRes.data,
-        brokerPayload,
-      });
-    } catch (err) {
-
-
-      const e = extractBrokerError(err);
-      logError(req, err, { msg: "AngelOne placeOrder API failed", extracted: e });
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-        status: "FAILED",
-        positionStatus: "FAILED",
-        text: e.msg,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "AngelOne",
-        result: "BROKER_REJECTED",
-        message: e.msg,
-      };
-
-
-    }
-
-    if (placeRes.data?.status !== true) {
-      const msg = placeRes.data?.message || "Order rejected";
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-        status: "FAILED",
-          positionStatus: "FAILED",
-        text: msg,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "AngelOne",
-        result: "BROKER_REJECTED",
-        message: msg,
-      };
-    }
-
-    // 4️⃣ Save broker IDs
-    const orderid = placeRes.data.data.orderid;
-    const uniqueOrderId = placeRes.data.data.uniqueorderid;
-
-    if(!orderExitstingOrNot) {
-
-     await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
-
-    logSuccess(req, {
-      msg: "AngelOne order placed successfully",
-      orderid,
-      uniqueOrderId,
-    });
-
-  }
-  
-    // 5️⃣ Details polling
-    let detData = null;
-    try {
-
-      detData = await getDetailsWithPolling(user, uniqueOrderId, req);
-
-      logSuccess(req, {
-      msg: "AngelOne getDetailsWithPolling response ",
-      orderid,
-      detData,
-    });
-
-    } catch (err) {
-
-      const e = extractBrokerError(err);
-
-      logError(req, err, { msg: " AngelOne order status", extracted: e }); 
-
-      await newOrder.update({
-        orderstatuslocaldb: "PENDING",
-        status: "PENDING",
-          positionStatus: "FAILED",
-        text: `DETAILS_PENDING: ${e.msg}`,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "AngelOne",
-        result: "PENDING",
-        orderid,
-        uniqueOrderId,
-        message: e.msg,
-      };
-    }
-
-    const detailsStatus = detData?.data?.status; // complete/rejected/cancelled/open/...
-
-    const detailsText = detData?.data?.text || "";
-
-    logSuccess(req, {
-      msg: "AngelOne status response ",
-      orderid,
-      detailsText:detailsText,
-      detailsStatus,
-    });
-
-    if (detailsStatus === "rejected") {
-      await newOrder.update({
-        status: "REJECTED",
-        orderstatus: "REJECTED",
-        positionStatus: "REJECTED",
-        orderstatuslocaldb: "REJECTED",
-        text: detailsText,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "AngelOne",
-        result: "REJECTED",
-        orderid,
-        uniqueOrderId,
-      };
-    }
-
-    if (detailsStatus === "cancelled") {
-      await newOrder.update({
-        status: "CANCELLED",
-        orderstatus: "CANCELLED",
-          positionStatus: "CANCELLED",
-        orderstatuslocaldb: "CANCELLED",
-        text: detailsText,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "AngelOne",
-        result: "CANCELLED",
-        orderid,
-        uniqueOrderId,
-      };
-    }
-
-    // ✅ Keep OPEN if not finalized
-    if (detailsStatus === "open" || !detailsStatus) {
-      await newOrder.update({
-        status: "OPEN",
-        orderstatus: "OPEN",
-        orderstatuslocaldb: "OPEN",
-        text: detailsText,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-    }
-
-    // ✅ Mark complete (but still try tradebook for fillsize/fillprice)
-    if (detailsStatus === "complete") {
-      await newOrder.update({
-        status: "COMPLETE",
-        orderstatus: "COMPLETE",
-        text: detailsText,
-      });
-    }
-
-    // 6️⃣ SELL pairing variables (NO DB UPDATE HERE)
-    let finalStatus = "OPEN";
-    let positionStatus = "OPEN";
-    let buyOrder = null;
-    let buyOrderId = "NA";
-
-    if ((reqInput.transactiontype || "").toUpperCase() === "SELL") {
-      buyOrderId = String(reqInput.buyOrderId || "NA");
-    }
-
-    // 7️⃣ Tradebook fetch + finalize
-    try {
-
-    const tradeData = await getTradebookWithRetry(user, req);
-
-    logSuccess(req, {
-      msg: "AngelOne getTradebookWithRetry response ",
-      orderid,
-      getTradebookWithRetry:tradeData,
-    });
-
-      
-     const fills = tradeData?.data?.filter(
-        t => String(t.orderid) === String(orderid)
-      );
-
-      let totalQty = 0;
-      let totalValue = 0;
-
-      fills.forEach(fill => {
-      const qty = Number(fill.fillsize);
-      const price = Number(fill.fillprice);
-
-      totalQty += qty;
-      totalValue += qty * price;
-    });
-
-    let matched = fills[0]
-
-    const avgPrice = totalQty > 0 ? (totalValue / totalQty) : 0;
-
-   logSuccess(req, {
-      msg: "AngelOne matched response ",
-      orderid,
-      matched:fills,
-    });
-
-      if (!matched) {
-        await newOrder.update({
-          orderstatuslocaldb: "PENDING",
-          status: detailsStatus === "complete" ? "COMPLETE" : "OPEN",
-          text: "TRADE_NOT_FOUND_YET",
-      });
-
-        return {
-          userId: user.id,
-          broker: "AngelOne",
-          result: "SUCCESS",
-          orderid,
-          uniqueOrderId,
-          note: "Tradebook not updated yet",
-        };
-      }
-
-      // ✅ SELL pairing AFTER matched (THIS IS WHAT YOU WANTED)
-      if ((reqInput.transactiontype || "").toUpperCase() === "SELL") {
-        buyOrder = await Order.findOne({
-          where: {
-            userId: user.id,
-            orderid: buyOrderId,
-          },
-          raw: true,
-        });
-
-        if (buyOrder && buyOrder.orderstatuslocaldb === "OPEN") {
-          await Order.update(
-            { 
-              orderstatuslocaldb: "COMPLETE",
-              positionStatus:"COMPLETE",
-             },
-            { where: { id: buyOrder.id } }
-          );
-        }
-
-        finalStatus = "COMPLETE";
-        positionStatus = "COMPLETE"
-      }
-
-      const buyPrice = Number(buyOrder?.fillprice || 0);
-      const buyQty = Number(buyOrder?.quantity || 0);
-      const buyValue = Number(buyOrder?.tradedValue || 0);
-      const buyTime = buyOrder?.filltime || "NA";
-
-      const txnType = (
-        matched.transactiontype ||
-        matched?.transaction_type ||
-        ""
-      ).toUpperCase();
-
-      let pnl =
-        txnType === "BUY"
-          ? 0
-          : avgPrice * totalQty - buyPrice * buyQty;
-
-      // filltime "HH:mm:ss" => ISO
-      let fillTimeISO = nowISOError;
-      try {
-        const createdAtDate = new Date(newOrder.createdAt);
-        const [h, m, s] = String(matched.filltime).split(":");
-        createdAtDate.setHours(Number(h), Number(m), Number(s), 0);
-        fillTimeISO = createdAtDate.toISOString();
-      } catch (_) {}
-
-
-       if(orderExitstingOrNot) {
-
-        // 🔑 Existing fillsize already stored
-       const existingFillSize = Number(newOrder.fillsize || 0);
-      //  const existingFillPrice = Number(newOrder.fillprice || 0);
-       const existingFillTradedValue = Number(newOrder.tradedValue || 0);
-
-       const newQty = totalQty
-      //  const newPrice = avgPrice
-      //  const newFillId = matched.fillid
-       const newTradeValue = avgPrice*totalQty
-
-        const UpdateNewQty = existingFillSize + newQty
-        const UpdateNewTradeValue = existingFillTradedValue+newTradeValue
-        const UpdateNewPrice =  UpdateNewTradeValue/UpdateNewQty
-
-
-      await newOrder.update({
-
-        tradedValue: UpdateNewTradeValue,
-        price: UpdateNewPrice,
-        fillprice:UpdateNewPrice,
-        fillsize: UpdateNewQty,
-        quantity:UpdateNewQty,
-        // fillid: newFillId,
-      });
-
-      logSuccess(req, { msg: "Trade matched & order finalized", pnl });
-
-       }else{
-
-      await newOrder.update({
-        tradedValue: avgPrice*totalQty,
-        price: avgPrice,
-        fillprice:avgPrice,
-        fillsize: totalQty,
-        filltime: fillTimeISO,
-        fillid: matched.fillid,
-        pnl,
-        buyOrderId,
-        buyTime,
-        buyprice: buyPrice,
-        buysize: buyQty,
-        buyvalue: buyValue,
-        positionStatus:positionStatus,
-        status: "COMPLETE",
-        orderstatuslocaldb: finalStatus, // ✅ SELL => COMPLETE, BUY => OPEN/COMPLETE based on your logic
-      });
-
-      logSuccess(req, { msg: "Trade matched & order finalized", pnl });
-
-    }
-      
-
-    } catch (err) {
-      const e = extractBrokerError(err);
-
-      const isRate =
-        e.status === 403 && String(e.msg).includes("exceeding access rate");
-
-      await newOrder.update({
-        orderstatuslocaldb: isRate ? "PENDING" : "FAILED",
-         positionStatus: "FAILED",
-        status: isRate
-          ? detailsStatus === "complete"
-            ? "COMPLETE"
-            : "OPEN"
-          : "FAILED",
-        text: isRate
-          ? `TRADEBOOK_RATE_LIMIT: ${e.msg}`
-          : `TRADEBOOK_ERROR: ${e.msg}`,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      logError(req, err, { msg: "AngelOne tradebook fetch failed", extracted: e });
-    }
-
-    return {
-      userId: user.id,
-      broker: "AngelOne",
-      result: "SUCCESS",
-      orderid,
-      uniqueOrderId,
-    };
-  } catch (err) {
-    const e = extractBrokerError(err);
-    logError(req, err, { msg: "Unexpected AngelOne order failure", extracted: e });
-
-    if (newOrder?.id) {
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-         positionStatus: "FAILED",
-        status: "FAILED",
-        text: e.msg,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-    }
-
-    return {
-      userId: user?.id,
-      broker: "AngelOne",
-      result: "ERROR",
-      message: e.msg,
-      error: safeErr(err),
-    };
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ==================== ref =================
-
-
+// ======================== 08 jan 2025 ======================
 
 
 
@@ -1062,11 +674,6 @@ export const placeAngelOrder121 = async (user, reqInput, req) => {
 //   status: e?.response?.status,
 //   data: e?.response?.data,
 // });
-
-
-
-
-// //  new code  start 
 
 // // -----------------------
 // // HELPERS
@@ -1129,41 +736,74 @@ export const placeAngelOrder121 = async (user, reqInput, req) => {
 //   return null;
 // }
 
-// async function getTradebookWithRetry(user, req) {
-//   const maxTry = 4;
+
+
+// async function getTradebookWithRetry(
+//   user,
+//   expectedQty,
+//   req,
+//   maxTry = 5
+// ) {
+//   let lastTradebook = null;
 
 //   for (let i = 0; i < maxTry; i++) {
 //     try {
 //       const tradeRes = await axios.get(ANGEL_ONE_TRADE_BOOK_URL, {
 //         headers: angelHeaders(user.authToken),
 //       });
-//       return tradeRes.data;
+
+//       const trades = tradeRes?.data?.data || [];
+
+//       const totalQty = Array.isArray(trades)
+//         ? trades.reduce((sum, t) => sum + Number(t?.fillsize||t?.quantity||0), 0)
+//         : 0;
+
+//       logSuccess(req, {
+//         msg: "AngelOne tradebook retry",
+//         attempt: i + 1,
+//         tradesCount: trades.length,
+//         totalQty,
+//         expectedQty,
+//       });
+
+//       // ✅ FULL FILL CONFIRMED
+//       if (totalQty >= expectedQty) {
+//         return tradeRes.data;
+//       }
+
+//       lastTradebook = tradeRes.data;
 //     } catch (err) {
 //       const e = extractBrokerError(err);
+
 //       logError(req, err, {
-//         msg: "AngelOne tradebook retry",
+//         msg: "AngelOne tradebook retry failed",
 //         attempt: i + 1,
 //         extracted: e,
 //       });
 
-//       // rate limit => backoff
+//       // rate limit
 //       if (e.status === 403 && String(e.msg).includes("exceeding access rate")) {
-//         await sleep(800 * Math.pow(2, i)); // 800, 1600, 3200...
+//         await sleep(800 * Math.pow(2, i));
 //         continue;
 //       }
-//       // network -> retry
+
+//       // network error
 //       if (!e.status) {
 //         await sleep(600 * Math.pow(2, i));
 //         continue;
 //       }
 
-//       // other -> throw
 //       throw err;
 //     }
+
+//     // wait before next poll
+//     await sleep(500);
 //   }
 
-//   throw new Error("Tradebook rate limited too many times");
+//   // ❗ retries exhausted → return best available snapshot
+//   return lastTradebook;
 // }
+
 
 
 // // =======================
@@ -1171,412 +811,354 @@ export const placeAngelOrder121 = async (user, reqInput, req) => {
 // // =======================
  
 
-
-
-
-
-
-// // ======================= update code ===============================
-
-
-// export const placeAngelOrder = async (user, reqInput, req) => {
-//   let newOrder = null;
+// // ======================= updated placeAngelOrder with partial SELL & logs ===============================
+// export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial = 0) => {
+//   let tempOrder = null;          // NEW TEMP ORDER (BUY/SELL)
+//   let existingBuyOrder = null;   // OLD OPEN BUY
 //   const nowISOError = new Date().toISOString();
 
 //   try {
-//     logSuccess(req, {
-//       msg: "AngelOne order flow started",
-//       userId: user?.id,
-//       reqInput,
-//     });
+//     // ====================================================
+//     // 1️⃣ READ existing BUY (NO UPDATE HERE)
+//     // ====================================================
+//     if ((reqInput.transactiontype || "").toUpperCase() === "BUY") {
+//       existingBuyOrder = await Order.findOne({
+//         where: {
+//           userId: user.id,
+//           ordertype: reqInput.orderType,
+//           producttype: reqInput.productType,
+//           tradingsymbol: reqInput.symbol,
+//           transactiontype: "BUY",
+//           orderstatuslocaldb: "OPEN",
+//           status:"COMPLETE"
+//         },
+//       });
 
+//       if (existingBuyOrder) {
+//         logSuccess(req, {
+//           msg: "Found existing OPEN BUY order for potential merge",
+//           orderid: existingBuyOrder.id,
+//         });
+//       }
+//     }
 
-//     // 1️⃣ Prepare local order
+//     // ====================================================
+//     // 2️⃣ ALWAYS CREATE NEW TEMP ORDER
+//     // ====================================================
 //     const orderData = {
 //       variety: reqInput.variety || "NORMAL",
 //       tradingsymbol: reqInput.symbol,
 //       instrumenttype: reqInput.instrumenttype,
 //       symboltoken: reqInput.token,
-//       transactiontype:reqInput.transactiontype,
-//       text:"",
+//       transactiontype: reqInput.transactiontype,
 //       exchange: reqInput.exch_seg,
 //       ordertype: reqInput.orderType,
 //       quantity: String(reqInput.quantity),
 //       producttype: reqInput.productType,
 //       duration: reqInput.duration,
 //       price: reqInput.price || "0",
-//       triggerprice:reqInput.triggerprice||0,
-//       squareoff: reqInput.squareoff||0,
-//       stoploss: reqInput.stoploss||0,
+//       triggerprice: reqInput.triggerprice || 0,
+//       squareoff: reqInput.squareoff || 0,
+//       stoploss: reqInput.stoploss || 0,
 //       orderstatuslocaldb: "PENDING",
 //       totalPrice: reqInput.totalPrice ?? null,
 //       actualQuantity: reqInput.actualQuantity ?? null,
 //       userId: user.id,
 //       userNameId: user.username,
-//       ordertag:"softwaresetu",
+//       ordertag: "softwaresetu",
 //       broker: "angelone",
-//       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
-//       angelOneToken: reqInput.angelOneToken || reqInput.token,
 //       buyOrderId: reqInput?.buyOrderId || null,
 //       strategyName: reqInput?.groupName || "",
 //       strategyUniqueId: reqInput?.strategyUniqueId || "",
+//       text: "",
+//       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
+//       angelOneToken: reqInput.angelOneToken || reqInput.token,
 //     };
 
-//     logSuccess(req, { msg: "Prepared local AngelOne order", orderData });
+//     tempOrder = await Order.create(orderData);
+//     logSuccess(req, {
+//       msg: `Temp ${reqInput.transactiontype} order created in DB`,
+//       tempOrderId: tempOrder.id,
+//       quantity: tempOrder.quantity,
+//     });
 
-//     // // 2️⃣ Save locally
-//     newOrder = await Order.create(orderData);
+//      logSuccess(req, {
+//       msg: `incoming data`,
+//       body:reqInput
+//     });
 
-//     logSuccess(req, { msg: "Local order saved", localOrderId: newOrder.id });
-
-//     //  Place AngelOne Order
+//     // ====================================================
+//     // 3️⃣ PLACE BROKER ORDER
+//     // ====================================================
 //     let placeRes;
 //     try {
-//       const brokerPayload = {
-//         variety: (reqInput.variety || "NORMAL").toUpperCase(),
-//         tradingsymbol: reqInput.symbol, // ex: YESBANK (or YESBANK-EQ if you want)
-//         symboltoken: String(reqInput.token),
-//         transactiontype: (reqInput.transactiontype || "").toUpperCase(),
-//         ordertag:"softwaresetu",
-//         exchange: reqInput.exch_seg,
-//         ordertype: (reqInput.orderType || "").toUpperCase(),
-//         producttype: (reqInput.productType || "").toUpperCase(),
-//         duration: "DAY",
-//         price:reqInput.price|| 0,
-//         triggerprice:reqInput.triggerprice||0,
-//         squareoff: reqInput.squareoff||0,
-//         stoploss: reqInput.stoploss||0,
-//         quantity: Number(reqInput.quantity),
-//       };
-
-//       placeRes = await axios.post(ANGEL_ONE_PLACE_URL, brokerPayload, {
-//         headers: angelHeaders(user.authToken),
-//       });
-
+//       placeRes = await axios.post(
+//         ANGEL_ONE_PLACE_URL,
+//         {
+//           variety: (reqInput.variety || "NORMAL").toUpperCase(),
+//           tradingsymbol: reqInput.symbol,
+//           symboltoken: String(reqInput.token),
+//           transactiontype: reqInput.transactiontype.toUpperCase(),
+//           exchange: reqInput.exch_seg,
+//           ordertype: reqInput.orderType.toUpperCase(),
+//           producttype: reqInput.productType.toUpperCase(),
+//           duration: "DAY",
+//           ordertag:"softwareetu",
+//           price: reqInput.price || 0,
+//           triggerprice: reqInput.triggerprice || 0,
+//           squareoff: reqInput.squareoff || 0,
+//           stoploss: reqInput.stoploss || 0,
+//           quantity: Number(reqInput.quantity),
+//         },
+//         { headers: angelHeaders(user.authToken) }
+//       );
 //       logSuccess(req, {
-//         msg: "AngelOne placeOrder response received",
-//         response: placeRes.data,
-//         brokerPayload,
+//         msg: "AngelOne API call success: order placed",
+//         orderType: reqInput.transactiontype,
+//         tempOrderId: tempOrder.id,
 //       });
 //     } catch (err) {
-//       const e = extractBrokerError(err);
-//       logError(req, err, { msg: "AngelOne placeOrder API failed", extracted: e });
-
-//       await newOrder.update({
+//       await tempOrder.update({
 //         orderstatuslocaldb: "FAILED",
 //         status: "FAILED",
 //         positionStatus: "FAILED",
-//         text: e.msg,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
+//         text: extractBrokerError(err).msg,
 //       });
-
-//       return {
-//         userId: user.id,
-//         broker: "AngelOne",
-//         result: "BROKER_REJECTED",
-//         message: e.msg,
-//       };
+//       logSuccess(req, {
+//         msg: "AngelOne API call failed: order rejected",
+//         error: extractBrokerError(err).msg,
+//         tempOrderId: tempOrder.id,
+//       });
+//       return { result: "BROKER_REJECTED" };
 //     }
 
-//     if (placeRes.data?.status !== true) {
-//       const msg = placeRes.data?.message || "Order rejected";
-
-//       await newOrder.update({
+//     if (!placeRes.data?.status) {
+//       await tempOrder.update({
 //         orderstatuslocaldb: "FAILED",
 //         status: "FAILED",
-//           positionStatus: "FAILED",
-//         text: msg,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
+//         positionStatus: "FAILED",
+//         text: placeRes.data?.message,
 //       });
-
-//       return {
-//         userId: user.id,
-//         broker: "AngelOne",
-//         result: "BROKER_REJECTED",
-//         message: msg,
-//       };
+//       logSuccess(req, {
+//         msg: "AngelOne order rejected by broker",
+//         brokerMessage: placeRes.data?.message,
+//         tempOrderId: tempOrder.id,
+//       });
+//       return { result: "BROKER_REJECTED" };
 //     }
 
-//     // 4️⃣ Save broker IDs
 //     const orderid = placeRes.data.data.orderid;
 //     const uniqueOrderId = placeRes.data.data.uniqueorderid;
 
-//     await newOrder.update({ orderid, uniqueorderid: uniqueOrderId });
-
+//     await tempOrder.update({ orderid, uniqueorderid: uniqueOrderId });
 //     logSuccess(req, {
-//       msg: "AngelOne order placed successfully",
+//       msg: "AngelOne order successfully registered in DB",
 //       orderid,
 //       uniqueOrderId,
 //     });
 
-//     // 5️⃣ Details polling
-//     let detData = null;
-//     try {
-
-//       detData = await getDetailsWithPolling(user, uniqueOrderId, req);
-
-//       logSuccess(req, {
-//       msg: "AngelOne getDetailsWithPolling response ",
-//       orderid,
-//       detData,
-//     });
-
-//     } catch (err) {
-
-//       const e = extractBrokerError(err);
-
-//       logError(req, err, { msg: " AngelOne order status", extracted: e }); 
-
-//       await newOrder.update({
-//         orderstatuslocaldb: "PENDING",
-//         status: "PENDING",
-//           positionStatus: "FAILED",
-//         text: `DETAILS_PENDING: ${e.msg}`,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
-//       });
-
-//       return {
-//         userId: user.id,
-//         broker: "AngelOne",
-//         result: "PENDING",
-//         orderid,
-//         uniqueOrderId,
-//         message: e.msg,
-//       };
-//     }
-
-//     const detailsStatus = detData?.data?.status; // complete/rejected/cancelled/open/...
-
+//     // ====================================================
+//     // 4️⃣ DETAILS POLLING
+//     // ====================================================
+//     const detData = await getDetailsWithPolling(user, uniqueOrderId, req);
+//     const detailsStatus = detData?.data?.status;
 //     const detailsText = detData?.data?.text || "";
 
-//     logSuccess(req, {
-//       msg: "AngelOne status response ",
-//       orderid,
-//       detailsText:detailsText,
-//       detailsStatus,
+//     if (["rejected", "cancelled"].includes(detailsStatus)) {
+//       await tempOrder.update({
+//         orderstatuslocaldb: detailsStatus.toUpperCase(),
+//         status: detailsStatus.toUpperCase(),
+//         positionStatus: detailsStatus.toUpperCase(),
+//         text: detailsText,
+//       });
+//       logSuccess(req, {
+//         msg: `AngelOne order ${detailsStatus.toUpperCase()}`,
+//         orderid,
+//         tempOrderId: tempOrder.id,
+//         brokerMessage: detailsText,
+//       });
+//       return { result: detailsStatus.toUpperCase() };
+//     }
+
+//     // ====================================================
+//     // 5️⃣ TRADEBOOK
+//     // ====================================================
+//     const tradeData = await getTradebookWithRetry(user, reqInput.quantity, req);
+//     const fills = tradeData?.data?.filter(t => String(t.orderid) === String(orderid));
+
+//     if (!fills?.length) {
+//       await tempOrder.update({
+//         orderstatuslocaldb: "PENDING",
+//         status: detailsStatus === "complete" ? "COMPLETE" : "OPEN",
+//         text: "TRADE_NOT_FOUND_YET",
+//       });
+//       logSuccess(req, {
+//         msg: "Trade not found yet in AngelOne tradebook",
+//         tempOrderId: tempOrder.id,
+//       });
+//       return { result: "PENDING" };
+//     }
+
+//     let totalQty = 0;
+//     let totalValue = 0;
+//     fills.forEach(f => {
+//       totalQty += Number(f.fillsize);
+//       totalValue += Number(f.fillsize) * Number(f.fillprice);
 //     });
 
-//     if (detailsStatus === "rejected") {
-//       await newOrder.update({
-//         status: "REJECTED",
-//         orderstatus: "REJECTED",
-//           positionStatus: "REJECTED",
-//         orderstatuslocaldb: "REJECTED",
-//         text: detailsText,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
-//       });
+//     const avgPrice = totalValue / totalQty;
+//     const matched = fills[0];
 
-//       return {
-//         userId: user.id,
-//         broker: "AngelOne",
-//         result: "REJECTED",
-//         orderid,
-//         uniqueOrderId,
-//       };
-//     }
-
-//     if (detailsStatus === "cancelled") {
-//       await newOrder.update({
-//         status: "CANCELLED",
-//         orderstatus: "CANCELLED",
-//           positionStatus: "CANCELLED",
-//         orderstatuslocaldb: "CANCELLED",
-//         text: detailsText,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
-//       });
-
-//       return {
-//         userId: user.id,
-//         broker: "AngelOne",
-//         result: "CANCELLED",
-//         orderid,
-//         uniqueOrderId,
-//       };
-//     }
-
-//     // ✅ Keep OPEN if not finalized
-//     if (detailsStatus === "open" || !detailsStatus) {
-//       await newOrder.update({
-//         status: "OPEN",
-//         orderstatus: "OPEN",
-//         orderstatuslocaldb: "OPEN",
-//         text: detailsText,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
-//       });
-//     }
-
-//     // ✅ Mark complete (but still try tradebook for fillsize/fillprice)
-//     if (detailsStatus === "complete") {
-//       await newOrder.update({
-//         status: "COMPLETE",
-//         orderstatus: "COMPLETE",
-//         orderstatuslocaldb: "COMPLETE",
-//         text: detailsText,
-//       });
-//     }
-
-//     // 6️⃣ SELL pairing variables (NO DB UPDATE HERE)
+//     // ====================================================
+//     // 6️⃣ SELL PAIRING + PARTIAL (SAFE)
+//     // ====================================================
 //     let finalStatus = "OPEN";
 //     let positionStatus = "OPEN";
 //     let buyOrder = null;
-//     let buyOrderId = "NA";
 
 //     if ((reqInput.transactiontype || "").toUpperCase() === "SELL") {
-//       buyOrderId = String(reqInput.buyOrderId || "NA");
-//     }
-
-//     // 7️⃣ Tradebook fetch + finalize
-//     try {
-
-//     const tradeData = await getTradebookWithRetry(user, req);
-
-//     logSuccess(req, {
-//       msg: "AngelOne getTradebookWithRetry response ",
-//       orderid,
-//       getTradebookWithRetry:tradeData,
-//     });
-
-      
-//      const fills = tradeData?.data?.filter(
-//         t => String(t.orderid) === String(orderid)
-//       );
-
-//       let totalQty = 0;
-//       let totalValue = 0;
-
-//       fills.forEach(fill => {
-//       const qty = Number(fill.fillsize);
-//       const price = Number(fill.fillprice);
-
-//       totalQty += qty;
-//       totalValue += qty * price;
-//     });
-
-//     let matched = fills[0]
-
-//     const avgPrice = totalQty > 0 ? (totalValue / totalQty) : 0;
-
-//    logSuccess(req, {
-//       msg: "AngelOne matched response ",
-//       orderid,
-//       matched:fills,
-//     });
-
-//       if (!matched) {
-//         await newOrder.update({
-//           orderstatuslocaldb: "PENDING",
-//           status: detailsStatus === "complete" ? "COMPLETE" : "OPEN",
-//           text: "TRADE_NOT_FOUND_YET",
+//       buyOrder = await Order.findOne({
+//         where: { userId: user.id, orderid: reqInput.buyOrderId },
 //       });
 
-//         return {
-//           userId: user.id,
-//           broker: "AngelOne",
-//           result: "SUCCESS",
-//           orderid,
-//           uniqueOrderId,
-//           note: "Tradebook not updated yet",
-//         };
-//       }
+//       // SELL success → finalize temp SELL
+//       finalStatus = "COMPLETE";
+//       positionStatus = "COMPLETE";
 
-//       // ✅ SELL pairing AFTER matched (THIS IS WHAT YOU WANTED)
-//       if ((reqInput.transactiontype || "").toUpperCase() === "SELL") {
-//         buyOrder = await Order.findOne({
-//           where: {
-//             userId: user.id,
-//             orderid: buyOrderId,
-//           },
-//           raw: true,
+//       await tempOrder.update({
+//         fillsize: totalQty,
+//         quantity: totalQty,
+//         tradedValue: avgPrice * totalQty,
+//         price: avgPrice,
+//         fillprice: avgPrice,
+//         filltime: nowISOError,
+//         fillid: matched.fillid,
+//         pnl: (avgPrice - Number(buyOrder?.fillprice || 0)) * totalQty||0,
+//         buyOrderId: reqInput?.buyOrderId,
+//         buyTime: buyOrder?.filltime,
+//         buyprice: buyOrder?.fillprice,
+//         buysize: buyOrder?.quantity,
+//         buyvalue: buyOrder?.tradedValue,
+//         positionStatus,
+//         status: "COMPLETE",
+//         orderstatuslocaldb: finalStatus,
+//       });
+
+//       logSuccess(req, {
+//         msg: "SELL order executed successfully, temp SELL updated",
+//         tempOrderId: tempOrder.id,
+//         sellQty: totalQty,
+//       });
+
+//       // PARTIAL SELL → update original BUY + insert BUY clone
+//       if (sellQuantityPartial > 0 && buyOrder) {
+//         const remainingQty = Number(buyOrder.fillsize || buyOrder.quantity) - totalQty;
+
+//         // UPDATE ORIGINAL BUY
+//         await buyOrder.update({
+//           fillsize: remainingQty,
+//           quantity: remainingQty,
+//           tradedValue: Number(buyOrder.tradedValue || 0) - Number(buyOrder.fillprice || buyOrder.price) * totalQty,
+//         });
+//         logSuccess(req, {
+//           msg: "Original BUY order reduced after partial SELL",
+//           originalBuyId: buyOrder.id,
+//           remainingQty,
 //         });
 
-//         if (buyOrder && buyOrder.orderstatuslocaldb === "OPEN") {
-//           await Order.update(
-//             { 
-//               orderstatuslocaldb: "COMPLETE",
-//               positionStatus:"COMPLETE",
-//              },
-//             { where: { id: buyOrder.id } }
-//           );
-//         }
+//         // Compute used qty & remaining qty
+//         const usedQty = totalQty;
+//         const buyFillPrice = Number(buyOrder.fillprice || buyOrder.price);
 
-//         finalStatus = "COMPLETE";
-//         positionStatus = "COMPLETE"
+//           // INSERT BUY CLONE FOR PARTIAL SELL
+//           await Order.create({
+//           variety: buyOrder.variety,
+//           tradingsymbol: buyOrder.tradingsymbol,
+//           instrumenttype: buyOrder.instrumenttype,
+//           symboltoken: buyOrder.symboltoken,
+//           transactiontype: "BUY",
+//           exchange: buyOrder.exchange,
+//           ordertype: buyOrder.ordertype,
+//           producttype: buyOrder.producttype,
+//           duration: buyOrder.duration,
+
+//           // qty split		
+//           quantity: usedQty,
+//           fillsize: usedQty,
+//           price: buyFillPrice,
+//           fillprice: buyFillPrice,
+
+//           // recompute values
+//           tradedValue: buyFillPrice * usedQty,
+//           buyvalue: 0,
+
+//           // meta copy		
+//           userId: buyOrder.userId,
+//           userNameId: buyOrder.userNameId,
+//           broker: buyOrder.broker,
+//           angelOneSymbol: buyOrder.angelOneSymbol,
+//           angelOneToken: buyOrder.angelOneToken,
+//           strategyName: buyOrder.strategyName,
+//           strategyUniqueId: buyOrder.strategyUniqueId,
+//           filltime: buyOrder.filltime,
+//           uniqueorderid: buyOrder.uniqueorderid,
+
+//           // status		
+//           orderstatuslocaldb: "COMPLETE",
+//           status: "COMPLETE",
+//           positionStatus: "COMPLETE",
+//           text: "BUY_SPLIT_FOR_SELL",
+//       });
+
+//         logSuccess(req, {
+//           msg: "BUY clone inserted for corresponding partial SELL",
+//           cloneQty: totalQty,
+//         });
+//       }else{
+          
+//          await buyOrder.update({
+//           orderstatuslocaldb: "COMPLETE",
+//           positionStatus: "COMPLETE",
+          
+//         });
 //       }
-
-//       const buyPrice = Number(buyOrder?.fillprice || 0);
-//       const buyQty = Number(buyOrder?.quantity || 0);
-//       const buyValue = Number(buyOrder?.tradedValue || 0);
-//       const buyTime = buyOrder?.filltime || "NA";
-
-//       const txnType = (
-//         matched.transactiontype ||
-//         matched?.transaction_type ||
-//         ""
-//       ).toUpperCase();
-
-//       let pnl =
-//         txnType === "BUY"
-//           ? 0
-//           : avgPrice * totalQty - buyPrice * buyQty;
-
-//       // filltime "HH:mm:ss" => ISO
-//       let fillTimeISO = nowISOError;
-//       try {
-//         const createdAtDate = new Date(newOrder.createdAt);
-//         const [h, m, s] = String(matched.filltime).split(":");
-//         createdAtDate.setHours(Number(h), Number(m), Number(s), 0);
-//         fillTimeISO = createdAtDate.toISOString();
-//       } catch (_) {}
-
-//       await newOrder.update({
-//         tradedValue: avgPrice*totalQty,
-//         price: avgPrice,
-//         fillprice:avgPrice,
-//         fillsize: totalQty,
-//         filltime: fillTimeISO,
-//         fillid: matched.fillid,
-//         pnl,
-//         buyOrderId,
-//         buyTime,
-//         buyprice: buyPrice,
-//         buysize: buyQty,
-//         buyvalue: buyValue,
-//         positionStatus:positionStatus,
-//         status: "COMPLETE",
-//         orderstatuslocaldb: finalStatus, // ✅ SELL => COMPLETE, BUY => OPEN/COMPLETE based on your logic
-//       });
-
-//       logSuccess(req, { msg: "Trade matched & order finalized", pnl });
-//     } catch (err) {
-//       const e = extractBrokerError(err);
-
-//       const isRate =
-//         e.status === 403 && String(e.msg).includes("exceeding access rate");
-
-//       await newOrder.update({
-//         orderstatuslocaldb: isRate ? "PENDING" : "FAILED",
-//          positionStatus: "FAILED",
-//         status: isRate
-//           ? detailsStatus === "complete"
-//             ? "COMPLETE"
-//             : "OPEN"
-//           : "FAILED",
-//         text: isRate
-//           ? `TRADEBOOK_RATE_LIMIT: ${e.msg}`
-//           : `TRADEBOOK_ERROR: ${e.msg}`,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
-//       });
-
-//       logError(req, err, { msg: "AngelOne tradebook fetch failed", extracted: e });
 //     }
 
+//     // ====================================================
+//     // 7️⃣ SAFE BUY MERGE (LAST STEP)
+//     // ====================================================
+//     if ((reqInput.transactiontype || "").toUpperCase() === "BUY" && existingBuyOrder) {
+//       const mergedQty = Number(existingBuyOrder.fillsize || 0) + totalQty;
+//       const mergedValue = Number(existingBuyOrder.tradedValue || 0) + avgPrice * totalQty;
+//       const mergedAvg = mergedValue / mergedQty;
+
+//       await existingBuyOrder.update({
+//         fillsize: mergedQty,
+//         quantity: mergedQty,
+//         tradedValue: mergedValue,
+//         price: mergedAvg,
+//         fillprice: mergedAvg,
+//       });
+
+//       await tempOrder.destroy();
+//       logSuccess(req, {
+//         msg: "Existing BUY merged with new BUY",
+//         existingBuyId: existingBuyOrder.id,
+//         mergedQty,
+//       });
+
+//       return {
+//         result: "SUCCESS",
+//         orderid: existingBuyOrder.id,
+//         uniqueOrderId: existingBuyOrder.uniqueorderid,
+//         userId: user.id,
+//         broker: "AngelOne",
+//       };
+//     }
+
+//     // ====================================================
+//     // 8️⃣ NORMAL SUCCESS
+//     // ====================================================
 //     return {
 //       userId: user.id,
 //       broker: "AngelOne",
@@ -1585,26 +1167,44 @@ export const placeAngelOrder121 = async (user, reqInput, req) => {
 //       uniqueOrderId,
 //     };
 //   } catch (err) {
-//     const e = extractBrokerError(err);
-//     logError(req, err, { msg: "Unexpected AngelOne order failure", extracted: e });
-
-//     if (newOrder?.id) {
-//       await newOrder.update({
+//     if (tempOrder?.id) {
+//       await tempOrder.update({
 //         orderstatuslocaldb: "FAILED",
-//          positionStatus: "FAILED",
+//         positionStatus: "FAILED",
 //         status: "FAILED",
-//         text: e.msg,
-//         buyTime: nowISOError,
-//         filltime: nowISOError,
+//         text: err.message,
 //       });
 //     }
+//     logSuccess(req, {
+//       msg: "placeAngelOrder failed with error",
+//       error: err.message,
+//       tempOrderId: tempOrder?.id,
+//     });
 
 //     return {
-//       userId: user?.id,
 //       broker: "AngelOne",
 //       result: "ERROR",
-//       message: e.msg,
-//       error: safeErr(err),
+//       message: err.message,
 //     };
 //   }
 // };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 import express from 'express';
-import {  finvasiaAppCredential, getShoonyaFunds, getShoonyaInstrumentsFull, getShoonyaOrders, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
+import {  finvasiaAppCredential, getFinvasiaAppCredential, getShoonyaFunds, getShoonyaHoldings, getShoonyaInstrumentsFull, getShoonyaOrders, getShoonyaPositions, getShoonyaTrades, shoonyaLogin, shoonyaLoginWithTotp } from '../controllers/shoonyaController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
@@ -17,6 +17,7 @@ router.get('/finvasia/deshbaord/todayorderdata',authMiddleware, getDeshboardOrde
 
 router.post('/finvasia/login', authMiddleware,shoonyaLogin);
 router.post('/finavasia/appcredential/create', authMiddleware,finvasiaAppCredential);
+router.get('/finavasia/appcredential/get', authMiddleware,getFinvasiaAppCredential);
 
 
 
@@ -34,6 +35,10 @@ router.get('/finavasia/logintotp',authMiddleware,shoonyaLoginWithTotp );
 
 router.get('/finvasia/orders', getShoonyaOrders);
 router.get('/finvasia/trades', getShoonyaTrades);
+router.get('/finvasia/holding', getShoonyaHoldings);
+router.get('/finvasia/postions', getShoonyaPositions);
+
+
 
 
 router.post('/finvasia/orders', getShoonyaOrders);

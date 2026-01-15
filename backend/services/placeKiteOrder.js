@@ -30,25 +30,7 @@ function mapVarietyToKite(variety) {
 // -------------------- HELPERS --------------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchTradesWithRetry121(kite, orderid, req, retries = 3, delayMs = 1200) {
-  for (let i = 1; i <= retries; i++) {
-    try {
 
-      const trades = await kite.getOrderTrades(orderid);
-      logSuccess(req, {
-        msg: "Kite getOrderTrades retry",
-        attempt: i,
-        orderid,
-        tradesCount: Array.isArray(trades) ? trades.length : 0,
-      });
-      if (Array.isArray(trades) && trades.length > 0) return trades;
-    } catch (e) {
-      logError(req, e, { msg: "Kite getOrderTrades failed", attempt: i, orderid });
-    }
-    if (i < retries) await sleep(delayMs);
-  }
-  return [];
-}
 
 async function fetchTradesWithRetry(
   kite,
@@ -99,26 +81,6 @@ async function fetchTradesWithRetry(
 }
 
 
-async function findBuyOrderForSell({ userId, reqInput, req }) {
-  if (reqInput?.buyOrderId) {
-    const buyOrder = await Order.findOne({
-      where: {
-        userId,
-        orderid: String(reqInput.buyOrderId),
-        transactiontype: "BUY",
-        // producttype: reqInput.productType,
-        // ordertype: reqInput.orderType,
-        status: "COMPLETE",
-        orderstatuslocaldb: "OPEN",
-      },
-      raw: true,
-    });
-    logSuccess(req, { msg: "BUY match by buyOrderId", buyOrderId: reqInput.buyOrderId, found: !!buyOrder });
-    if (buyOrder) return buyOrder;
-  }
-
-}
-
 // Calculate weighted average price from trades
 function calculateWeightedAveragePrice(trades) {
   let totalValue = 0;
@@ -132,28 +94,20 @@ function calculateWeightedAveragePrice(trades) {
   return totalValue / totalQuantity;
 }
 
-// ======================================================================
-// ✅ Unified placeKiteOrder (handles both mapped and direct inputs)
-// ======================================================================
 
-// ======================================================================
-// ✅ SAFE BUY MERGE KITE ORDER
-// ======================================================================
-export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => {
-
+// ========================= UPDATED placeKiteOrder with Partial SELL ========================
+export const placeKiteOrder = async (user, reqInput, req, useMappings = true) => {
   let newOrder = null;
   let existingBuyOrder = null;
   const nowISOError = new Date().toISOString();
 
   try {
-
     const kite = await getKiteClientForUserId(user.id);
 
     const kiteProductType = useMappings ? getKiteProductCode(reqInput.productType) : reqInput.productType;
     const kiteVariety = useMappings ? mapVarietyToKite(reqInput.variety) : reqInput.variety;
 
-
-    // 🔑 READ ONLY existing BUY (NO UPDATE)
+    // 1️⃣ READ EXISTING BUY (NO UPDATE HERE)
     if ((reqInput.transactiontype || "").toUpperCase() === "BUY") {
       existingBuyOrder = await Order.findOne({
         where: {
@@ -163,11 +117,19 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
           ordertype: reqInput.orderType,
           transactiontype: "BUY",
           orderstatuslocaldb: "OPEN",
+          status: "COMPLETE",
         },
       });
+
+      if (existingBuyOrder) {
+        logSuccess(req, {
+          msg: "Existing BUY found for potential merge",
+          buyOrderId: existingBuyOrder.id
+        });
+      }
     }
 
-    // ✅ ALWAYS CREATE NEW ORDER
+    // 2️⃣ ALWAYS CREATE NEW TEMP ORDER
     const orderData = {
       tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
       symboltoken: reqInput.kiteToken || reqInput.token,
@@ -191,15 +153,22 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
       strategyUniqueId: reqInput?.strategyUniqueId || "",
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
+      text: "",
     };
 
     newOrder = await Order.create(orderData);
 
-    // ---------------- PLACE ORDER ----------------
+    logSuccess(req, {
+      msg: `Temp ${orderData.transactiontype} created`,
+      tempOrderId: newOrder.id,
+      qty: orderData.quantity
+    });
+
+    // 3️⃣ PLACE BROKER ORDER
     let placeRes;
     try {
       placeRes = await kite.placeOrder(kiteVariety, {
-        exchange: reqInput.exch_seg,
+        exchange: orderData.exchange,
         tradingsymbol: orderData.tradingsymbol,
         transaction_type: orderData.transactiontype,
         quantity: Number(reqInput.quantity),
@@ -207,6 +176,12 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
         order_type: reqInput.orderType,
         price: Number(reqInput.price || 0),
         tag: "softwaresetu",
+      });
+
+      logSuccess(req, {
+        msg: "Kite API responded success for placement",
+        tempOrderId: newOrder.id,
+        brokerStatus: "PLACED"
       });
     } catch (err) {
       await newOrder.update({
@@ -216,59 +191,178 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
         text: err.message,
         filltime: nowISOError,
       });
+
+      logError(req, err, {
+        msg: "Kite placement failed (REJECTED)"
+      });
+
       return { result: "BROKER_REJECTED" };
     }
 
     const orderid = placeRes.order_id;
     await newOrder.update({ orderid });
 
-    // ---------------- TRADEBOOK ----------------
+    // 4️⃣ TRADEBOOK FETCH WITH RETRY
     const trades = await fetchTradesWithRetry(kite, orderid, Number(reqInput.quantity), req);
-      // const trades = await fetchTradesWithRetry(kite, orderid, req);
-      
-    if (!trades.length) return { result: "SUCCESS", orderid };
+
+    // 🛑 No trades? Check order status in orderbook
+if (!trades?.length) {
+  const orderInfo = await kite.getOrderHistory(orderid)
+    .catch(() => []);
+
+  const lastState = orderInfo?.slice?.(-1)?.[0];  // last history event
+
+  if (lastState?.status === "REJECTED") {
+    await newOrder.update({
+      status: lastState.status || "REJECTED",
+      orderstatuslocaldb: lastState.status || "REJECTED",
+      positionStatus: lastState.status || "REJECTED",
+      text: lastState.status_message || "BROKER_REJECTED",
+      filltime: new Date().toISOString(),
+    });
+
+    logError(req, {
+      msg: "Order rejected after placement",
+      orderid,
+      reason: lastState?.status_message
+    });
+
+    return { result: "BROKER_REJECTED", orderid };
+  }
+
+  if (lastState?.status === "CANCELLED") {
+    await newOrder.update({
+      status:lastState.status || "CANCELLED",
+      orderstatuslocaldb: lastState.status || "CANCELLED",
+      positionStatus:lastState.status || "CANCELLED",
+      text: lastState.status_message || "BROKER_CANCELLED",
+      filltime: new Date().toISOString(),
+    });
+
+    return { result: "BROKER_CANCELLED", orderid };
+  }
+        // OPEN
+      if (lastState?.status === "OPEN") {
+        await newOrder.update({
+          status: "OPEN",
+          orderstatuslocaldb: "OPEN",
+          positionStatus: "OPEN",
+          text: lastState.status_message || "Order open",
+        });
+
+        return { result: "OPEN", orderid };
+      }
+
+      // PENDING
+      if (
+        lastState?.status === "PENDING" || 
+        lastState?.status === "TRIGGER PENDING" || 
+        lastState?.status === "TRIGGER_PENDING"
+      ) {
+        await newOrder.update({
+          status: "PENDING",
+          orderstatuslocaldb: "PENDING",
+          positionStatus: "PENDING",
+          text: lastState.status_message || "Order pending",
+        });
+
+        return { result: "PENDING", orderid };
+      }
+
+        // otherwise still pending
+        return { result: "PENDING", orderid };
+      }
+
 
     const avgPrice = calculateWeightedAveragePrice(trades);
     const totalQty = trades.reduce((s, t) => s + t.quantity, 0);
+    const firstFill = trades[0];
 
     let finalStatus = "OPEN";
     let positionStatus = "OPEN";
     let buyOrder = null;
 
-    // ---------------- SELL PAIRING ----------------
+
+    // ====================== SELL PROCESSING ======================
     if (orderData.transactiontype === "SELL") {
       buyOrder = await Order.findOne({
-        where: {
-          userId: user.id,
-          orderid: reqInput.buyOrderId,
-        },
+        where: { userId: user.id, orderid: reqInput.buyOrderId },
       });
 
       if (buyOrder) {
-        await buyOrder.update({
-          orderstatuslocaldb: "COMPLETE",
-          positionStatus: "COMPLETE",
-        });
+        const originalQty = Number(buyOrder.fillsize || buyOrder.quantity);
+        const usedQty = totalQty;
+        const remainingQty = originalQty - usedQty;
+
+        finalStatus = "COMPLETE";
+        positionStatus = "COMPLETE";
+
+        // 🟡 Partial SELL
+        if (remainingQty > 0) {
+          await buyOrder.update({
+            fillsize: remainingQty,
+            quantity: remainingQty,
+            tradedValue: (Number(buyOrder.tradedValue || 0) - ((Number(buyOrder.fillprice || buyOrder.price)) * usedQty)),
+          });
+
+          // Insert BUY clone
+          const buyFillPrice = Number(buyOrder.fillprice || buyOrder.price);
+          await Order.create({
+            variety: buyOrder.variety,
+            tradingsymbol: buyOrder.tradingsymbol,
+            instrumenttype: buyOrder.instrumenttype,
+            symboltoken: buyOrder.symboltoken,
+            transactiontype: "BUY",
+            exchange: buyOrder.exchange,
+            ordertype: buyOrder.ordertype,
+            producttype: buyOrder.producttype,
+            duration: buyOrder.duration,
+            quantity: usedQty,
+            fillsize: usedQty,
+            price: buyFillPrice,
+            fillprice: buyFillPrice,
+            tradedValue: buyFillPrice * usedQty,
+            userId: buyOrder.userId,
+            userNameId: buyOrder.userNameId,
+            broker: buyOrder.broker,
+            angelOneSymbol: buyOrder.angelOneSymbol,
+            angelOneToken: buyOrder.angelOneToken,
+            strategyName: buyOrder.strategyName,
+            strategyUniqueId: buyOrder.strategyUniqueId,
+            filltime: buyOrder.filltime,
+            uniqueorderid: buyOrder.uniqueorderid,
+            status: "COMPLETE",
+            orderstatuslocaldb: "COMPLETE",
+            positionStatus: "COMPLETE",
+            text: "BUY_SPLIT_FOR_SELL",
+          });
+
+          logSuccess(req, {
+            msg: `Partial SELL split created`,
+            soldQty: usedQty,
+            remainingQty,
+          });
+        }
+
+        // 🔴 Full SELL close
+        if (remainingQty === 0) {
+          await buyOrder.update({
+            orderstatuslocaldb: "COMPLETE",
+            positionStatus: "COMPLETE",
+          });
+        }
       }
-      finalStatus = "COMPLETE";
-      positionStatus = "COMPLETE";
     }
 
     const pnl =
-      orderData.transactiontype === "SELL" && buyOrder
-        ? ((avgPrice * totalQty) - (buyOrder.fillprice * buyOrder.fillsize))
+      newOrder.transactiontype === "SELL" && buyOrder
+        ? avgPrice * totalQty - Number(buyOrder?.fillprice) * totalQty
         : 0;
 
-    // ================= SAFE BUY MERGE =================
-    if (orderData.transactiontype === "BUY" && existingBuyOrder) {
-
-      const mergedQty =
-        Number(existingBuyOrder.fillsize || 0) + totalQty;
-
-      const mergedValue =
-        Number(existingBuyOrder.tradedValue || 0) +
-        avgPrice * totalQty;
-
+    // ====================== BUY MERGE ======================
+    if (newOrder.transactiontype === "BUY" && existingBuyOrder) {
+      const mergedQty = Number(existingBuyOrder.fillsize || 0) + totalQty;
+      const mergedValue = Number(existingBuyOrder.tradedValue || 0) + avgPrice * totalQty;
       const mergedAvg = mergedValue / mergedQty;
 
       await existingBuyOrder.update({
@@ -281,46 +375,53 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
 
       await newOrder.destroy();
 
-      return {
-        result: "SUCCESS",
-        mergedInto: existingBuyOrder.id,
-      };
+      logSuccess(req, {
+        msg: "BUY merged safely with existing BUY",
+        mergedQty,
+      });
+
+      return { result: "SUCCESS", buyId: existingBuyOrder.id };
     }
 
-    // ================= NORMAL FINAL UPDATE =================
+    // =================== FINAL UPDATE FOR THIS ORDER ==================
     await newOrder.update({
       tradedValue: avgPrice * totalQty,
-      price: avgPrice,
       fillprice: avgPrice,
       fillsize: totalQty,
       quantity: totalQty,
-      uniqueorderid:trades[0]?.exchange_order_id,
-      filltime: trades[0]?.fill_timestamp
-        ? new Date(trades[0].fill_timestamp).toISOString()
+      uniqueorderid: firstFill?.exchange_order_id,
+      filltime: firstFill?.fill_timestamp
+        ? new Date(firstFill.fill_timestamp).toISOString()
         : nowISOError,
-      fillid: trades[0]?.trade_id,
+      fillid: firstFill?.trade_id,
       pnl,
-      buyOrderId: buyOrder?.orderid || "NA",
-      buyTime:buyOrder?.filltime,
-      buyprice: buyOrder?.fillprice,
-      buysize: buyOrder?.fillsize,
-      buyvalue: buyOrder?.tradedValue,
+      buyOrderId: buyOrder?.orderid || null,
+      buyprice: buyOrder?.fillprice||0,
+      buyTime: buyOrder?.filltime||null,
+      buysize: totalQty||0,
+      buyvalue: totalQty*buyOrder?.fillprice||0,
       positionStatus,
       status: "COMPLETE",
       orderstatuslocaldb: finalStatus,
     });
 
-    return {
-       result: "SUCCESS", orderid
-       };
+    logSuccess(req, {
+      msg: `${newOrder.transactiontype} completed`,
+      tempOrderId: newOrder.id,
+      pnl
+    });
+
+    return { result: "SUCCESS", orderid };
 
   } catch (err) {
     logError(req, err, { msg: "Kite unexpected error" });
+
     if (newOrder?.id) {
       await newOrder.update({
         orderstatuslocaldb: "FAILED",
         status: "FAILED",
         positionStatus: "FAILED",
+        text: err.message,
         filltime: nowISOError,
       });
     }
@@ -333,301 +434,14 @@ export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => 
 
 
 
-// =====================31 -dec 2025 4:50 pm ====================
-export const placeKiteOrder121 = async (user, reqInput, req, useMappings = true) => {
-  
-   let newOrder = null;
-   let existingBuyOrder = null;
-   let orderExitstingOrNot = false
-  
-  const nowISOError = new Date().toISOString();
-
-  try {
-
-    logSuccess(req, { msg: "Kite order flow started", userId: user?.id, reqInput });
-
-    // 1) Kite instance
-    const kite = await getKiteClientForUserId(user.id);
-    logSuccess(req, { msg: "Kite client created", userId: user.id });
-
-    // 2) Mappings (if required)
-    const kiteProductType = useMappings ? getKiteProductCode(reqInput.productType) : reqInput.productType;
-    logSuccess(req, { msg: "Mapped product type", input: reqInput.productType, kiteProductType });
-
-    const kiteVariety = useMappings ? mapVarietyToKite(reqInput.variety) : reqInput.variety;
-    logSuccess(req, { msg: "Mapped order variety", input: reqInput.variety, kiteVariety });
-
-    // 3) Local pending order
-    const orderData = {
-      symboltoken: reqInput.kiteToken || reqInput.token,
-      variety: kiteVariety || "regular",
-      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-      instrumenttype: reqInput.instrumenttype,
-      transactiontype: (reqInput.transactiontype || "").toUpperCase(),
-      exchange: reqInput.exch_seg,
-      ordertype: reqInput.orderType,
-      quantity: String(reqInput.quantity),
-      producttype: kiteProductType,
-      price: Number(reqInput.price || 0),
-      orderstatuslocaldb: "PENDING",
-      ordertag:"softwaresetu",
-      totalPrice: reqInput.totalPrice ?? null,
-      actualQuantity: reqInput.actualQuantity ?? null,
-      userId: user.id,
-      broker: "kite",
-      text: reqInput?.text||"",
-      angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
-      angelOneToken: reqInput.angelOneToken || reqInput.token,
-      userNameId: user.username,
-      buyOrderId: reqInput?.buyOrderId || null,
-      strategyName:reqInput?.groupName||"",
-      strategyUniqueId:reqInput?.strategyUniqueId||""
-    };
-
-     if((reqInput.transactiontype || "").toUpperCase()==='BUY') {
-
-    // 2️⃣ Check existing OPEN/PENDING order for same symbol
-    existingBuyOrder = await Order.findOne({
-      where: {
-        userId: user.id,
-        tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-        producttype: kiteProductType,
-        ordertype: reqInput.orderType,
-        transactiontype: "BUY",
-        orderstatuslocaldb: ["PENDING", "OPEN"],
-      },
-    });
-
-     }
-
-   //  Only here CREATE
-      newOrder = await Order.create(orderData);
-
-      logSuccess(req, {
-        msg: "New local order created",
-        localOrderId: newOrder?.id,
-      });
-
-
-    // 4) Kite payload
-    const orderParams = {
-      exchange: reqInput.exch_seg,
-      tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-      transaction_type: (reqInput.transactiontype || "").toUpperCase(),
-      quantity: Number(reqInput.quantity),
-      product: kiteProductType,
-      tag:"softwaresetu",
-      order_type: reqInput.orderType,
-      price: Number(reqInput.price || 0),
-      market_protection: 5,
-    };
-
-    logSuccess(req, { msg: "Prepared Kite payload", orderParams });
-
-    // 5) Place order
-    let placeRes;
-    try {
-
-      placeRes = await kite.placeOrder(orderData.variety, orderParams);
-
-      console.log(placeRes,'==============placeRes kite ===========');
-      
- 
-      logSuccess(req, { msg: "Kite order placed", placeRes });
-    } catch (err) {
-
-      logError(req, err, { msg: "Kite order placement failed" });
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-        status: "FAILED",
-        positionStatus: "FAILED",
-        text: err?.message || "Kite order placement failed",
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-      return { userId: user.id, broker: "Kite", result: "BROKER_REJECTED", message: err?.message };
-    }
-
-    const orderid = placeRes?.order_id;
-
-     if(!orderExitstingOrNot) {
-
-       await newOrder.update({ orderid });
-
-     }
-   
-    logSuccess(req, { msg: "Order ID saved locally", orderid });
-
-    // 6) Fetch trades
-    const trades = await fetchTradesWithRetry(kite, orderid, req, 3, 1200);
-    if (trades.length === 0) {
-      logSuccess(req, { msg: "No trades found after retries", orderid });
-      return { userId: user.id, broker: "Kite", result: "SUCCESS", orderid };
-    }
-
-    logSuccess(req, { msg: "Fetched trades", orderid, trades: trades });
-
-    //  logSuccess(req, { msg: "Fetched trades", orderid, tradesCount: trades.length });
-
-    // 7) Calculate weighted average price
-    const weightedAvgPrice = calculateWeightedAveragePrice(trades);
-
-    const totalFilledQty = trades.reduce((sum, trade) => sum + trade.quantity, 0);
-
-    logSuccess(req, {
-      msg: "Calculated weighted average price",
-      orderid,
-      weightedAvgPrice,
-      totalFilledQty,
-    });
-
-    // 8) SELL pairing
-    let buyOrder = null;
-    let finalStatus = "OPEN";
-    let positionStatus = "OPEN"
-    let buyOrderId = 'NA'
-
-    const txType = (reqInput.transactiontype || "").toUpperCase();
-
-    if (txType === "SELL") {
-      buyOrder = await findBuyOrderForSell({ userId: user.id, reqInput, req});
-      if (buyOrder) {
-        await Order.update(
-          { 
-             orderstatuslocaldb: "COMPLETE",
-             positionStatus:"COMPLETE",
-           },
-          { where: { id: buyOrder.id } }
-        );
-        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id,findByObject:buyOrder });
-      }
-      finalStatus = "COMPLETE";
-      positionStatus = "COMPLETE";
-      buyOrderId = buyOrder?.orderid || 'NA'
-    }
-
-    // 9) Calculate PnL
-    const buyPrice = Number(buyOrder?.fillprice || 0);
-    const buyQty = Number(buyOrder?.fillsize || 0);
-    const buyValue = Number(buyOrder?.tradedValue || 0);
-    let buyTime = buyOrder?.filltime || "NA";
-
-    let pnl = ((weightedAvgPrice * totalFilledQty) - (buyPrice * buyQty));
-    if (txType === "BUY") {
-      pnl = 0;
-      buyTime = "NA";
-    }
-
-    logSuccess(req, {
-      msg: "Calculated PnL",
-      orderid,
-      pnl,
-      weightedAvgPrice,
-      totalFilledQty,
-      buyPrice,
-      buyQty,
-    });
-
-    if(orderExitstingOrNot) {
-
-        // 🔑 Existing fillsize already stored
-       const existingFillSize = Number(newOrder.fillsize || 0);
-      //  const existingFillPrice = Number(newOrder.fillprice || 0);
-       const existingFillTradedValue = Number(newOrder.tradedValue || 0);
-
-      
-       const newQty = totalFilledQty
-      //  const newPrice = avgPrice
-      //  const newFillId = trades[0].trade_id
-       const newTradeValue =  weightedAvgPrice * totalFilledQty
-
-
-
-        const UpdateNewQty = existingFillSize + newQty
-        const UpdateNewTradeValue = existingFillTradedValue+newTradeValue
-        const UpdateNewPrice =  UpdateNewTradeValue/UpdateNewQty
-
-
-      await newOrder.update({
-
-        tradedValue: UpdateNewTradeValue,
-        price: UpdateNewPrice,
-        fillprice:UpdateNewPrice,
-        fillsize: UpdateNewQty,
-        quantity:UpdateNewQty,
-        // fillid: newFillId,
-      });
-
-      logSuccess(req, { msg: "Trade matched & order finalized", pnl });
-
-       }else{
-
-      await newOrder.update({
-        tradedValue:  weightedAvgPrice * totalFilledQty,
-        price: weightedAvgPrice,
-        fillprice:weightedAvgPrice,
-        fillsize: totalFilledQty,
-         quantity: totalFilledQty,
-        filltime: trades[0].fill_timestamp ? new Date(trades[0].fill_timestamp).toISOString() : null,
-        fillid: trades[0].trade_id || null,
-        pnl,
-        buyOrderId: buyOrderId,
-        buyTime,
-        buyprice: buyPrice,
-        buysize: buyQty,
-        buyvalue: buyValue,
-        positionStatus:positionStatus,
-        status: "COMPLETE",
-        orderstatuslocaldb: finalStatus, // ✅ SELL => COMPLETE, BUY => OPEN/COMPLETE based on your logic
-      });
-
-      logSuccess(req, { msg: "Trade matched & order finalized", pnl });
-
-    }
-
-
-    // logSuccess(req, { msg: "Final order updated in DB", orderid });
-    return { userId: user.id, broker: "Kite", result: "SUCCESS", orderid };
-  } catch (err) {
-    logError(req, err, { msg: "Unexpected Kite order failure" });
-    try {
-      if (newOrder?.id) {
-        await newOrder.update({
-          orderstatuslocaldb: "FAILED",
-          status: "FAILED",
-           positionStatus: "FAILED",
-          text: err?.message || "Unexpected error",
-         buyTime: nowISOError,
-        filltime: nowISOError,
-        });
-      }
-    } catch (e2) {
-
-      logError(req, e2, { msg: "Failed to mark local order FAILED in catch" });
-    }
-    return { userId: user?.id, broker: "Kite", result: "ERROR", message: err?.message };
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ========================= aws running code======================
 
 
 // import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 // import Order from "../models/orderModel.js";
 // import { logSuccess, logError } from "../utils/loggerr.js";
+
+
 
 // // -------------------- MAPPERS --------------------
 // function getKiteProductCode(type) {
@@ -655,9 +469,10 @@ export const placeKiteOrder121 = async (user, reqInput, req, useMappings = true)
 // // -------------------- HELPERS --------------------
 // const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// async function fetchTradesWithRetry(kite, orderid, req, retries = 3, delayMs = 1200) {
+// async function fetchTradesWithRetry121(kite, orderid, req, retries = 3, delayMs = 1200) {
 //   for (let i = 1; i <= retries; i++) {
 //     try {
+
 //       const trades = await kite.getOrderTrades(orderid);
 //       logSuccess(req, {
 //         msg: "Kite getOrderTrades retry",
@@ -673,16 +488,69 @@ export const placeKiteOrder121 = async (user, reqInput, req, useMappings = true)
 //   }
 //   return [];
 // }
+// 
+// async function fetchTradesWithRetry(
+//   kite,
+//   orderid,
+//   expectedQty,
+//   req,
+//   retries = 5,
+//   delayMs = 1200
+// ) {
+//   let lastTrades = [];
+
+//   for (let i = 1; i <= retries; i++) {
+//     try {
+//       const trades = await kite.getOrderTrades(orderid);
+
+//       const totalQty = Array.isArray(trades)
+//         ? trades.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
+//         : 0;
+
+//       logSuccess(req, {
+//         msg: "Kite getOrderTrades retry",
+//         attempt: i,
+//         orderid,
+//         tradesCount: trades?.length || 0,
+//         totalQty,
+//         expectedQty,
+//       });
+
+//       // ✅ FULL FILL CONFIRMATION
+//       if (totalQty >= expectedQty) {
+//         return trades;
+//       }
+
+//       lastTrades = trades || [];
+//     } catch (e) {
+//       logError(req, e, {
+//         msg: "Kite getOrderTrades failed",
+//         attempt: i,
+//         orderid,
+//       });
+//     }
+
+//     if (i < retries) await sleep(delayMs);
+//   }
+
+//   // ❗ retries exhausted → return whatever we got (partial fill)
+//   return lastTrades;
+// }
+
+
+
 
 // async function findBuyOrderForSell({ userId, reqInput, req }) {
-//   // ✅ 1) best: buyOrderId
 //   if (reqInput?.buyOrderId) {
 //     const buyOrder = await Order.findOne({
 //       where: {
 //         userId,
 //         orderid: String(reqInput.buyOrderId),
 //         transactiontype: "BUY",
+//         // producttype: reqInput.productType,
+//         // ordertype: reqInput.orderType,
 //         status: "COMPLETE",
+//         orderstatuslocaldb: "OPEN",
 //       },
 //       raw: true,
 //     });
@@ -690,189 +558,227 @@ export const placeKiteOrder121 = async (user, reqInput, req, useMappings = true)
 //     if (buyOrder) return buyOrder;
 //   }
 
-//   // ✅ 2) fallback: symbol + exchange + qty + OPEN
-//   const buyOrder2 = await Order.findOne({
-//     where: {
-//       userId,
-//       tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-//       exchange: reqInput.exch_seg,
-//       quantity: String(reqInput.quantity),
-//       transactiontype: "BUY",
-//       status: "COMPLETE",
-//       orderstatuslocaldb: "OPEN",
-//     },
-//     order: [["createdAt", "DESC"]],
-//     raw: true,
+// }
+
+// // Calculate weighted average price from trades
+// function calculateWeightedAveragePrice(trades) {
+//   let totalValue = 0;
+//   let totalQuantity = 0;
+
+//   trades.forEach(trade => {
+//     totalValue += trade.average_price * trade.quantity;
+//     totalQuantity += trade.quantity;
 //   });
 
-//   logSuccess(req, {
-//     msg: "BUY match by fallback symbol/exchange/qty",
-//     found: !!buyOrder2,
-//     symbol: reqInput.kiteSymbol || reqInput.symbol,
-//     exchange: reqInput.exch_seg,
-//     qty: reqInput.quantity,
-//   });
-
-//   return buyOrder2 || null;
+//   return totalValue / totalQuantity;
 // }
 
 // // ======================================================================
 // // ✅ Unified placeKiteOrder (handles both mapped and direct inputs)
 // // ======================================================================
-// export const placeKiteOrder = async (user, reqInput,req, useMappings = true) => {
+
+// // ======================================================================
+// // ✅ SAFE BUY MERGE KITE ORDER
+// // ======================================================================
+
+
+
+
+// export const placeKiteOrder = async (user, reqInput, req,useMappings = true) => {
+
 //   let newOrder = null;
+//   let existingBuyOrder = null;
+//   const nowISOError = new Date().toISOString();
+
 //   try {
-//     logSuccess(req, { msg: "Kite order flow started", userId: user?.id, reqInput });
 
-//     // 1) Kite instance
 //     const kite = await getKiteClientForUserId(user.id);
-//     logSuccess(req, { msg: "Kite client created", userId: user.id });
 
-//     // 2) Mappings (if required)
 //     const kiteProductType = useMappings ? getKiteProductCode(reqInput.productType) : reqInput.productType;
-//     logSuccess(req, { msg: "Mapped product type", input: reqInput.productType, kiteProductType });
-
 //     const kiteVariety = useMappings ? mapVarietyToKite(reqInput.variety) : reqInput.variety;
-//     logSuccess(req, { msg: "Mapped order variety", input: reqInput.variety, kiteVariety });
 
-//     // 3) Local pending order
+
+//     // 🔑 READ ONLY existing BUY (NO UPDATE)
+//     if ((reqInput.transactiontype || "").toUpperCase() === "BUY") {
+//       existingBuyOrder = await Order.findOne({
+//         where: {
+//           userId: user.id,
+//           tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
+//           producttype: kiteProductType,
+//           ordertype: reqInput.orderType,
+//           transactiontype: "BUY",
+//           orderstatuslocaldb: "OPEN",
+//         },
+//       });
+//     }
+
+//     // ✅ ALWAYS CREATE NEW ORDER
 //     const orderData = {
-//       symboltoken: reqInput.kiteToken || reqInput.token,
-//       variety: kiteVariety || "regular",
 //       tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-//       instrumenttype: reqInput.instrumenttype,
-//       transactiontype: (reqInput.transactiontype || "").toUpperCase(),
+//       symboltoken: reqInput.kiteToken || reqInput.token,
 //       exchange: reqInput.exch_seg,
+//       transactiontype: reqInput.transactiontype.toUpperCase(),
 //       ordertype: reqInput.orderType,
-//       quantity: String(reqInput.quantity),
 //       producttype: kiteProductType,
+//       duration: reqInput.duration,
+//       squareoff: reqInput.squareoff || 0,
+//       stoploss: reqInput.stoploss || 0,
+//       variety: kiteVariety,
+//       quantity: String(reqInput.quantity),
 //       price: Number(reqInput.price || 0),
 //       orderstatuslocaldb: "PENDING",
-//       totalPrice: reqInput.totalPrice ?? null,
-//       actualQuantity: reqInput.actualQuantity ?? null,
 //       userId: user.id,
+//       userNameId: user.username,
 //       broker: "kite",
+//       ordertag: "softwaresetu",
+//       buyOrderId: reqInput?.buyOrderId || null,
+//       strategyName: reqInput?.groupName || "",
+//       strategyUniqueId: reqInput?.strategyUniqueId || "",
 //       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
 //       angelOneToken: reqInput.angelOneToken || reqInput.token,
-//       userNameId: user.username,
-//       buyOrderId: reqInput?.buyOrderId || null,
 //     };
 
-//     logSuccess(req, { msg: "Prepared local order object", orderData });
 //     newOrder = await Order.create(orderData);
-//     logSuccess(req, { msg: "Local order saved", localRowId: newOrder.id });
-
-//     // 4) Kite payload
-//     const orderParams = {
-//       exchange: reqInput.exch_seg,
-//       tradingsymbol: reqInput.kiteSymbol || reqInput.symbol,
-//       transaction_type: (reqInput.transactiontype || "").toUpperCase(),
-//       quantity: Number(reqInput.quantity),
-//       product: kiteProductType,
-//       order_type: reqInput.orderType,
-//       price: Number(reqInput.price || 0),
-//       market_protection: 5,
-//     };
-
-//     logSuccess(req, { msg: "Prepared Kite payload", orderParams });
-
-//     // 5) Place order
+//     // ---------------- PLACE ORDER ----------------
 //     let placeRes;
 //     try {
-//       placeRes = await kite.placeOrder(orderData.variety, orderParams);
-//       logSuccess(req, { msg: "Kite order placed", placeRes });
+//       placeRes = await kite.placeOrder(kiteVariety, {
+//         exchange: reqInput.exch_seg,
+//         tradingsymbol: orderData.tradingsymbol,
+//         transaction_type: orderData.transactiontype,
+//         quantity: Number(reqInput.quantity),
+//         product: kiteProductType,
+//         order_type: reqInput.orderType,
+//         price: Number(reqInput.price || 0),
+//         tag: "softwaresetu",
+//       });
 //     } catch (err) {
-//       logError(req, err, { msg: "Kite order placement failed" });
 //       await newOrder.update({
 //         orderstatuslocaldb: "FAILED",
 //         status: "FAILED",
-//         text: err?.message || "Kite order placement failed",
-//         buyTime: new Date().toISOString(),
-//         filltime: new Date().toISOString(),
+//         positionStatus: "FAILED",
+//         text: err.message,
+//         filltime: nowISOError,
 //       });
-//       return { userId: user.id, broker: "Kite", result: "BROKER_REJECTED", message: err?.message };
+//       return { result: "BROKER_REJECTED" };
 //     }
 
-//     const orderid = placeRes?.order_id;
+//     const orderid = placeRes.order_id;
 //     await newOrder.update({ orderid });
-//     logSuccess(req, { msg: "Order ID saved locally", orderid });
 
-//     // 6) Fetch trades (no snapshot)
-//     const trades = await fetchTradesWithRetry(kite, orderid, req, 3, 1200);
-//     const trade = trades.length ? trades[0] : null;
+//     // ---------------- TRADEBOOK ----------------
+//     const trades = await fetchTradesWithRetry(kite, orderid, Number(reqInput.quantity), req);
+//       // const trades = await fetchTradesWithRetry(kite, orderid, req);
+      
+//     if (!trades.length) return { result: "SUCCESS", orderid };
 
-//     if (trade) logSuccess(req, { msg: "Using trade[0]", trade });
+//     const avgPrice = calculateWeightedAveragePrice(trades);
+//     const totalQty = trades.reduce((s, t) => s + t.quantity, 0);
 
-//     // 7) SELL pairing
-//     let buyOrder = null;
 //     let finalStatus = "OPEN";
-//     const txType = (reqInput.transactiontype || "").toUpperCase();
+//     let positionStatus = "OPEN";
+//     let buyOrder = null;
 
-//     if (txType === "SELL") {
-//       buyOrder = await findBuyOrderForSell({ userId: user.id, reqInput, req });
-//       if (buyOrder) {
-//         await Order.update(
-//           { orderstatuslocaldb: "COMPLETE" },
-//           { where: { id: buyOrder.id } }
-//         );
-//         logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderDbId: buyOrder.id });
-//       }
-//       finalStatus = "COMPLETE";
-//     }
-
-//     // 8) Update from trade (if exists)
-//     if (trade) {
-//       const tradePrice = Number(trade.average_price || 0);
-//       const tradeQty = Number(trade.quantity || 0);
-
-//       const buyPrice = Number(buyOrder?.fillprice || 0);
-//       const buyQty = Number(buyOrder?.fillsize || 0);
-//       const buyValue = Number(buyOrder?.tradedValue || 0);
-//       let buyTime = buyOrder?.filltime || "NA";
-
-//       let pnl = tradePrice * tradeQty - buyPrice * buyQty;
-//       if (String(trade.transaction_type || "").toUpperCase() === "BUY") {
-//         pnl = 0;
-//         buyTime = "NA";
-//       }
-
-//       logSuccess(req, { msg: "Calculated PnL", orderid, pnl, tradePrice, tradeQty, buyPrice, buyQty });
-
-//       await newOrder.update({
-//         tradedValue: tradePrice * tradeQty,
-//         fillprice: tradePrice,
-//         fillsize: tradeQty,
-//         fillid: trade.trade_id || null,
-//         filltime: trade.fill_timestamp ? new Date(trade.fill_timestamp).toISOString() : null,
-//         status: "COMPLETE",
-//         pnl,
-//         buyTime,
-//         buyprice: buyPrice,
-//         buysize: buyQty,
-//         buyvalue: buyValue,
+//     // ---------------- SELL PAIRING ----------------
+//     if (orderData.transactiontype === "SELL") {
+//       buyOrder = await Order.findOne({
+//         where: {
+//           userId: user.id,
+//           orderid: reqInput.buyOrderId,
+//         },
 //       });
 
-//       logSuccess(req, { msg: "Final order updated in DB using trade", orderid });
-//     } else {
-//       logSuccess(req, { msg: "No trade found after retries (non-fatal)", orderid });
-//     }
-
-//     logSuccess(req, { msg: "Kite order flow completed", orderid });
-//     return { userId: user.id, broker: "Kite", result: "SUCCESS", orderid };
-//   } catch (err) {
-//     logError(req, err, { msg: "Unexpected Kite order failure" });
-//     try {
-//       if (newOrder?.id) {
-//         await newOrder.update({
-//           orderstatuslocaldb: "FAILED",
-//           status: "FAILED",
-//           text: err?.message || "Unexpected error",
-//           buyTime: new Date().toISOString(),
+//       if (buyOrder) {
+//         await buyOrder.update({
+//           orderstatuslocaldb: "COMPLETE",
+//           positionStatus: "COMPLETE",
 //         });
 //       }
-//     } catch (e2) {
-//       logError(req, e2, { msg: "Failed to mark local order FAILED in catch" });
+//       finalStatus = "COMPLETE";
+//       positionStatus = "COMPLETE";
+
+//  }
+
+//     const pnl =
+//       orderData.transactiontype === "SELL" && buyOrder
+//         ? ((avgPrice * totalQty) - (buyOrder.fillprice * buyOrder.fillsize))
+//         : 0;
+
+//     // ================= SAFE BUY MERGE =================
+//     if (orderData.transactiontype === "BUY" && existingBuyOrder) {
+
+//       const mergedQty =
+//         Number(existingBuyOrder.fillsize || 0) + totalQty;
+
+//       const mergedValue =
+//         Number(existingBuyOrder.tradedValue || 0) +
+//         avgPrice * totalQty;
+
+//       const mergedAvg = mergedValue / mergedQty;
+
+//       await existingBuyOrder.update({
+//         fillsize: mergedQty,
+//         quantity: mergedQty,
+//         tradedValue: mergedValue,
+//         price: mergedAvg,
+//         fillprice: mergedAvg,
+//       });
+
+//       await newOrder.destroy();
+
+//       return {
+//         result: "SUCCESS",
+//         mergedInto: existingBuyOrder.id,
+//       };
 //     }
-//     return { userId: user?.id, broker: "Kite", result: "ERROR", message: err?.message };
+
+//     // ================= NORMAL FINAL UPDATE =================
+//     await newOrder.update({
+//       tradedValue: avgPrice * totalQty,
+//       price: avgPrice,
+//       fillprice: avgPrice,
+//       fillsize: totalQty,
+//       quantity: totalQty,
+//       uniqueorderid:trades[0]?.exchange_order_id,
+//       filltime: trades[0]?.fill_timestamp
+//         ? new Date(trades[0].fill_timestamp).toISOString()
+//         : nowISOError,
+//       fillid: trades[0]?.trade_id,
+//       pnl,
+//       buyOrderId: buyOrder?.orderid || "NA",
+//       buyTime:buyOrder?.filltime,
+//       buyprice: buyOrder?.fillprice,
+//       buysize: buyOrder?.fillsize,
+//       buyvalue: buyOrder?.tradedValue,
+//       positionStatus,
+//       status: "COMPLETE",
+//       orderstatuslocaldb: finalStatus,
+//     });
+
+// return {
+//        result: "SUCCESS", orderid
+//        };
+
+//   } catch (err) {
+//     logError(req, err, { msg: "Kite unexpected error" });
+//     if (newOrder?.id) {
+//       await newOrder.update({
+//         orderstatuslocaldb: "FAILED",
+//         status: "FAILED",
+//         positionStatus: "FAILED",
+//         filltime: nowISOError,
+//       });
+//     }
+//     return { result: "ERROR" };
 //   }
 // };
+
+
+
+
+
+
+
+
+
+

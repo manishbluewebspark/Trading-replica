@@ -4,7 +4,7 @@ import Order from "../models/orderModel.js";
 import zlib from "zlib";
 import redis from "../utils/redis.js";  // your redis client
 import { UPSTOX_CONFIG } from "../utils/upstox.config.js";
-
+import User from "../models/userModel.js";
 
 
 
@@ -91,11 +91,8 @@ export const getUpstoxInstruments = async (req, res) => {
 
 export const generateUpstoxAuthUrl = (req, res) => {
 
-
-    console.log('check UpStox login');
-    
-
   const UPSTOX_API_KEY = process.env.UPSTOX_API_KEY;
+  
   const UPSTOX_REDIRECT_URI = process.env.UPSTOX_REDIRECT_URI;
 
   const authUrl = `https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id=${UPSTOX_API_KEY}&redirect_uri=${UPSTOX_REDIRECT_URI}`;
@@ -106,8 +103,6 @@ export const generateUpstoxAuthUrl = (req, res) => {
 
 
 export const upStoxCallback = async (req, res) => {
-
-      console.log(req.query,'query.data');
 
   const code = req.query.code;
   const apiKey = process.env.UPSTOX_API_KEY;
@@ -133,12 +128,28 @@ export const upStoxCallback = async (req, res) => {
 
      console.log(response.data,'response.data');
 
+     const { email, access_token } = response.data;
+
+     const user = await User.findOne({ where: { email } });
+
+        if (!user) {
+          
+          return res.status(404).send("User does not exist");
+        }
+
+        await user.update({
+          authToken: access_token,   // update token
+          angelLoginUser:true,
+          angelLoginExpiry: new Date(Date.now() + 10 * 60 * 60 * 1000), // 10 hours
+        });
+
+
     const accessToken = response.data.access_token;
 
-    console.log(accessToken);
-    
-    // Store the access token securely (e.g., in a database or session)
-    res.send('Authorization successful! You can now close this window.');
+      // Redirect and STOP loop by returning
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/dashboard?access_token=${accessToken}`
+      );
   } catch (error) {
     console.error('Error:', error.response.data);
     res.status(500).send('Authorization failed.');
@@ -147,9 +158,8 @@ export const upStoxCallback = async (req, res) => {
 
 export const getUpstoxFunds = async (req, res) => {
   try {
-    const accessToken =
-    process.env.UPSTOX_TEST_ACCESS_TOKEN
-      // req.headers.upstoxaccesstoken || UPSTOX_CONFIG.ACCESS_TOKEN;
+
+    let accessToken =  req.headers.angelonetoken || UPSTOX_CONFIG.ACCESS_TOKEN;
 
     if (!accessToken) {
       return res.json({
@@ -164,14 +174,8 @@ export const getUpstoxFunds = async (req, res) => {
       Authorization: `Bearer ${accessToken}`,
     };
 
-    const baseURL = UPSTOX_CONFIG.BASE_URL;
-
-    console.log('=============baseURL===========',baseURL);
+    const baseURL = process.env.UPSTOX_URL;
     
-
-    
-    
-
     // 🔁 parallel calls
     const [fundsRes, ordersRes] = await Promise.all([
       axios.get(
@@ -184,11 +188,15 @@ export const getUpstoxFunds = async (req, res) => {
       ),
     ]);
 
-    console.log('==========UPSTOX baseURL==========',baseURL);
+    // console.log('==========UPSTOX fundsRes==========',fundsRes);
+    // console.log('==========UPSTOX ordersRes==========',ordersRes);
 
     // 💰 Funds
     const equity = fundsRes.data?.data?.equity || {};
     const availableCash = equity.available_margin ?? 0;
+
+      console.log('==========UPSTOX fundsRes==========',equity);
+
 
     // 📦 Orders
     let orders = Array.isArray(ordersRes.data)
@@ -221,9 +229,7 @@ export const getUpstoxFunds = async (req, res) => {
       recentOrders: mappedOrders.slice(0, 5),
     });
   } catch (err) {
-
-    console.log(err);
-    
+ 
     return res.json({
       status: false,
       statusCode: 500,
@@ -242,8 +248,7 @@ export const getTradeDataForUpstoxDashboard = async function (req, res, next) {
 
     // 🔐 1) Get Upstox access token from headers
     // Change header name if you prefer something else
-    // const upstoxToken = req.headers.upstoxaccesstoken;
-    const upstoxToken = process.env.UPSTOX_TEST_ACCESS_TOKEN
+    const upstoxToken = req.headers.upstoxaccesstoken;
 
     if (!upstoxToken) {
       return res.json({

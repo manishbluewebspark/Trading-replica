@@ -169,7 +169,7 @@
 // export default AngelOneCredential;
 
 
-import { FC, useState } from "react";
+import { FC, useState,useEffect } from "react";
 import Input from "../../components/form/input/InputField";
 import Button from "../../components/ui/button/Button";
 import Label from "../../components/form/Label";
@@ -189,6 +189,34 @@ const AngelOneCredential: FC = () => {
   // 👁️ Toggles
   const [showTotp, setShowTotp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+
+  useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/angelone/credential/get`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          AngelOneToken: localStorage.getItem("angel_token"),
+        },
+      });
+
+       console.log(res?.data,'=================angelone data ================');
+
+      if (res.data.status) {
+
+        setClientId(res?.data?.data?.clientId||"");
+        setTotpSecret(res?.data?.data?.totpSecret||"")
+        setPassword(res?.data?.data?.password||"");
+      }
+    } catch (err) {
+      toast.error("Failed to load credentials");
+    }
+  };
+
+  fetchData();
+}, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,9 +238,9 @@ const AngelOneCredential: FC = () => {
              if(res.data.status==true) {
               
               toast.success(res?.data?.message);
-              setClientId("");
-              setTotpSecret("");
-              setPassword("");
+              // setClientId("");
+              // setTotpSecret("");
+              // setPassword("");
                     
              }else{
               toast.error(res?.data?.message || "Something went wrong");

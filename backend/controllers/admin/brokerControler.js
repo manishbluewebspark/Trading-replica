@@ -25,9 +25,14 @@ const errorResponse = (res, message, code = 500, error = null) => {
 // ✅ Get all brokers
 export const getAllBrokers = async (req, res) => {
   try {
+
+    console.log('=============brokers===========');
     const brokers = await BrokerModel.findAll({
       order: [["createdAt", "DESC"]],
     });
+
+    console.log(brokers,'brokers');
+    
 
     return successResponse(res, "successfully fetched data", brokers);
   } catch (error) {

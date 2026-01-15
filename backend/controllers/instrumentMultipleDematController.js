@@ -1,6 +1,4 @@
 
-
-
 import redis from "../utils/redis.js";  // your redis client
 import { logSuccess, logError } from "../utils/loggerr.js"; // <-- path adjust
 import { startMergeWorker } from "../workers/startMergeWorker.js";
@@ -10,38 +8,65 @@ import { startMergeWorker } from "../workers/startMergeWorker.js";
 // =======================================================
 // ✅ MAIN CONTROLLER: Merged Instruments Testing Code
 // =======================================================
-// =========== node corn used ===============
+let isWorkerRunning = false;
 
 export const getMergedInstrumentsNew = async (req, res) => {
+  try {
 
-   console.log('req check point !');
+    console.log("✅ getMergedInstrumentsNew called");
 
-  let MERGED_REDIS_KEY = 'merged_instruments_new'
+    const MERGED_KEY = "merged_instruments_new";
 
-  //   await redis.del(MERGED_REDIS_KEY)
+    //  const cached2 = await redis.del(MERGED_KEY);
 
-  //  console.log('redis cache is delete');
-  
-  const cached = await redis.get(MERGED_REDIS_KEY);
+    // 1️⃣ Check Redis cache
 
+    const cached = await redis.get(MERGED_KEY);
+    if (cached) {
+      res.setHeader("Content-Type", "application/json");
+      return res.status(200).send(cached);
+    }
 
+    // 2️⃣ If worker already running
+    if (isWorkerRunning) {
+      return res.json({
+        status: false,
+        message: "Preparing instruments... worker is already running, try again in 10-15 Minute"
+      });
+    }
 
-  if (!cached) {
+    // 3️⃣ Start worker (async fire)
+    console.log("Cache empty — starting merge worker");
+    isWorkerRunning = true;
 
-    console.log('cached is empty');
-    
+    startMergeWorker()   // no await here → fire and forget
+      .then(() => console.log("✔️ Merge worker completed"))
+      .catch((err) => console.error("❌ Merge worker failed:", err))
+      .finally(() => {
+        isWorkerRunning = false;
+        
+      });
 
-         await startMergeWorker()
+    // 4️⃣ Immediate response
+    return res.json({
+      status: false,
+      message: "Preparing instruments... try again in 10-15 Minute"
+    });
 
-      const cached = await redis.get(MERGED_REDIS_KEY);
-
-    res.setHeader("Content-Type", "application/json");
-    return res.status(200).send(cached);
+  } catch (err) {
+    console.error("❌ Controller error:", err);
+    isWorkerRunning = false;
+    return res.json({
+      status: false,
+      error: err.message,
+      message: "Preparing instruments... try again in 20-30 sec"
+    });
   }
-
-  res.setHeader("Content-Type", "application/json");
-  return res.status(200).send(cached);
 };
+
+
+
+
 
 
 

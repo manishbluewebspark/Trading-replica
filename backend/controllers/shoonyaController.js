@@ -222,6 +222,64 @@ export const finvasiaAppCredential = async (req, res) => {
   }
 };
 
+export const getFinvasiaAppCredential = async (req, res) => {
+  try {
+    const userId = req.userId; // set by auth middleware
+
+    if (!userId) {
+      return res.json({
+        status: false,
+        statusCode: 400,
+        message: "Unauthorized: userId missing",
+      });
+    }
+
+    // 1️⃣ Find user
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.json({
+        status: false,
+        statusCode: 404,
+        message: "User not found",
+      });
+    }
+
+    // 2️⃣ Build response object
+    const data = {
+      clientId: user.kite_client_id || "",  // API key entered in form 1st
+      totpSecret: user.kite_secret || "",  // Secret
+      apiKey: user.kite_key || "",         // UID (login id)
+      pin: user.kite_pin || "",            // PIN/Pwd
+      imei: user.finavacia_imei || "",
+      vc: user.finavacia_vendor_code || "",
+    };
+
+    const isEmpty =
+      !data.clientId && !data.totpSecret && !data.apiKey && !data.pin &&
+      !data.imei && !data.vc;
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: isEmpty
+        ? "No Finvasia credential found"
+        : "Finvasia credential loaded successfully",
+      data,
+    });
+  } catch (error) {
+    console.error("getFinavasiaAppCredential error:", error);
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Failed to fetch Finvasia (Shoonya) credentials",
+      error: error.message,
+    });
+  }
+};
+
+
 
 
 // -------------------------------
@@ -237,6 +295,10 @@ export const getShoonyaFunds = async (req, res) => {
       where: { id: req.userId },
       raw: true,
     });
+
+
+    console.log(user,'===============user====================');
+    
 
     if (!user) {
       return res.status(404).json({
@@ -261,7 +323,8 @@ export const getShoonyaFunds = async (req, res) => {
 
 
     // ✅ Build raw x-www-form-urlencoded string like in their curl examples
-    const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+    // const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+   const body = `jKey=${user.authToken}&jData=${JSON.stringify(jData)}`;
 
     const response = await axios.post(url, body, {
       headers: {
@@ -524,8 +587,8 @@ export const getShoonyaFunds1 = async (req, res) => {
 export const getShoonyaOrders = async (req, res) => {
   try {
 
-    const uid = 'FN169676'
-     const susertoken = "3d3814b84389bb2102b0a9a91959b9175b8e9f800d25a709b93d5560ba08c20d"
+     const uid = 'FN169676'
+     const susertoken = "bd891d999db82152011ef31d99cddc3054d07d96b51d525e2f0cdcb3f66df310"
 
 
     if (!uid || !susertoken) {
@@ -623,8 +686,8 @@ export const getShoonyaTrades = async (req, res) => {
   try {
     // 🔹 Now expecting actid also
    
-    const uid = 'FN169676'
-     const susertoken = 'd7d4506729c2047f388462011699f5d2c1c12968458f6ff6c6902a5273a33f0c'
+     const uid = 'FN169676'
+     const susertoken = "b52d7d821bfdfef87e4e8cea09756353a78789e37d73222126c21136b1911f6f"
 
      let actid = uid
 
@@ -718,6 +781,145 @@ export const getShoonyaTrades = async (req, res) => {
     });
   }
 };
+
+export const getShoonyaHoldings = async (req, res) => {
+  try {
+    const uid = "FN169676";
+    const susertoken = "bd891d999db82152011ef31d99cddc3054d07d96b51d525e2f0cdcb3f66df310";
+    const actid = uid;
+
+    if (!uid || !actid || !susertoken) {
+      return res.status(400).json({
+        status: false,
+        message: "uid, actid and susertoken are required",
+      });
+    }
+
+    const url = `${SHOONYA_BASE_URL}/Holdings`;
+
+    const jData = {
+      uid,
+      actid,
+      prd: "C",    // 👈 MANDATORY FIELD FOR HOLDINGS
+    };
+
+    const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+
+    console.log("Shoonya /Holdings body =>", body);
+
+    const response = await axios.post(url, body, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const data = response?.data;
+    console.log("Finvasia holdings raw:", data);
+
+    if (!data) {
+      return res.status(400).json({
+        status: false,
+        message: "No response from Shoonya Holdings",
+      });
+    }
+
+    if (!Array.isArray(data) && data.stat && data.stat !== "Ok") {
+      return res.status(400).json({
+        status: false,
+        message: data?.emsg || "Unable to fetch holdings",
+        raw: data,
+      });
+    }
+
+    const holdings = Array.isArray(data) ? data : data?.holdingdata || [];
+
+    return res.json({
+      status: true,
+      message: "Holdings fetched successfully",
+      count: holdings.length,
+      holdings,
+      raw: data,
+    });
+  } catch (error) {
+    console.error("Shoonya Holdings Error:", error?.response?.data || error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Shoonya holdings fetch failed",
+      error: error?.response?.data || error.message,
+    });
+  }
+};
+
+
+export const getShoonyaPositions = async (req, res) => {
+  try {
+    const uid = "FN169676";
+    const susertoken = "bd891d999db82152011ef31d99cddc3054d07d96b51d525e2f0cdcb3f66df310";
+    const actid = uid;
+
+    if (!uid || !actid || !susertoken) {
+      return res.status(400).json({
+        status: false,
+        message: "uid, actid and susertoken are required",
+      });
+    }
+
+    const url = `${SHOONYA_BASE_URL}/Positions`;
+
+    const jData = {
+      uid,
+      actid,
+    };
+
+    const body = `jKey=${susertoken}&jData=${JSON.stringify(jData)}`;
+
+    console.log("Shoonya /Positions body =>", body);
+
+    const response = await axios.post(url, body, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const data = response?.data;
+    console.log("Finvasia positions raw:", data);
+
+    if (!data) {
+      return res.status(400).json({
+        status: false,
+        message: "No response from Shoonya Positions",
+      });
+    }
+
+    if (!Array.isArray(data) && data.stat && data.stat !== "Ok") {
+      return res.status(400).json({
+        status: false,
+        message: data?.emsg || "Unable to fetch positions",
+        raw: data,
+      });
+    }
+
+    const positions = Array.isArray(data) ? data : data?.positiondata || [];
+
+    return res.json({
+      status: true,
+      message: "Positions fetched successfully",
+      count: positions.length,
+      positions,
+      raw: data,
+    });
+  } catch (error) {
+    console.error("Shoonya Positions Error:", error?.response?.data || error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Shoonya positions fetch failed",
+      error: error?.response?.data || error.message,
+    });
+  }
+};
+
 
 
 export const getShoonyaTrades2 = async (req, res) => {

@@ -371,7 +371,7 @@ export const getAngelOneProfileFund = async function (req,res,next) {
 export const getAngelOneOrder = async (req, res,next) => {
     try {
 
-    const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpneU9EY3dNU3dpYm1KbUlqb3hOelkyTnpReU1USXhMQ0pwWVhRaU9qRTNOalkzTkRJeE1qRXNJbXAwYVNJNkltVmxORGxoT0RKaUxXUTFOMlV0TkdWaE9TMWhZbU5sTFRWak56TmxaRFkxT1dZM1ppSXNJbFJ2YTJWdUlqb2lJbjAuTVV5S211dEZNUER2a0Y1THF3bV9BSjB5cldkdTI4cGZEZWxpdWVYaGdYTGpjZV9hUHQ3WFVIZkNfRjVheEllWVNIUmNOMFMwdm54Q2xnc2NLRktqSWZoMVB4R09KM002eEVwMkEyRUhERElnbXFCVTZiaUlSdFU0ek1DWkpXQ1MtamJsSGxRbXk1R19WR3VNRWdZcFhNRElZUHhPbTJvcDlrRUtTR3F6TGx3IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2NzQyMzAxLCJleHAiOjE3NjY3NzM4MDB9.9Yro3MmEJt1cuClNhYgtScqWw0Hu68eK7JMLk4QLmvlwVo_c__w3VFJddB5WHNvj0wpkTi79Kh-lzeYFS1GSGA'
+    const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRFExTWpJeE55d2libUptSWpveE56WTRNelkxTmpNM0xDSnBZWFFpT2pFM05qZ3pOalUyTXpjc0ltcDBhU0k2SWpKaFpqQmlNVGcyTFdKbFpqVXROREkzTlMwNU9ESmlMVGsyTURjd1pHUTFNamc1WkNJc0lsUnZhMlZ1SWpvaUluMC5YSEdBX2pxOGNzMmF5ejRVT2NtU0NCdzNzNFM0UmFNRDJMNThCYWloZzB0cnkzSWFRZVNuY1U5b0pndEhZaFg3QXU4RnRrdmVRMndwQ0Q5OFF6WjYyQUNRZ1FvNkh1dXJXU1hzSnpJVU1CdlhPZmlILWJjSDdxTlBySGRKclhGYjZ4d2M3M0FKXzBvMzBjejI1NTdUYVItaHdOcXNVLTlTclc3QVQ4aDRlMHMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjgzNjU4MTcsImV4cCI6MTc2ODQxNTQwMH0.oxAbnfa9foMIA46OxXBP9y2XqZKg_6XzZ5kpEFm2LEdU0Q_lwM2rKtK-cE-TB29dq3NF_VTs7MFkKUew6MWvfg'
   if (!angelToken) {
     
      return res.json({
@@ -1149,6 +1149,8 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
   try {
     const userId = req.userId;
 
+    
+
     /* =====================================================
        ✅ IST DAY RANGE (VERY IMPORTANT)
     ===================================================== */
@@ -1221,9 +1223,18 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
        ✅ TOTAL COMPLETED TRADES
        (1 SELL = 1 TRADE)
     ===================================================== */
-    const totalTraded = trades.filter(
-      (t) => t.transactiontype === "SELL"
-    ).length;
+   const sellTrades = trades.filter((t) => t.transactiontype === "SELL");
+
+    // Use Set to store unique strategyUniqueId
+    const uniqueStrategyIds = new Set(sellTrades.map((t) => t.strategyUniqueId));
+
+    // Count of unique strategyUniqueId
+    const totalTraded = uniqueStrategyIds.size;
+
+
+    console.log('==========totalTraded==========',totalTraded);
+    
+
 
     /* =====================================================
        ✅ OPEN / PENDING ORDERS COUNT
@@ -1318,7 +1329,7 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
     ===================================================== */
 
 
-    console.log(pnlData,'====================pnlData=============');
+
     
     return res.json({
       status: true,
@@ -1522,8 +1533,6 @@ export const getTradeDataForCommonDeshboardUpdate1212 = async function (req, res
 export const getDeshboardOrdersUpdate = async (req, res) => {
   try {
 
-      
-   
     // 1️⃣ Set date range (today by default)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -1549,6 +1558,7 @@ export const getDeshboardOrdersUpdate = async (req, res) => {
     const mappedOrders = orders.map((o) => ({
       tradingsymbol: o.tradingsymbol,
       orderid: o.orderid,
+      buyOrderId: o.buyOrderId,
       transactiontype: o.transactiontype,
       lotsize: Number(o.quantity),
       averageprice: Number(o.fillprice || o.averageprice || 0),
@@ -1560,14 +1570,65 @@ export const getDeshboardOrdersUpdate = async (req, res) => {
     const recentFiveOrders = mappedOrders.slice(0, 5);
 
 
-    console.log(mappedOrders,'==============mappedOrders============');
-    
+const mergeSellByBuyOrderId = (orders) => {
+  let buy = null;
+  let sell = null;
+
+  for (const o of orders) {
+    const qty = Number(o.lotsize || 0);
+    const price = Number(o.averageprice || 0);
+
+    if (o.transactiontype === "BUY") {
+      buy = { ...o };
+    }
+
+    if (o.transactiontype === "SELL") {
+      if (!sell) {
+        sell = {
+          ...o,
+          lotsize: 0,
+          totalValue: 0
+        };
+      }
+      sell.lotsize += qty;
+      sell.totalValue += qty * price;
+    }
+  }
+
+  if (sell) {
+    sell.averageprice = sell.totalValue / sell.lotsize;
+    delete sell.totalValue;
+  }
+
+  // ⭐ HERE IS THE CHANGE ⭐
+  if (!buy && !sell) return [];     // nothing found
+  if (buy && !sell) return [buy];   // only buy found
+  if (!buy && sell) return [sell];  // only sell found
+
+  return [buy, sell];               // buy + merged sell
+};
+
+
+  let newmappedOrders = []
+
+  if(req.role==='clone-user') {
+
+    newmappedOrders = mappedOrders
+
+  }else{
+
+   newmappedOrders = await mergeSellByBuyOrderId(mappedOrders)
+  }
+
+
+  console.log(newmappedOrders);
+  
 
     return res.json({
       status: true,
       message: " orders retrieved successfully",
       data: {
-        totalOrders: mappedOrders,
+        totalOrders: newmappedOrders,
         recentOrders: recentFiveOrders,
       },
     });
@@ -1731,7 +1792,7 @@ export const getPosition = async (req, res,next) => {
 
       // let token = req.headers.angelonetoken
 
-       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkExMzcyODYiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrRXhNemN5T0RZaUxDSmxlSEFpT2pFM05qYzBNVE01T1RNc0ltNWlaaUk2TVRjMk56TXlOelF4TXl3aWFXRjBJam94TnpZM016STNOREV6TENKcWRHa2lPaUpoT1RrNU9UY3dPQzAxWXprNUxUUmhZV1F0T1RNNU9TMHhNVFF4Wm1RNU5HSTJZV1FpTENKVWIydGxiaUk2SWlKOS55WE53bE5JOGVzU2FyZEdrenh6TUpOdHJUVGkyaTZ6bnh0OE1zOGtHb09mNURMUnJYdGhLQXdVTjRWRUZhaTFBNkJpNl9kREFwVzV0NExrX1pNekVIb1B5VV9RdmZHSGMtYy1IbDNzWjVrOUF2ZUJqTGhHS1F1OUMxanQ1eldSYUdtTmRiNkFqX2E2QTZBNnpNQmxnLUMxQUY4T1l6OXRnelNZZlN5SEJtb0kiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjczMjc1OTMsImV4cCI6MTc2NzM3ODYwMH0.Pb9_TIxssxdwQxc9MjDH_23EhfFy8LOjjgD6Yp0i9rFUXvWVQH_ipY0Oz7__ZQFL3nOuTak0TpPjKsYvGnf0_w"
+       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTnpnME16azBNU3dpYm1KbUlqb3hOelkzTnpVM016WXhMQ0pwWVhRaU9qRTNOamMzTlRjek5qRXNJbXAwYVNJNkltSTBaRFJoTTJVeExXUm1Oekl0Tkdaall5MWhOMlZtTFRJMVl6STBZbVk1WXpkbE5DSXNJbFJ2YTJWdUlqb2lJbjAuUmlrTjJhWk5UVkIycXB3YWdGZE42bGJVdFBLX05MVGc5Yzl5Q2RuaF9LU3hadlViMU4xeDI2VV85NWtJRWlHZkZaT0JxWHI5aTFDTHhCSVJ6SERDT19FZzE4anRNRUNFc200Y0xLVjNRZldLdDFFTlFMTVVYazdoaUduSGFZXzZFRGp6Y25Ga2pQNEtkaTVkLXZJS3FTXy1ZSXBlMndoVGpxcGNtSmtuX3Q0IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY3NzU3NTQxLCJleHAiOjE3Njc4MTA2MDB9.pGZAoTn23Az5x7HsSKDzIMVJx2taST8DuRQNYufG_0x6wTZQgYP-1sVq76_QP-4OLaYpGaCX0c7MkGQXFpjhLA"
 
       var config = {
         method: 'get',
@@ -1966,7 +2027,7 @@ export const getAngelTradeBooks = async (req, res) => {
 
     // const angelToken = req.headers.angelonetoken
 
-   const angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTmpZek5UTTNOeXdpYm1KbUlqb3hOelkyTlRRNE56azNMQ0pwWVhRaU9qRTNOalkxTkRnM09UY3NJbXAwYVNJNkltWXdPRE15TkRneExUWTVaVEV0TkRJNU1pMWlNbVJqTFRRd1lURmxPVGcyT1dZMk5DSXNJbFJ2YTJWdUlqb2lJbjAuRFl6YTFObXNpZmhzMGpPR1g0ZkdtbTBlX2gwblF2eUtkZzA0RjVpQ20yN0UySWZqQUpYVGNvLUdNU3lfSGZJWnVpQXlNamliTFlwNnBjU1dpbGJSNUJ2X0t4SW10ODBTQUU2NFM1dkgxcGZzZl9jMGNGT2VSUWhUVVB3bDVNTDBLd1JpLXBwcjZ2VXNfdk1mSFJSa2N3bDZmWEN6WFhURFo1d3VoT09kblJVIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY2NTQ4OTc3LCJleHAiOjE3NjY2MDEwMDB9._dQJWe7RdnOtKD2JV5-YdHCnJzOERxKTLJ2JZgb8VBOpH0YnKd1o2dFp13CrU_bT9PNElOu3LibeigpxgP0eXg"
+   const angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTnprMU1ETTJPQ3dpYm1KbUlqb3hOelkzT0RZek56ZzRMQ0pwWVhRaU9qRTNOamM0TmpNM09EZ3NJbXAwYVNJNklqZzVZems0TVdaa0xXUmtOakl0TkRsaE1DMWhaamxpTFRFM1pqRm1PV1JoTW1ReVlpSXNJbFJ2YTJWdUlqb2lJbjAuc1lGZ0hIaHJSbW1nLUpWRzc3NUFRbHRQS3J5cFQ4eDdHNUJOM0dXVGNNeS15dFp0ZnRCd196WllHYUYweENJTWYwamM3UHI5WDgtUGx4UEFJcXFBZ1lXWmNfcnZ3dVN6Z0JfaXhnRmNfMkE3azFfakZzcWI0RXhOTFd5Y0E1UkxMZmFJWXlzZGVlNGpyTTZwMWY5eE0xQ1AtTm1fRmdycDZsYXdaNEFnYkNFIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY3ODYzOTY4LCJleHAiOjE3Njc4OTcwMDB9.21ehjSVbCZ0AapX3uErc4jFw7FkF9V4tE3CLBvDNihBF7Xwk_bZ5iJShJyQ8a4ASVpwcgxyKIKdU7P56ECKL6g"
    
    var config = {
         method: 'get',

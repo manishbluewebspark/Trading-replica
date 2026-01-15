@@ -6,7 +6,7 @@ import AngelOneCredentialer from '../models/angelOneCredential.js';
 export const getAngelOneCredential = async (req, res) => {
     try {
 
-    const { userId } = req.params;
+    const  userId  = req.userId
 
      if (!userId) {
       return res.json({
@@ -68,12 +68,17 @@ export const createAngelOneCredential = async (req, res) => {
 
         if (existing) {
       
-        return res.json({
-            status: true,
-            statusCode: 200,
-            message: "AngelOne credentials Already Created.",
-            data: existing,
-        });
+       existing.clientId = clientId;
+      existing.totpSecret = totpSecret;
+      existing.password = password; // ⚠️ consider hashing
+      await existing.save();
+
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "AngelOne credentials updated successfully.",
+        data: existing,
+      });
       }
 
             // Create new record

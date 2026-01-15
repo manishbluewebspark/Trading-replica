@@ -108,6 +108,53 @@ export const kiteAppCredential = async (req, res) => {
   }
 };
 
+export const kiteAppCredentialGet = async (req, res) => {
+  try {
+    const userId = req.userId; // set by auth middleware
+
+    if (!userId) {
+      return res.json({
+        status: false,
+        statusCode: 400,
+        message: "Unauthorized: userId is missing",
+      });
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.json({
+        status: false,
+        statusCode: 404,
+        message: "User not found",
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "Kite App Credentials fetched",
+      data: {
+        clientId: user.kite_client_id || "",
+        pin: user.kite_pin || "",
+        apiKey: user.kite_key || "",
+        totpSecret: user.kite_secret || "",
+      },
+    });
+
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Failed to fetch kite app credentials",
+      error: error.message,
+    });
+  }
+};
+
+
+
 
 
 // ===================== KITE LOGIN URL =====================
@@ -1520,8 +1567,10 @@ export const getKiteHolding = async (req, res) => {
 export const getKiteTrades = async (req, res) => {
   try {
 
-   
-    const  kite  = await getKiteClientForUserId(11)
+    const  kite  = await getKiteClientForUserId(43)
+
+      console.log('vssdsdvsvs');
+
     //  const  kite  = await getKiteClientForUserId(13)
 
     // const orders = await kite.getOrderHistory("1999368808602804224");
@@ -1648,11 +1697,11 @@ export const cancellKiteOnlineOrder = async (req, res) => {
 export const getKiteOrders = async (req, res) => {
   try {
 
-  const  kite  = await getKiteClientForUserId(11)
+  const  kite  = await getKiteClientForUserId(43)
 
   //  const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("2008064113993064448");
+    const orders = await kite.getOrderTrades("NIFTY2612025800CE");
     
 
     // console.log(orders,'orders orders');

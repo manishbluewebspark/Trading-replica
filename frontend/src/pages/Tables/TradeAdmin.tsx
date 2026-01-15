@@ -1764,9 +1764,6 @@ export default function TradeAdmin() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-
-
-
   const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [rowData, setRowData] = useState<RowItem[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
@@ -1877,8 +1874,24 @@ export default function TradeAdmin() {
         },
       },
     
-      { headerName: "Buy Price", field: "buyprice", width: 120 },
-      { headerName: "Sell Price", field: "fillprice", width: 120 },
+      // { headerName: "Buy Price", field: "buyprice", width: 120 },
+      // { headerName: "Sell Price", field: "fillprice", width: 120 },
+
+      {
+      headerName: "Buy Price",
+      field: "buyprice",
+      width: 120,
+      valueFormatter: params =>
+        params.value != null ? Number(params.value).toFixed(2) : ""
+      },
+      {
+        headerName: "Sell Price",
+        field: "fillprice",
+        width: 120,
+        valueFormatter: params =>
+          params.value != null ? Number(params.value).toFixed(2) : ""
+      },
+
       { headerName: "Quantity", field: "quantity" as any, width: 110 },
       {
         headerName: "PNL",
@@ -1887,8 +1900,6 @@ export default function TradeAdmin() {
         cellRenderer: pnlCellRenderer,
       },
       { headerName: "Order ID", field: "orderid", width: 190 },
-    
-
        {
         headerName: "Strategy ID",
         field: "strategyUniqueId",

@@ -2108,7 +2108,129 @@ const ANGEL_RMS_URL =
 //   }
 // };
 
+
+
+
+
+
+
 export const refreshAngelFundsForAllUsers = async (req, res) => {
+  const startTime = Date.now();   // ⏱️ Start time
+
+  try {
+    const users = await User.findAll({
+      where: {
+        role: ["user", "clone-user"],
+      },
+      raw: true
+    });
+
+    if (!users.length) {
+      const totalMs = Date.now() - startTime;
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No users found",
+        timeTakenMs: totalMs,
+        timeTakenSec: (totalMs / 1000).toFixed(2),
+        data: [],
+      });
+    }
+
+    const results = [];
+    const THIRTY_MIN = 30 * 60 * 1000;
+
+    for (const user of users) {
+      try {
+        const existingFund = await FundPNL.findOne({
+          where: { userId: user.id },
+        });
+
+        const broker = (user.brokerName || "").toLowerCase();
+
+        if (broker === "angelone" && user.role === "user") {
+          const response = await handleAngelOneUser(user, existingFund);
+          results.push(response);
+          continue;
+        }
+
+        if (broker === "kite" && user.role === "user") {
+          const response = await handleKiteUser(user, existingFund);
+          results.push(response);
+          continue;
+        }
+
+        if (user.role === "clone-user") {
+          results.push({
+            userId: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            brokerName: user.brokerName,
+            angelFund: user.fund || 0,
+            status: "CLONE_USER",
+            message: "Clone user fallback",
+          });
+          continue;
+        }
+
+        results.push({
+          userId: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          brokerName: user.brokerName,
+          status: "UNKNOWN_BROKER",
+          message: "Broker not supported",
+        });
+
+      } catch (error) {
+        results.push({
+          userId: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          brokerName: user.brokerName,
+          status: "ERROR",
+          message: error.message,
+        });
+      }
+    }
+
+    // ⏱️ Calculate duration
+    const endTime = Date.now();
+    const totalMs = endTime - startTime;
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "Funds refreshed",
+      timeTakenMs: totalMs,
+      timeTakenSec: (totalMs / 1000).toFixed(2),
+      usersCount: users.length,
+      data: results,
+    });
+
+  } catch (error) {
+    const totalMs = Date.now() - startTime;
+
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred",
+      timeTakenMs: totalMs,
+      timeTakenSec: (totalMs / 1000).toFixed(2),
+      error: error.message,
+    });
+  }
+};
+
+
+// ==========================================================
+// ===================running code ==========================
+// ==========================================================
+
+export const refreshAngelFundsForAllUsers1 = async (req, res) => {
   try {
     
       const users = await User.findAll({ where: {
@@ -2139,12 +2261,16 @@ export const refreshAngelFundsForAllUsers = async (req, res) => {
 
         const now = Date.now();
         const isFresh =
-          existingFund &&
-          existingFund.updatedAt &&
-          existingFund.updatedAt.getTime() > now - THIRTY_MIN;
+          // existingFund &&
+          // existingFund.updatedAt &&
+          // existingFund.updatedAt.getTime() > now - THIRTY_MIN;
+          false
 
         // 🔥 Use Cached Fund - Angel + Kite Common
         if (isFresh) {
+
+          console.log('fffff');
+          
           results.push({
             userId: user.id,
            username:user.username,
@@ -2158,6 +2284,8 @@ export const refreshAngelFundsForAllUsers = async (req, res) => {
           });
           continue;
         }
+
+         console.log('tttttt');
 
         // ************************************************************
         // 🔥 START: BROKER BASED LOGIC

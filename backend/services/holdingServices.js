@@ -56,17 +56,54 @@ function normalizeAngelHolding(h) {
 // ========================
 // POSITION NORMALIZER
 // ========================
+
 function normalizeAngelPosition(p) {
+  const type = String(p.producttype || "").toUpperCase();
+
+  let buyqty = 0;
+  let sellqty = 0;
+  let avgprice = 0;
+
+  if (type === "CARRYFORWARD") {
+    // Take CF numbers
+    buyqty = Number(p.cfbuyqty || 0);
+    sellqty = Number(p.cfsellqty || 0);
+    avgprice = Number(p.totalbuyavgprice || p.cfbuyavgprice || 0);
+  } else if (type === "CNC") {
+    // Take Today CNC qty
+    buyqty = Number(p.buyqty || 0);
+    sellqty = Number(p.sellqty || 0);
+    avgprice = Number(p.buyavgprice || 0);
+  } else {
+    // fallback (MIS or others)
+    buyqty = Number(p.buyqty || 0);
+    sellqty = Number(p.sellqty || 0);
+    avgprice = Number(p.buyavgprice || 0);
+  }
+
   return {
     symboltoken: String(p.symboltoken || "").trim(),
     tradingsymbol: String(p.tradingsymbol || "").toUpperCase(),
-    producttype: p.producttype, // CNC / MIS
-    buyqty: Number(p.buyqty || 0),
-    sellqty: Number(p.sellqty || 0),
-    netqty: Number(p.netqty || 0),
-    avgprice: Number(p.buyavgprice || 0),
+    producttype: type,
+    buyqty,
+    sellqty,
+    netqty: buyqty - sellqty,
+    avgprice,
   };
 }
+
+
+// function normalizeAngelPosition(p) {
+//   return {
+//     symboltoken: String(p.symboltoken || "").trim(),
+//     tradingsymbol: String(p.tradingsymbol || "").toUpperCase(),
+//     producttype: p.producttype, // CNC / MIS
+//     buyqty: Number(p.buyqty || 0),
+//     sellqty: Number(p.sellqty || 0),
+//     netqty: Number(p.netqty || 0),
+//     avgprice: Number(p.buyavgprice || 0),
+//   };
+// }
 
 
 function isAfterMarketClose() {
@@ -98,6 +135,16 @@ async function syncAngelPositionsWithDB({ user, positions, req }) {
     if (p.buyqty <= p.sellqty) continue;
 
     let positionStatus = "HOLDING";
+  
+//     const order = await Order.findOne({
+//   where: {
+//     userId: user.id,
+//     broker: "angelone",
+//     symboltoken: p.symboltoken,
+//     transactiontype: "BUY",
+//     orderstatuslocaldb: "OPEN",
+//   }
+// });
 
     await Order.update(
       {
@@ -219,21 +266,22 @@ export async function angeloneHoldingFun({ user, req, order }) {
     // ✅ AngelOne response usually: { status, message, errorcode, data: [...] }
     const holdings = resp?.data?.data || resp?.data?.holding || [];
 
-  if(holdings.length===0) {
+    if(holdings.length===0) {
 
-    return {
-      result: false,
-      broker: "angelone",
-      holdings, // ✅ raw holdings list
-      count: Array.isArray(holdings) ? holdings.length : 0,
-      // optional: fullResponse: resp.data
-    };
+      return {
+        result: false,
+        broker: "angelone",
+        holdings, // ✅ raw holdings list
+        count: Array.isArray(holdings) ? holdings.length : 0,
+        // optional: fullResponse: resp.data
+      };
 
-  }
+    }
 
     await syncAngelHoldingsWithLocalDB({ user, holdings, req });
 
      const afterMarket = isAfterMarketClose();
+      // const afterMarket = true
 
       if(afterMarket) {
 
@@ -644,12 +692,7 @@ function normalizeFinvasiaHolding(h) {
 
 async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
   try {
-    logSuccess(req, {
-      msg: "syncFinvasiaHoldingsWithLocalDB started",
-      userId: user?.id,
-      broker: "finvasia",
-      holdingsCount: Array.isArray(holdings) ? holdings.length : 0,
-    });
+   
 
     if (!Array.isArray(holdings) || holdings.length === 0) {
       logSuccess(req, { msg: "No Finvasia holdings to sync", userId: user?.id });
@@ -660,11 +703,7 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
       .map(normalizeFinvasiaHolding)
       .filter((h) => h.tradingsymbol && h.quantity > 0);
 
-    logSuccess(req, {
-      msg: "Finvasia holdings normalized & filtered (qty>0)",
-      userId: user?.id,
-      openHoldingsCount: openHoldings.length,
-    });
+  
 
     if (!openHoldings.length) {
       logSuccess(req, { msg: "No open holdings after filter (finvasia)", userId: user?.id });
@@ -675,14 +714,7 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
     const holdingMap = new Map();
     for (const h of openHoldings) holdingMap.set(h.tradingsymbol, h);
 
-    logSuccess(req, {
-      msg: "Holding map prepared (finvasia)",
-      userId: user?.id,
-      uniqueSymbols: holdingMap.size,
-    });
 
-    // Fetch OPEN BUY orders FIFO
-    logSuccess(req, { msg: "Fetching OPEN BUY orders FIFO (finvasia)", userId: user?.id });
 
     const orders = await Order.findAll({
       where: {
@@ -695,30 +727,16 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
       raw: true,
     });
 
-    logSuccess(req, {
-      msg: "OPEN BUY orders fetched (finvasia)",
-      userId: user?.id,
-      openBuyCount: Array.isArray(orders) ? orders.length : 0,
-    });
-
+   
     // Group orders by symbol
     const ordersBySymbol = {};
-    logSuccess(req, { msg: "Grouping Finvasia orders by symbol", userId: user?.id });
+  
 
     for (const o of orders) {
       const sym = normSymFinvasia(o.tradingsymbol);
       if (!ordersBySymbol[sym]) ordersBySymbol[sym] = [];
       ordersBySymbol[sym].push(o);
     }
-
-    logSuccess(req, {
-      msg: "Orders grouped (finvasia)",
-      userId: user?.id,
-      symbolGroups: Object.keys(ordersBySymbol).length,
-    });
-
-    // FIFO allocation
-    logSuccess(req, { msg: "Starting FIFO allocation (finvasia)", userId: user?.id });
 
     let updatedCount = 0;
     let skippedNoLocalOrders = 0;
@@ -729,22 +747,11 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
 
       if (!symbolOrders.length) {
         skippedNoLocalOrders++;
-        logSuccess(req, {
-          msg: "No local OPEN BUY orders for Finvasia holding symbol",
-          userId: user?.id,
-          sym,
-          holdingQty: holding.quantity,
-        });
+       
         continue;
       }
 
-      logSuccess(req, {
-        msg: "Allocating Finvasia holding to FIFO orders",
-        userId: user?.id,
-        sym,
-        holdingQty: holding.quantity,
-        openOrdersForSymbol: symbolOrders.length,
-      });
+     
 
       for (const ord of symbolOrders) {
         if (remainingQty <= 0) break;
@@ -754,37 +761,18 @@ async function syncFinvasiaHoldingsWithLocalDB({ user, holdings, req }) {
 
         const allocatedQty = Math.min(orderQty, remainingQty);
 
-        logSuccess(req, {
-          msg: "Updating Finvasia order positionStatus => HOLDING",
-          userId: user?.id,
-          orderDbId: ord.id,
-          sym,
-          orderQty,
-          allocatedQty,
-          remainingBefore: remainingQty,
-        });
+      
 
         await Order.update({ positionStatus: "HOLDING" }, { where: { id: ord.id } });
 
         updatedCount++;
         remainingQty -= allocatedQty;
 
-        logSuccess(req, {
-          msg: "Finvasia order marked HOLDING (post allocation)",
-          userId: user?.id,
-          orderDbId: ord.id,
-          sym,
-          remainingAfter: remainingQty,
-        });
+       
       }
     }
 
-    logSuccess(req, {
-      msg: "syncFinvasiaHoldingsWithLocalDB completed",
-      userId: user?.id,
-      updatedCount,
-      skippedNoLocalOrders,
-    });
+  
   } catch (e) {
     logError(req, e, { msg: "syncFinvasiaHoldingsWithLocalDB failed", userId: user?.id });
     throw e;

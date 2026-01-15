@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import Order from "../../models/orderModel.js";
 import Trade from "../../models/tradeModel.js";
@@ -6,87 +5,76 @@ import User from "../../models/userModel.js";
 import { logSuccess, logError } from "../../utils/loggerr.js";
 import { getKiteClientForUserId } from "../../services/userKiteBrokerService.js";
 
-
 /* ======================================================
    BROKER FETCH FUNCTIONS
 ====================================================== */
 const fetchAngelOrders = async (user) => {
+  try {
+    if (!user.authToken) return [];
 
-  try{
+    const res = await axios.get(
+      "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook",
+      {
+        headers: {
+          Authorization: `Bearer ${user.authToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-UserType": "USER",
+          "X-SourceID": "WEB",
+          "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+          "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+          "X-MACAddress": process.env.MAC_Address,
+          "X-PrivateKey": process.env.PRIVATE_KEY,
+        },
+      }
+    );
 
-     if (!user.authToken) return [];
-
-  const res = await axios.get(
-    "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook",
-    {
-      headers: {
-        Authorization: `Bearer ${user.authToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-UserType": "USER",
-        "X-SourceID": "WEB",
-        "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
-        "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
-        "X-MACAddress": process.env.MAC_Address,
-        "X-PrivateKey": process.env.PRIVATE_KEY,
-      },
-    }
-  );
-
-  return (res.data?.data || [])
-    .filter(o => o.status === "complete")
-    .map(o => ({
-      broker: "angelone",
-      tradingsymbol: o.tradingsymbol,
-      transactiontype: o.transactiontype, // BUY / SELL
-      quantity: Number(o.filledshares),
-      price: Number(o.averageprice),
-      orderid: o.orderid,
-      uniqueorderid:o.uniqueorderid,
-      filltime:o.exchtime,
-       userNameId:user.username,
-      userId:user.id,
-    }));
-
-  }catch(err) {
-     return []
+    return (res.data?.data || [])
+      .filter(o => o.status === "complete")
+      .map(o => ({
+        broker: "angelone",
+        tradingsymbol: o.tradingsymbol,
+        transactiontype: o.transactiontype, // BUY / SELL
+        quantity: Number(o.filledshares),
+        price: Number(o.averageprice),
+        orderid: o.orderid,
+        uniqueorderid: o.uniqueorderid,
+        filltime: o.exchtime,
+        userNameId: user.username,
+        userId: user.id,
+        ordertag: o.ordertag || null, // software tag
+      }));
+  } catch (err) {
+    console.error("Angel fetch error:", err.message);
+    return [];
   }
-
- 
 };
-
 
 const fetchKiteOrders = async (user) => {
   try {
-    
-  const kite = await getKiteClientForUserId(user.id); 
+    const kite = await getKiteClientForUserId(user.id);
+    const orders = await kite.getOrders();
 
-  const orders = await kite.getOrders();
-
-  return (orders || [])
-    .filter(o => o.status === "COMPLETE")
-    .map(o => ({
-      broker: "kite",
-      tradingsymbol: o.tradingsymbol,
-      transactiontype: o.transaction_type, // BUY / SELL
-      quantity: Number(o.filled_quantity),
-      price: Number(o.average_price),
-      orderid: o.order_id,
-      userNameId:user.username,
-      userId:user.id,
-      uniqueorderid:o.exchange_order_id,
-      filltime:o.exchange_timestamp
-    }));
-
+    return (orders || [])
+      .filter(o => o.status === "COMPLETE")
+      .map(o => ({
+        broker: "kite",
+        tradingsymbol: o.tradingsymbol,
+        transactiontype: o.transaction_type,
+        quantity: Number(o.filled_quantity),
+        price: Number(o.average_price),
+        orderid: o.order_id,
+        userNameId: user.username,
+        userId: user.id,
+        uniqueorderid: o.exchange_order_id,
+        filltime: o.exchange_timestamp,
+        ordertag: o.ordertag || null,
+      }));
   } catch (error) {
-
-    return []
-    
+    console.error("Kite fetch error:", error.message);
+    return [];
   }
 };
-
-
-/* ================= DUMMY BROKER FETCH ================= */
 
 const fetchBrokerOrders = async (user) => {
   if (user.brokerName === "angelone") return fetchAngelOrders(user);
@@ -94,34 +82,30 @@ const fetchBrokerOrders = async (user) => {
   return [];
 };
 
-
 /* =====================================================
    MAIN API
 ===================================================== */
 
-
 export const GetOrderStatusPerticularSymbol = async (req, res) => {
   try {
-
-    const openBuys = await Order.findAll({
+    // Get all software BUY orders (OPEN or COMPLETE) to sync with DEMAT
+    const softwareOrders = await Order.findAll({
       where: {
         transactiontype: "BUY",
-        orderstatuslocaldb: "OPEN",
         status: "COMPLETE",
       },
       raw: true,
     });
 
-    if (!openBuys.length) {
-      return res.json({ status: true, message: "No open positions" });
+    if (!softwareOrders.length) {
+      return res.json({ status: true, message: "No software BUY orders found" });
     }
 
     const userCache = {};
     const brokerCache = {};
 
-    for (const buy of openBuys) {
-
-      /* ---------- USER ---------- */
+    for (const buy of softwareOrders) {
+      // ---------- USER ----------
       let user = userCache[buy.userId];
       if (!user) {
         user = await User.findOne({ where: { id: buy.userId }, raw: true });
@@ -129,165 +113,442 @@ export const GetOrderStatusPerticularSymbol = async (req, res) => {
       }
       if (!user) continue;
 
-      /* ---------- BROKER DATA ---------- */
+      // ---------- BROKER DATA ----------
       if (!brokerCache[user.id]) {
-
-         let brokerOrders = await fetchBrokerOrders(user);
-          if(brokerOrders.length===0) {
-            continue  
-          }else{
-                brokerCache[user.id] = await fetchBrokerOrders(user);
-          }
-      
+        const brokerOrders = await fetchBrokerOrders(user);
+        if (!brokerOrders.length) continue;
+        brokerCache[user.id] = brokerOrders.sort(
+          (a, b) => new Date(a.filltime) - new Date(b.filltime)
+        ); // FIFO
       }
 
-      /* ---------- FILTER ONLY AFTER THIS BUY ---------- */
-      const brokerTrades = brokerCache[user.id].filter(t =>
-        t.tradingsymbol === buy.tradingsymbol &&
-        new Date(t.filltime) >= new Date(buy.filltime)
-      );
+      // ---------- MATCH TRADES ----------
+      let remainingQty = buy.quantity;
+      let buyValue = 0;
+      let sellValue = 0;
 
-      if (!brokerTrades.length) continue;
+      const matchedTrades = [];
 
-      /* ---------- AGGREGATION ---------- */
-      let buyQty = 0, buyValue = 0;
-      let sellQty = 0, sellValue = 0;
+      for (const t of brokerCache[user.id]) {
+        if (t.tradingsymbol !== buy.tradingsymbol) continue;
 
-      for (const t of brokerTrades) {
+        const isSoftwareOrder = t.ordertag === "softwareetu";
+
         if (t.transactiontype === "BUY") {
-          buyQty += Number(t.quantity);
           buyValue += t.quantity * t.price;
+        }
 
+        if (t.transactiontype === "SELL" && remainingQty > 0) {
+          // FIFO: earliest SELL for software BUY
+          const usedQty = Math.min(remainingQty, t.quantity);
+          remainingQty -= usedQty;
+          sellValue += usedQty * t.price;
 
+          matchedTrades.push({
+            ...t,
+            usedQty,
+            isSoftwareOrder,
+          });
 
-          console.log(t,'t object');
-          
+          // AUDIT SELL
+          await Trade.findOrCreate({
+            where: { orderid: t.orderid },
+            defaults: {
+              ...t,
+              filltime: new Date(t.filltime).toISOString(),
+              transactiontype: "SELL",
+              source: isSoftwareOrder ? "SOFTWARE" : "DEMAT-MANUAL",
+              userId: buy.userId,
+              userNameId: buy.userNameId,
+              status: "COMPLETE",
+            },
+          });
+        }
 
-
-          // 🔥 AUDIT BUY
+        // AUDIT BUY
+        if (t.transactiontype === "BUY" && isSoftwareOrder) {
           await Trade.findOrCreate({
             where: { orderid: t.orderid },
             defaults: {
               ...t,
               filltime: new Date(t.filltime).toISOString(),
               transactiontype: "BUY",
-              userId:buy.userId,
-              userNameId:buy.userNameId,
-              orderid: buy.orderid,
-              source: "DEMAT",
-              status: "COMPLETE",
-            },
-          });
-        }
-
-        if (t.transactiontype === "SELL") {
-          sellQty += Number(t.quantity);
-          sellValue += t.quantity * t.price;
-
-
-          console.log(buy,'t buy');
-          
-
-          // 🔥 AUDIT SELL
-          await Trade.findOrCreate({
-            where: { orderid: t.orderid },
-            defaults: {
-              ...t,
-              filltime: new Date(t.filltime).toISOString(),
-              userId:buy.userId,
-              userNameId:buy.userNameId,
-              transactiontype: "SELL",
-              orderid: buy.orderid,
-              source: "DEMAT",
+              source: "SOFTWARE",
+              userId: buy.userId,
+              userNameId: buy.userNameId,
               status: "COMPLETE",
             },
           });
         }
       }
 
-      const buyAvg = buyQty ? buyValue / buyQty : 0;
-      const sellAvg = sellQty ? sellValue / sellQty : 0;
+      const buyAvg = buyValue / buy.quantity;
+      const sellQtyDone = buy.quantity - remainingQty;
+      const sellAvg = sellQtyDone > 0 ? sellValue / sellQtyDone : 0;
 
-      /* ================= ONLY BUY ================= */
-      if (sellQty === 0) {
-  
+      // ---------------- ONLY BUY ----------------
+      if (sellQtyDone === 0) {
         await Order.update(
           {
-            quantity: buyQty,
-            fillsize: buyQty,
+            fillsize: buy.quantity,
             price: buyAvg,
             fillprice: buyAvg,
-            tradedValue: buyQty * buyAvg,
+            tradedValue: buy.quantity * buyAvg,
           },
           { where: { id: buy.id } }
         );
         continue;
       }
 
-      /* ================= PARTIAL SELL ================= */
-      if (sellQty < buyQty) {
-        const remaining = buyQty - sellQty;
-
+      // ---------------- PARTIAL SELL ----------------
+      if (remainingQty > 0 && remainingQty < buy.quantity) {
         await Order.update(
           {
-            quantity: remaining,
-            fillsize: remaining,
-            tradedValue: remaining * buyAvg,
+            quantity: remainingQty,
+            fillsize: remainingQty,
+            tradedValue: remainingQty * buyAvg,
           },
           { where: { id: buy.id } }
         );
         continue;
       }
 
-      /* ================= FULL SELL ================= */
-      if (sellQty >= buyQty) {
+      // ---------------- FULL SELL ----------------
+      if (remainingQty === 0) {
+        const firstSell = matchedTrades.find(t => t.isSoftwareOrder || t.source === "DEMAT-MANUAL");
 
-        const lastSell = brokerTrades
-          .filter(t => t.transactiontype === "SELL")
-          .pop();
+        const pnl = (sellAvg - buyAvg) * buy.quantity;
 
-        const pnl = (sellAvg - buyAvg) * buyQty;
-
+        // Close original BUY
         await Order.update(
-          {
-            orderstatuslocaldb: "COMPLETE",
-            positionStatus: "COMPLETE",
-          },
+          { orderstatuslocaldb: "COMPLETE", positionStatus: "COMPLETE" },
           { where: { id: buy.id } }
         );
 
+        // Create SELL entry for audit
         await Order.create({
           ...buy,
           id: undefined,
           transactiontype: "SELL",
-          quantity: buyQty,
+          quantity: buy.quantity,
+          fillsize: buy.quantity,
           price: sellAvg,
-          tradedValue: sellAvg * buyQty,
           fillprice: sellAvg,
-          fillsize: buyQty,
+          tradedValue: sellAvg * buy.quantity,
           buyprice: buyAvg,
-          buyvalue: buyAvg * buyQty,
-          buysize: buyQty,
-          buyTime: new Date( buy.filltime).toISOString(),
+          buyvalue: buyAvg * buy.quantity,
+          buysize: buy.quantity,
+          buyTime: new Date(buy.filltime).toISOString(),
           pnl,
-          orderid: lastSell.orderid,
-          uniqueorderid: lastSell?.uniqueorderid,
-          fillid: lastSell?.fillid,
-          filltime: new Date(lastSell.filltime).toISOString(),
+          orderid: firstSell.orderid,
+          uniqueorderid: firstSell?.uniqueorderid,
+          fillid: firstSell?.fillid,
+          filltime: new Date(firstSell.filltime).toISOString(),
           orderstatuslocaldb: "COMPLETE",
           positionStatus: "COMPLETE",
         });
       }
     }
 
-    return res.json({ status: true, message: "Order sync done" });
-
+    return res.json({ status: true, message: "Full reconciliation done" });
   } catch (err) {
     console.error(err);
     logError(req, err);
     return res.json({ status: false, message: err.message });
   }
 };
+
+
+
+// ======================ref code 6 jan 2025========================
+
+
+// import axios from "axios";
+// import Order from "../../models/orderModel.js";
+// import Trade from "../../models/tradeModel.js";
+// import User from "../../models/userModel.js";
+// import { logSuccess, logError } from "../../utils/loggerr.js";
+// import { getKiteClientForUserId } from "../../services/userKiteBrokerService.js";
+
+
+// /* ======================================================
+//    BROKER FETCH FUNCTIONS
+// ====================================================== */
+// const fetchAngelOrders = async (user) => {
+
+//   try{
+
+//      if (!user.authToken) return [];
+
+//   const res = await axios.get(
+//     "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook",
+//     {
+//       headers: {
+//         Authorization: `Bearer ${user.authToken}`,
+//         "Content-Type": "application/json",
+//         Accept: "application/json",
+//         "X-UserType": "USER",
+//         "X-SourceID": "WEB",
+//         "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+//         "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+//         "X-MACAddress": process.env.MAC_Address,
+//         "X-PrivateKey": process.env.PRIVATE_KEY,
+//       },
+//     }
+//   );
+
+//   return (res.data?.data || [])
+//     .filter(o => o.status === "complete")
+//     .map(o => ({
+//       broker: "angelone",
+//       tradingsymbol: o.tradingsymbol,
+//       transactiontype: o.transactiontype, // BUY / SELL
+//       quantity: Number(o.filledshares),
+//       price: Number(o.averageprice),
+//       orderid: o.orderid,
+//       uniqueorderid:o.uniqueorderid,
+//       filltime:o.exchtime,
+//        userNameId:user.username,
+//       userId:user.id,
+//     }));
+
+//   }catch(err) {
+//      return []
+//   }
+
+ 
+// };
+
+
+// const fetchKiteOrders = async (user) => {
+//   try {
+    
+//   const kite = await getKiteClientForUserId(user.id); 
+
+//   const orders = await kite.getOrders();
+
+//   return (orders || [])
+//     .filter(o => o.status === "COMPLETE")
+//     .map(o => ({
+//       broker: "kite",
+//       tradingsymbol: o.tradingsymbol,
+//       transactiontype: o.transaction_type, // BUY / SELL
+//       quantity: Number(o.filled_quantity),
+//       price: Number(o.average_price),
+//       orderid: o.order_id,
+//       userNameId:user.username,
+//       userId:user.id,
+//       uniqueorderid:o.exchange_order_id,
+//       filltime:o.exchange_timestamp
+//     }));
+
+//   } catch (error) {
+
+//     return []
+    
+//   }
+// };
+
+
+// /* ================= DUMMY BROKER FETCH ================= */
+
+// const fetchBrokerOrders = async (user) => {
+//   if (user.brokerName === "angelone") return fetchAngelOrders(user);
+//   if (user.brokerName === "kite") return fetchKiteOrders(user);
+//   return [];
+// };
+
+
+// /* =====================================================
+//    MAIN API
+// ===================================================== */
+
+
+// export const GetOrderStatusPerticularSymbol = async (req, res) => {
+//   try {
+
+//     const openBuys = await Order.findAll({
+//       where: {
+//         transactiontype: "BUY",
+//         orderstatuslocaldb: "OPEN",
+//         status: "COMPLETE",
+//       },
+//       raw: true,
+//     });
+
+//     if (!openBuys.length) {
+//       return res.json({ status: true, message: "No open positions" });
+//     }
+
+//     const userCache = {};
+//     const brokerCache = {};
+
+//     for (const buy of openBuys) {
+
+//       /* ---------- USER ---------- */
+//       let user = userCache[buy.userId];
+//       if (!user) {
+//         user = await User.findOne({ where: { id: buy.userId }, raw: true });
+//         userCache[buy.userId] = user;
+//       }
+//       if (!user) continue;
+
+//       /* ---------- BROKER DATA ---------- */
+//       if (!brokerCache[user.id]) {
+
+//          let brokerOrders = await fetchBrokerOrders(user);
+//           if(brokerOrders.length===0) {
+//             continue  
+//           }else{
+//                 brokerCache[user.id] = await fetchBrokerOrders(user);
+//           }
+      
+//       }
+
+//       /* ---------- FILTER ONLY AFTER THIS BUY ---------- */
+//       const brokerTrades = brokerCache[user.id].filter(t =>
+//         t.tradingsymbol === buy.tradingsymbol &&
+//         new Date(t.filltime) >= new Date(buy.filltime)
+//       );
+
+//       if (!brokerTrades.length) continue;
+
+//       /* ---------- AGGREGATION ---------- */
+//       let buyQty = 0, buyValue = 0;
+//       let sellQty = 0, sellValue = 0;
+
+//       for (const t of brokerTrades) {
+//         if (t.transactiontype === "BUY") {
+//           buyQty += Number(t.quantity);
+//           buyValue += t.quantity * t.price;
+
+
+
+//           console.log(t,'t object');
+          
+
+
+//           // 🔥 AUDIT BUY
+//           await Trade.findOrCreate({
+//             where: { orderid: t.orderid },
+//             defaults: {
+//               ...t,
+//               filltime: new Date(t.filltime).toISOString(),
+//               transactiontype: "BUY",
+//               userId:buy.userId,
+//               userNameId:buy.userNameId,
+//               orderid: buy.orderid,
+//               source: "DEMAT",
+//               status: "COMPLETE",
+//             },
+//           });
+//         }
+
+//         if (t.transactiontype === "SELL") {
+//           sellQty += Number(t.quantity);
+//           sellValue += t.quantity * t.price;
+
+
+//           // 🔥 AUDIT SELL
+//           await Trade.findOrCreate({
+//             where: { orderid: t.orderid },
+//             defaults: {
+//               ...t,
+//               filltime: new Date(t.filltime).toISOString(),
+//               userId:buy.userId,
+//               userNameId:buy.userNameId,
+//               transactiontype: "SELL",
+//               orderid: buy.orderid,
+//               source: "DEMAT",
+//               status: "COMPLETE",
+//             },
+//           });
+//         }
+//       }
+
+//       const buyAvg = buyQty ? buyValue / buyQty : 0;
+//       const sellAvg = sellQty ? sellValue / sellQty : 0;
+
+//       /* ================= ONLY BUY ================= */
+//       if (sellQty === 0) {
+  
+//         await Order.update(
+//           {
+//             quantity: buyQty,
+//             fillsize: buyQty,
+//             price: buyAvg,
+//             fillprice: buyAvg,
+//             tradedValue: buyQty * buyAvg,
+//           },
+//           { where: { id: buy.id } }
+//         );
+//         continue;
+//       }
+
+//       /* ================= PARTIAL SELL ================= */
+//       if (sellQty < buyQty) {
+//         const remaining = buyQty - sellQty;
+
+//         await Order.update(
+//           {
+//             quantity: remaining,
+//             fillsize: remaining,
+//             tradedValue: remaining * buyAvg,
+//           },
+//           { where: { id: buy.id } }
+//         );
+//         continue;
+//       }
+
+//       /* ================= FULL SELL ================= */
+//       if (sellQty >= buyQty) {
+
+//         const lastSell = brokerTrades
+//           .filter(t => t.transactiontype === "SELL")
+//           .pop();
+
+//         const pnl = (sellAvg - buyAvg) * buyQty;
+
+//         await Order.update(
+//           {
+//             orderstatuslocaldb: "COMPLETE",
+//             positionStatus: "COMPLETE",
+//           },
+//           { where: { id: buy.id } }
+//         );
+
+//         await Order.create({
+//           ...buy,
+//           id: undefined,
+//           transactiontype: "SELL",
+//           quantity: buyQty,
+//           price: sellAvg,
+//           tradedValue: sellAvg * buyQty,
+//           fillprice: sellAvg,
+//           fillsize: buyQty,
+//           buyprice: buyAvg,
+//           buyvalue: buyAvg * buyQty,
+//           buysize: buyQty,
+//           buyTime: new Date( buy.filltime).toISOString(),
+//           pnl,
+//           orderid: lastSell.orderid,
+//           uniqueorderid: lastSell?.uniqueorderid,
+//           fillid: lastSell?.fillid,
+//           filltime: new Date(lastSell.filltime).toISOString(),
+//           orderstatuslocaldb: "COMPLETE",
+//           positionStatus: "COMPLETE",
+//         });
+//       }
+//     }
+
+//     return res.json({ status: true, message: "Order sync done" });
+
+//   } catch (err) {
+//     console.error(err);
+//     logError(req, err);
+//     return res.json({ status: false, message: err.message });
+//   }
+// };
 
 
 

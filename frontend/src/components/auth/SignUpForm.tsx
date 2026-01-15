@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useState,useEffect } from "react";
 import { Link } from "react-router";
 import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
@@ -25,6 +25,43 @@ export default function SignUpForm() {
   const [isChecked, setIsChecked] = useState(() => {
     return JSON.parse(localStorage.getItem("termsAccepted") || "false");
   });
+
+  const [brokers, setBrokers] = useState([]);
+
+  useEffect(() => {
+
+   
+    
+  const fetchBrokers = async () => {
+    try {
+
+       console.log(`${apiUrl}/admin/brokersignup`,'nnnnnnnn');
+
+      const res = await axios.get(`${apiUrl}/admin/brokersignup`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+      });
+
+      console.log(res,'tgbggbg');
+      
+      if (res.data.status) {
+        setBrokers(res.data.data);
+      }
+    } catch (err) {
+
+      console.log(err,'hhhhy error');
+      
+      toast.error("Failed to load brokers");
+    }
+  };
+  fetchBrokers();
+}, []);
+
+
+console.log(brokers,'====================brokers================');
+
+
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,7 +200,7 @@ export default function SignUpForm() {
               </div>
 
               {/* Broker */}
-              <div>
+              {/* <div>
                 <Label>Broker<span className="text-error-500">*</span></Label>
                 <select
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full bg-white"
@@ -180,10 +217,26 @@ export default function SignUpForm() {
                   <option value="kite">Kite</option>
                    <option value="finvasia">Finvasia</option>
                   <option value="fyers">Fyers</option>
-                  <option value="grow">Grow</option>
+                  <option value="groww">Groww</option>
                     <option value="upstox">UpStox</option>
                 </select>
-              </div>
+              </div> */}
+              <div>
+  <Label>Broker<span className="text-error-500">*</span></Label>
+  <select
+    className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full bg-white"
+    value={broker}
+    onChange={(e) => setBroker(e.target.value)}
+    required
+  >
+    <option value="">Select Broker</option>
+    {brokers.map((b: any) => (
+      <option key={b.id} value={b.brokerName}>
+        {b.brokerName}
+      </option>
+    ))}
+  </select>
+</div>
 
               {/* Password */}
               <div>

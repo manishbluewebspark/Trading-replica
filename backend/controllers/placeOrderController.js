@@ -955,10 +955,67 @@ export const getOrderInTables = async (req, res, next) => {
       filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
     }));
 
+
+     // Group by strategyUniqueId + userId + buyOrderId
+    const aggMap = new Map();
+
+    for (const item of formatted) {
+      const key = `${item.strategyUniqueId}_${item.userId}_${item.buyOrderId}`;
+
+      if (!aggMap.has(key)) {
+        aggMap.set(key, {
+          ...item,
+          client_data: [],
+          totalSellQty: 0,
+          totalBuyQty: Number(item.buysize || 0),
+          totalSellValue: 0,
+          totalBuyValue: Number(item.buyvalue || item.buyprice * Number(item.buysize || 0) || 0),
+          totalPNL: 0,
+        });
+      }
+
+      const row = aggMap.get(key);
+
+      // Update sell-related fields (merge all sell orders)
+      const sellQty = Number(item.fillsize || item.quantity || 0);
+      const sellValue = Number(item.tradedValue || item.fillprice * sellQty || 0);
+
+      row.totalSellQty += sellQty;
+      row.totalSellValue += sellValue;
+      row.totalPNL = row.totalSellValue - (row.totalBuyValue * (row.totalSellQty / row.totalBuyQty));
+    }
+
+    // Prepare final output (single aggregated row per unique group)
+    const final = [...aggMap.values()].map((x) => {
+      const avgSell = x.totalSellQty ? x.totalSellValue / x.totalSellQty : 0;
+      const avgBuy = x.totalBuyQty ? x.totalBuyValue / x.totalBuyQty : 0;
+
+      // Create aggregated client_data row (single row with merged data)
+      const aggregatedClientData = {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+      };
+
+      return {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+        client_data: [aggregatedClientData], // Single aggregated row in subtable
+      };
+    });
+
+
     return res.json({
       status: true,
       statusCode: 200,
-      data: formatted,
+      data: final,
       buydata: buyCount,
       message: "get data",
     });
@@ -1491,6 +1548,165 @@ export const adminGetTradeInTables = async (req, res, next) => {
         orderstatuslocaldb: "COMPLETE",
         transactiontype: "SELL",
       },
+      order: [["filltime", "DESC"]],
+      raw: true,
+    });
+
+    const buyCount = await Order.count({
+      where: {
+        transactiontype: "SELL",
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    // Convert UTC → IST
+    const formatted = orderData.map((o) => ({
+      ...o,
+      createdAt: o.createdAt ? formatUTCToIST(o.createdAt) : null,
+      updatedAt: o.updatedAt ? formatUTCToIST(o.updatedAt) : null,
+      buyTime: o.buyTime ? formatUTCToIST(o.buyTime) : null,
+      filltime: o.filltime ? formatUTCToIST(o.filltime) : null,
+    }));
+
+    // Group by strategyUniqueId + userId + buyOrderId
+    const aggMap = new Map();
+
+    for (const item of formatted) {
+      const key = `${item.strategyUniqueId}_${item.userId}_${item.buyOrderId}`;
+
+      if (!aggMap.has(key)) {
+        aggMap.set(key, {
+          ...item,
+          client_data: [],
+          totalSellQty: 0,
+          totalBuyQty: Number(item.buysize || 0),
+          totalSellValue: 0,
+          totalBuyValue: Number(item.buyvalue || item.buyprice * Number(item.buysize || 0) || 0),
+          totalPNL: 0,
+        });
+      }
+
+      const row = aggMap.get(key);
+
+      // Update sell-related fields (merge all sell orders)
+      const sellQty = Number(item.fillsize || item.quantity || 0);
+      const sellValue = Number(item.tradedValue || item.fillprice * sellQty || 0);
+
+      row.totalSellQty += sellQty;
+      row.totalSellValue += sellValue;
+      row.totalPNL = row.totalSellValue - (row.totalBuyValue * (row.totalSellQty / row.totalBuyQty));
+    }
+
+    // Prepare final output (single aggregated row per unique group)
+    const final = [...aggMap.values()].map((x) => {
+      const avgSell = x.totalSellQty ? x.totalSellValue / x.totalSellQty : 0;
+      const avgBuy = x.totalBuyQty ? x.totalBuyValue / x.totalBuyQty : 0;
+
+      // Create aggregated client_data row (single row with merged data)
+      const aggregatedClientData = {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+      };
+
+      return {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+        client_data: [aggregatedClientData], // Single aggregated row in subtable
+      };
+    });
+
+
+
+    // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+    const groups = {};
+    final.forEach((item) => {
+      const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+
+    // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    const seen = new Set();
+    const unique = [];
+
+    for (const o of final) {
+      const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+      const key = `${uniqueKey}__${o.transactiontype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Add client_data field with all matching objects
+      unique.push({
+        ...o,
+        client_data: groups[uniqueKey] || [],
+      });
+    }
+
+
+
+
+
+
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      data: unique,
+      buydata: buyCount,
+      message: "get data",
+    });
+  } catch (error) {
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Unexpected error occurred. Please try again.",
+      data: null,
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const adminGetTradeInTables121 = async (req, res, next) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    const orderData = await Order.findAll({
+      where: {
+        filltime: { [Op.between]: [startISO, endISO] },
+        orderstatuslocaldb: "COMPLETE",
+        transactiontype: "SELL",
+      },
       order: [["filltime", "DESC"]], // Latest first
       //  limit: 6,        
       raw: true,
@@ -1747,9 +1963,66 @@ export const adminGetOrderWithDate = async (req, res,next) => {
             }));
 
 
-            // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+
+             // Group by strategyUniqueId + userId + buyOrderId
+    const aggMap = new Map();
+
+    for (const item of formatted) {
+      const key = `${item.strategyUniqueId}_${item.userId}_${item.buyOrderId}`;
+
+      if (!aggMap.has(key)) {
+        aggMap.set(key, {
+          ...item,
+          client_data: [],
+          totalSellQty: 0,
+          totalBuyQty: Number(item.buysize || 0),
+          totalSellValue: 0,
+          totalBuyValue: Number(item.buyvalue || item.buyprice * Number(item.buysize || 0) || 0),
+          totalPNL: 0,
+        });
+      }
+
+      const row = aggMap.get(key);
+
+      // Update sell-related fields (merge all sell orders)
+      const sellQty = Number(item.fillsize || item.quantity || 0);
+      const sellValue = Number(item.tradedValue || item.fillprice * sellQty || 0);
+
+      row.totalSellQty += sellQty;
+      row.totalSellValue += sellValue;
+      row.totalPNL = row.totalSellValue - (row.totalBuyValue * (row.totalSellQty / row.totalBuyQty));
+    }
+
+    // Prepare final output (single aggregated row per unique group)
+    const final = [...aggMap.values()].map((x) => {
+      const avgSell = x.totalSellQty ? x.totalSellValue / x.totalSellQty : 0;
+      const avgBuy = x.totalBuyQty ? x.totalBuyValue / x.totalBuyQty : 0;
+
+      // Create aggregated client_data row (single row with merged data)
+      const aggregatedClientData = {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+      };
+
+      return {
+        ...x,
+        quantity: x.totalSellQty,
+        buyprice: avgBuy,
+        fillprice: avgSell,
+        price: avgSell,
+        pnl: x.totalPNL.toFixed(2),
+        client_data: [aggregatedClientData], // Single aggregated row in subtable
+      };
+    });
+
+
+     // Group all objects by strategyUniqueId, but treat null/empty as unique keys
     const groups = {};
-    formatted.forEach((item) => {
+    final.forEach((item) => {
       const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
       if (!groups[key]) {
         groups[key] = [];
@@ -1761,7 +2034,7 @@ export const adminGetOrderWithDate = async (req, res,next) => {
     const seen = new Set();
     const unique = [];
 
-    for (const o of formatted) {
+    for (const o of final) {
       const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
       const key = `${uniqueKey}__${o.transactiontype}`;
       if (seen.has(key)) continue;
@@ -1772,6 +2045,34 @@ export const adminGetOrderWithDate = async (req, res,next) => {
         client_data: groups[uniqueKey] || [],
       });
     }
+
+
+
+    //         // Group all objects by strategyUniqueId, but treat null/empty as unique keys
+    // const groups = {};
+    // formatted.forEach((item) => {
+    //   const key = item.strategyUniqueId || `null_${item.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+    //   if (!groups[key]) {
+    //     groups[key] = [];
+    //   }
+    //   groups[key].push(item);
+    // });
+
+    // // Dedupe: (strategyUniqueId + transactiontype) same => keep only first (latest)
+    // const seen = new Set();
+    // const unique = [];
+
+    // for (const o of formatted) {
+    //   const uniqueKey = o.strategyUniqueId || `null_${o.id}`; // Use item.id to ensure uniqueness for null/empty strategyUniqueId
+    //   const key = `${uniqueKey}__${o.transactiontype}`;
+    //   if (seen.has(key)) continue;
+    //   seen.add(key);
+    //   // Add client_data field with all matching objects
+    //   unique.push({
+    //     ...o,
+    //     client_data: groups[uniqueKey] || [],
+    //   });
+    // }
 
 
 
@@ -1919,7 +2220,7 @@ export const getRejectsOrdersTable = async (req, res) => {
     // ---------------------------------------------------
     // 2) ONLY rejected / cancelled / failed
     // ---------------------------------------------------
-    const badStatuses = ["FAILED", "REJECTED", "CANCELLED"];
+    const badStatuses = ["FAILED", "REJECTED", "CANCELLED","OPEN","PENDING"];
 
     const orderData = await Order.findAll({
       where: {

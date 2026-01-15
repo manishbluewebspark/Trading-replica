@@ -5,6 +5,7 @@ import { cloneUserOneApi } from "./cloneUserApi";
 import { fyersApi } from "./fyersApi";
 import {finvasiaApi} from "./finvasiaApi"
 import {upStoxApi} from "./upStoxApi"
+import {growwApi} from "./growwApi"
 import {  useNavigate } from "react-router-dom";
 
 
@@ -71,6 +72,14 @@ if (broker === "angelone"&&userRole==='user') {
    if (broker === "finvasia"&&userRole==='user') {
     return {
       api: finvasiaApi,
+      image: brokerImage,
+       brokerName:broker,
+        role:userRole
+    };
+  }
+  if (broker === "groww"&&userRole==='user') {
+    return {
+      api: growwApi,
       image: brokerImage,
        brokerName:broker,
         role:userRole

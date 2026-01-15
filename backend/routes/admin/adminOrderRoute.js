@@ -47,14 +47,10 @@ router.post("/targetstoplosscheck", AdminAuthMiddleware, adminGroupSquareOff);
 
 
 
-
 // router.get('/fetchorderdetails',adminFetchBuyOrdersAndUpdateManual)
 router.get('/fetchsellorderdetails',adminFetchSellOrdersAndUpdateManual)
 
 router.post("/getusers/pnldata", getUsersPnlData);
-
-
-
 
 
 
@@ -90,6 +86,7 @@ router.delete("/strategies/:id",AdminAuthMiddleware, deleteStrategy);     // del
 
 // brokers routes
 router.get("/broker",authMiddleware, getAllBrokers);
+router.get("/brokersignup", getAllBrokers);
 router.get("/broker/:id",AdminAuthMiddleware, getBrokerById);
 router.post("/broker", AdminAuthMiddleware,createBroker);
 router.put("/broker",AdminAuthMiddleware, updateBroker);

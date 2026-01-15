@@ -1,14 +1,18 @@
-// services/fyers/placeFyersOrder.js
-
-import { setFyersAccessToken, fyers } from "../utils/fyersClient.js";
+import axios from "axios";
 import Order from "../models/orderModel.js";
 import { logSuccess, logError } from "../utils/loggerr.js";
+import { setFyersAccessToken, fyers } from "../utils/fyersClient.js";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
+import utc from "dayjs/plugin/utc.js";
 
 
+dayjs.extend(customParseFormat);
+dayjs.extend(utc);
 
-
-
-
+// ====================================================
+// 🌐 Helpers Inline
+// ====================================================
 
 function getFyersProductCode(type) {
   if (!type) return "INTRADAY"; // default Fyers product
@@ -34,359 +38,300 @@ function getFyersProductCode(type) {
   }
 }
 
+const normalizeStatus = (status = "") =>
+  status.toUpperCase().replace(/\s+/g, "").trim();
 
-function mapFyersOrderType(orderType) {
-  if (!orderType) return 1; // default LIMIT
-
-  switch (orderType.toUpperCase()) {
-    case "LIMIT":
-      return 1;      // LIMIT
-
-    case "MARKET":
-      return 2;      // MARKET
-
-    case "STOPLOSS_LIMIT":
-    case "SL":
-      return 3;      // Stoploss LIMIT
-
-    case "STOPLOSS_MARKET":
-    case "SL-M":
-      return 4;      // Stoploss MARKET
-
-    default:
-      return 1;      // fallback LIMIT
-  }
-}
-
-
-// ==============update logger code ==============================
-export const placeFyersOrder = async (user, reqInput, req) => {
-  try {
-
-    const nowISOError = new Date().toISOString();
-
-    logSuccess(req, { msg: "Fyers order flow started", userId: user?.id, reqInput });
-
-    // 1️⃣ Set Fyers access token (per user)
+const fetchFyersOrderDetailsWithRetry = async ({ orderid, attempts = 3 }) => {
+  for (let i = 0; i < attempts; i++) {
     try {
-      await setFyersAccessToken(user.authToken);
-      logSuccess(req, { msg: "Fyers access token set successfully" });
-    } catch (e) {
-      logError(req, e, { msg: "Failed to set Fyers access token" });
-      return {
-        userId: user.id,
-        broker: "Fyers",
-        result: "ERROR",
-        message: "Failed to set Fyers token",
-      };
+      const resp = await fyers.get_orders({});
+      const found = resp?.orderBook?.find(o => o.id === orderid);
+      if (found) return found;
+    } catch { /* ignore */ }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return null;
+};
+
+const fetchFyersTradebookWithRetry = async ({ orderid, expectedQty, attempts = 3 }) => {
+  let lastTrades = []; // store whatever we got in each attempt
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const resp = await fyers.get_trades({});
+      let trades = resp?.tradeBook?.filter(t => t.orderNumber === orderid) || [];
+
+      // store the trades found in this attempt
+      lastTrades = trades;
+
+      if (expectedQty) {
+        // check for trades matching the expected quantity
+        const matchingTrades = trades.filter(t => t.tradedQty||t.quantity === expectedQty);
+
+        if (matchingTrades.length) return matchingTrades; // exact match found
+      }
+    } catch (err) {
+      console.error("Error fetching trades:", err);
     }
 
-    const fyersProductType = getFyersProductCode(reqInput.productType);
-    const fyersOrderType = mapFyersOrderType(reqInput.orderType);
+    // wait 300ms before next retry
+    await new Promise(r => setTimeout(r, 300));
+  }
 
-    logSuccess(req, {
-      msg: "Resolved Fyers mappings",
-      fyersProductType,
-      fyersOrderType,
-    });
+  // after all retries, return whatever trades we got (partial or empty)
+  return lastTrades;
+};
 
-    const isLimitType = fyersOrderType === 1 || fyersOrderType === 3; // LIMIT, SL
-    const isMarketType = fyersOrderType === 2 || fyersOrderType === 4; // MARKET, SL-M
 
-    const limitPrice = isLimitType ? Number(reqInput.price || 0) : 0;
-    const stopPrice =
-      fyersOrderType === 3 || fyersOrderType === 4
-        ? Number(reqInput.triggerPrice || 0)
-        : 0;
+// ====================================================
+// 🚀 Main Function
+// ====================================================
+export const placeFyersOrder = async (user, reqInput, req, isLocalDbFlow = true) => {
+  let newOrder = null;
+  const nowISOError = new Date().toISOString();
 
-    logSuccess(req, {
-      msg: "Computed order prices",
-      isLimitType,
-      isMarketType,
-      limitPrice,
-      stopPrice,
-    });
+  try {
+    const transactionType = (reqInput.transactiontype || "").toUpperCase();
 
-    // Build Fyers symbol: "NSE:SBIN-EQ"
-    const fyersSymbol = reqInput.fyersSymbol ||reqInput.symbol
-    logSuccess(req, { msg: "Built fyersSymbol",fyersSymbol  });
+     const fyersProductType = getFyersProductCode(reqInput.productType);
 
-    // 2️⃣ CREATE LOCAL PENDING ORDER
+    if (!user?.authToken) {
+      return { result: "ERROR", message: "FYERS token missing" };
+    }
+
+    // ------------------------------------
+    // 0️⃣ Apply Token
+    // ------------------------------------
+    await setFyersAccessToken(user.authToken);
+
+    // ------------------------------------
+    // 1️⃣ Detect Same Order (BUY only)
+    // ------------------------------------
+    let existingBuyOrder = null;
+    if (transactionType === "BUY") {
+      existingBuyOrder = await Order.findOne({
+        where: {
+          userId: user.id,
+          ordertype: reqInput.orderType,
+          producttype: fyersProductType,
+          tradingsymbol: reqInput.fyersSymbol||reqInput.symbol,
+          transactiontype: "BUY",
+          orderstatuslocaldb: "OPEN",
+        },
+      });
+    }
+
+    // ------------------------------------
+    // 2️⃣ Create Pending Order Locally
+    // ------------------------------------
     const orderData = {
-      symboltoken: reqInput.fyersToken ||reqInput.token,
       variety: reqInput.variety || "NORMAL",
-      tradingsymbol: reqInput.fyersSymbol ||reqInput.symbol,
-      duration: reqInput?.duration,
-      instrumenttype: reqInput.instrumenttype,
-      transactiontype: reqInput.transactiontype,
-      exchange: reqInput.exch_seg,
+      tradingsymbol: reqInput.reqInput.fyersSymbol||reqInput.symbol,
+      transactiontype: transactionType,
+      exchange: reqInput.exchange || reqInput.exch_seg || "NSE",
       ordertype: reqInput.orderType,
       quantity: reqInput.quantity,
-      product: fyersProductType,
+      producttype: fyersProductType,
       price: reqInput.price,
       orderstatuslocaldb: "PENDING",
-      totalPrice: reqInput.totalPrice,
-      actualQuantity: reqInput.actualQuantity,
       userId: user.id,
+      broker: "fyers",
       userNameId: user.username,
+      strategyName: reqInput.groupName || "",
+      strategyUniqueId: reqInput.strategyUniqueId || "",
+      buyOrderId: reqInput.buyOrderId || null,
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
-      broker: "fyers",
-      buyOrderId: reqInput?.buyOrderId,
-      strategyName:reqInput.groupName,
-      strategyUniqueId:reqInput?.strategyUniqueId||""
     };
 
-    logSuccess(req, { msg: "Prepared local pending order object", orderData });
+    newOrder = await Order.create(orderData);
 
-    const newOrder = await Order.create(orderData);
-    logSuccess(req, { msg: "Local order created", localOrderId: newOrder.id });
+    // ------------------------------------
+    // 3️⃣ FYERS API Payload
+    // ------------------------------------
+   
+    const fyersTypeMap = { LIMIT: 1, MARKET: 2, SL: 3, "SL-M": 4 };
 
-    // 3️⃣ FYERS ORDER PAYLOAD
-    const fyersReqBody = {
-      symbol: reqInput.fyersSymbol ||reqInput.symbol,
+    const payload = {
+      symbol:reqInput.fyersSymbol||reqInput.symbol,
       qty: Number(reqInput.quantity),
-      type: fyersOrderType,
-      side: reqInput.transactiontype === "BUY" ? 1 : -1,
+      type: fyersTypeMap[reqInput.orderType] || 2,
+      side: transactionType === "BUY" ? 1 : -1,
       productType: fyersProductType,
-      limitPrice,
-      stopPrice,
+      limitPrice: reqInput.orderType === "MARKET" ? 0 : Number(reqInput.price || 0),
+      stopPrice: reqInput.triggerPrice || 0,
+      validity: reqInput.duration || "DAY",
       disclosedQty: 0,
-      validity: reqInput?.duration,
+      orderTag:"softwaresetu",
       offlineOrder: false,
-      stopLoss: 0,
-      takeProfit: 0,
-      orderTag: reqInput.orderTag || `U${user.id}`,
     };
 
-    logSuccess(req, { msg: "Prepared Fyers place_order payload", fyersReqBody });
-
-    // 4️⃣ PLACE ORDER IN FYERS
+    // ------------------------------------
+    // 4️⃣ Place Fyers Order
+    // ------------------------------------
     let placeRes;
     try {
-      placeRes = await fyers.place_order(fyersReqBody);
-      logSuccess(req, { msg: "Fyers place_order response", placeRes });
+      placeRes = await fyers.place_order(payload);
     } catch (err) {
-      logError(req, err, { msg: "Fyers place_order API failed" });
-
       await newOrder.update({
         orderstatuslocaldb: "FAILED",
+        positionStatus: "FAILED",
         status: "FAILED",
-        text: err?.message || "Fyers place_order failed",
-        buyTime: nowISOError,
+        text: err.message,
         filltime: nowISOError,
       });
-
-      return {
-        userId: user.id,
-        broker: "Fyers",
-        result: "BROKER_REJECTED",
-        message: err?.message || "Fyers place_order failed",
-      };
+      return { result: "BROKER_ERROR", message: err.message };
     }
 
-    if (!placeRes || placeRes.s !== "ok") {
-      const msg = placeRes?.message || "Fyers order placement failed";
-      logSuccess(req, { msg: "Fyers rejected order", reason: msg, raw: placeRes });
-
-      await newOrder.update({
-        orderstatuslocaldb: "FAILED",
-        status: "FAILED",
-        text: msg,
-        buyTime: nowISOError,
-        filltime: nowISOError,
-      });
-
-      return {
-        userId: user.id,
-        broker: "Fyers",
-        result: "BROKER_REJECTED",
-        message: msg,
-      };
+    if (!placeRes || placeRes.s !== "ok" || !placeRes.id) {
+      await newOrder.update({ orderstatuslocaldb: "FAILED", positionStatus: "FAILED", status: "FAILED",filltime: nowISOError, });
+      return { result: "BROKER_REJECTED" };
     }
 
     const orderid = placeRes.id;
-    await newOrder.update({ orderid});
+    await newOrder.update({ orderid });
 
-    logSuccess(req, { msg: "Saved Fyers orderid locally", orderid });
+    // ------------------------------------
+    // 5️⃣ OrderBook Status Check
+    // ------------------------------------
+    const orderDetails = await fetchFyersOrderDetailsWithRetry({ orderid });
+    if (orderDetails) {
+      const stat = normalizeStatus(orderDetails.report_type||orderDetails.status);
 
-    // 5️⃣ HANDLE BUY / SELL LOGIC
-    let finalStatus = "OPEN";
-     let buyOrderId = 'NA'
+      if (stat.includes("REJECT")||stat.includes("REJECTED")) {
+        await newOrder.update({ 
+          orderstatuslocaldb: "REJECTED", positionStatus: "REJECTED",
+          status: "REJECTED",  filltime: nowISOError,
+          text:orderDetails?.oms_msg||""
+           });
+        return { result: "BROKER_REJECTED" };
+      }
+      if (["CANCEL", "CANCELLED"].includes(stat)) {
+        await newOrder.update({ 
+           orderstatuslocaldb: "CANCELLED",positionStatus: "CANCELLED",
+           status: "CANCELLED",  filltime: nowISOError,
+           text:orderDetails?.oms_msg||""
+           });
+        return { result: "OPEN" };
+      }
+      if (["OPEN", "PENDING"].includes(stat)) {
+        await newOrder.update({ 
+           orderstatuslocaldb: "OPEN",positionStatus: "OPEN",
+           status: "OPEN",  filltime: nowISOError,
+           text:orderDetails?.oms_msg||""
+           });
+        return { result: "OPEN" };
+      }
+    }
+
+    // ------------------------------------
+    // 6️⃣ Tradebook Final Fill
+    // ------------------------------------
+    const trades = await fetchFyersTradebookWithRetry({
+      orderid,
+      expectedQty: reqInput.quantity,
+    });
+
+    if (!trades.length) {
+      await newOrder.update({ orderstatuslocaldb: "OPEN",positionStatus: "OPEN", status: "OPEN",  filltime: nowISOError, });
+      return { result: "OPEN" };
+    }
+
+    let totalQty = 0;
+    let totalValue = 0;
+    trades.forEach(t => {
+      totalQty += Number(t.tradedQty||t.qty);
+      totalValue += Number(t.tradedQty||t.qty) * Number(t.tradePrice||t.price);
+    });
+    const avgPrice = totalValue / totalQty;
+
+    // ------------------------------------
+    // 7️⃣ SELL PNL / BUY MERGE
+    // ------------------------------------
     let buyOrder = null;
 
-    if (reqInput.transactiontype === "SELL") {
+    if (transactionType === "SELL" && reqInput.buyOrderId) {
       buyOrder = await Order.findOne({
-        where: {
-          userId: user.id,
-          status: "COMPLETE",
-          orderstatuslocaldb: "OPEN",
-          orderid: String(reqInput?.buyOrderId),
-        },
-        raw: true,
+        where: { userId: user.id, orderid: reqInput.buyOrderId, status: "COMPLETE" },
+      });
+      const originalQty = Number(buyOrder?.fillsize || buyOrder?.quantity);
+      const remaining = originalQty - totalQty;
+      if (buyOrder) {
+        if (remaining > 0) {
+          await buyOrder.update({ fillsize: remaining, quantity: remaining,tradedValue:remaining*buyOrder.fillprice });
+
+          await Order.create({
+             ...buyOrder.toJSON(),
+              id: undefined,
+              fillsize: totalQty,
+              quantity: totalQty,
+              tradedValue:totalQty*buyOrder.fillprice,
+              orderstatuslocaldb: "COMPLETE",
+              status: "COMPLETE",
+              postionStauts: "COMPLETE"
+              });
+        } else {
+          await buyOrder.update({ orderstatuslocaldb: "COMPLETE", postionStauts: "COMPLETE" });
+        }
+      }
+    }
+
+    const pnl = transactionType === "SELL" && buyOrder
+      ? (avgPrice - Number(buyOrder.fillprice || 0)) * totalQty
+      : 0;
+
+    await newOrder.update({
+      fillprice: avgPrice,
+      price: avgPrice,
+      quantity:totalQty,
+      fillsize: totalQty,
+      tradedValue: totalValue,
+      fillid: trades[0]?.row||"",
+      uniqueorderid: trades[0]?.exchangeOrderNo||"",
+      status: "COMPLETE",
+      orderstatuslocaldb: transactionType === "SELL" ? "COMPLETE" : "OPEN",
+      postionStauts: transactionType === "SELL" ? "COMPLETE" : "OPEN",
+      pnl,
+      buyOrderId: buyOrder?.orderid || null,
+      buyprice: buyOrder?.fillprice||0,
+      buyTime: buyOrder?.filltime||0,
+      buysize: buyOrder ? totalQty : 0,
+      buyvalue: totalQty*buyOrder?.fillprice||0,
+      positionStatus,
+
+
+    });
+
+    // ------------------------------------
+    // 8️⃣ MERGE BUY (Same Order Found)
+    // ------------------------------------
+    if (transactionType === "BUY" && existingBuyOrder) {
+      const mergedQty = Number(existingBuyOrder.fillsize || 0) + totalQty;
+      const mergedVal = Number(existingBuyOrder.tradedValue || 0) + totalValue;
+      await existingBuyOrder.update({
+        fillsize: mergedQty,
+        quantity: mergedQty,
+        tradedValue: mergedVal,
+        fillprice: mergedVal / mergedQty,
+        price: mergedVal / mergedQty
       });
 
-      logSuccess(req, { msg: "Fetched BUY order for SELL matching", buyOrder });
+      await newOrder.destroy();
 
-      if (buyOrder) {
-        await Order.update(
-          { orderstatuslocaldb: "COMPLETE" },
-          { where: { id: buyOrder.id } }
-        );
-        logSuccess(req, { msg: "BUY order marked COMPLETE", buyOrderId: buyOrder.id });
-      }
-
-      finalStatus = "COMPLETE";
-      buyOrderId =  String(reqInput?.buyOrderId)
+      return { result: "SUCCESS", mergedInto: existingBuyOrder.id };
     }
 
-    // 6️⃣ GET TRADEBOOK
-    let tradeForThisOrder = null;
+    return { result: "SUCCESS", orderid };
 
-    try {
-      const tradeRes = await fyers.get_tradebook();
-      logSuccess(req, { msg: "Fyers tradebook response", tradeRes });
-
-      if (tradeRes?.s === "ok" && Array.isArray(tradeRes.tradeBook)) {
-        const tradesForOrder = tradeRes.tradeBook.filter(
-          (t) => String(t.orderNumber) === String(orderid)
-        );
-
-        logSuccess(req, {
-          msg: "Filtered trades for this order",
-          orderid,
-          tradesCount: tradesForOrder.length,
-        });
-
-        if (tradesForOrder.length > 0) {
-          tradeForThisOrder = tradesForOrder[tradesForOrder.length - 1];
-          logSuccess(req, { msg: "Selected last trade entry", tradeForThisOrder });
-        }
-      }else{
-
-         logSuccess(req, { msg: "fyers with trade data not found", tradeForThisOrder });
-
-           // 8️⃣ UPDATE LOCAL ORDER
-          await newOrder.update({
-            orderstatuslocaldb: "OPEN",
-            status: "OPEN",
-            text:"Your Order is Pending or Open"
-          }); 
-      }
-    } catch (err) {
-
-      logError(req, err, { msg: "Fyers get_tradebook failed (non-fatal)" });
-
-          await newOrder.update({
-            orderstatuslocaldb: "OPEN",
-            status: "OPEN",
-            text:"Trade Data Getting TIme error"+"" +err?.message
-          }); 
-    }
-
-    // Defaults (if no trade yet)
-    let detailsData = {};
-    let tradedQty = 0;
-    let tradedPrice = 0;
-    let tradedValue = 0;
-
-    if (tradeForThisOrder) {
-      tradedQty = Number(tradeForThisOrder.tradedQty || 0);
-      tradedPrice = Number(tradeForThisOrder.tradePrice || 0);
-      tradedValue = Number(tradeForThisOrder.tradeValue || tradedQty * tradedPrice);
-
-      detailsData = {
-        exchangeOrderNo: tradeForThisOrder.exchangeOrderNo,
-        orderDateTime: tradeForThisOrder.orderDateTime,
-        productType: tradeForThisOrder.productType,
-        tradedQty,
-        tradedPrice,
-        tradedValue,
-      };
-    }
-
-    logSuccess(req, {
-      msg: "Trade snapshot computed",
-      tradedQty,
-      tradedPrice,
-      tradedValue,
-      detailsData,
-    });
-
-    // 7️⃣ PNL
-    let buyPrice = 0,
-      buySize = 0,
-      buyValue = 0,
-      buyTime = "NA",
-      pnl = 0;
-
-    if (buyOrder) {
-      buyPrice = Number(buyOrder?.fillprice || 0);
-      buySize = Number(buyOrder?.fillsize || 0);
-      buyValue = Number(buyOrder?.tradedValue || 0);
-      buyTime = buyOrder?.filltime || "NA";
-    }
-
-    if (tradeForThisOrder) {
-      pnl = tradedQty * tradedPrice - buyPrice * buySize;
-
-      if (reqInput.transactiontype === "BUY") {
-        pnl = 0;
-        buyTime = "NA";
-      }
-    }
-
-    logSuccess(req, {
-      msg: "Calculated PnL",
-      pnl,
-      buyPrice,
-      buySize,
-      tradedQty,
-      tradedPrice,
-    });
-
-    // 8️⃣ UPDATE LOCAL ORDER
-    await newOrder.update({
-      uniqueorderid: detailsData.exchangeOrderNo || orderid,
-      text: placeRes.message || "",
-      averageprice: tradedPrice  || 0,
-      lotsize: tradedQty || Number(reqInput.quantity || 0),
-      disclosedquantity: 0,
-      triggerprice: 0,
-      price: tradedPrice,
-      duration: "DAY",
-      producttype: fyersProductType,
-      orderstatuslocaldb: finalStatus,
-      status: "COMPLETE",
-      tradedValue,
-      fillprice: tradedPrice,
-      fillsize: tradedQty,
-      fillid: tradeForThisOrder?.tradeNumber || null,
-      pnl,
-      buyTime,
-      buyprice: buyPrice,
-      buysize: buySize,
-      buyvalue: buyValue,
-      buyOrderId:buyOrderId
-    });
-
-    logSuccess(req, { msg: "Final local DB update done", orderid, finalStatus });
-
-    return {
-      userId: user.id,
-      broker: "Fyers",
-      result: "SUCCESS",
-      orderid,
-    };
   } catch (err) {
-    logError(req, err, { msg: "placeFyersOrder unexpected error" });
-
-    return {
-      userId: user.id,
-      broker: "Fyers",
-      result: "ERROR",
-      message: err.message,
-    };
+    await newOrder?.update({
+      orderstatuslocaldb: "FAILED",
+      status: "FAILED",
+      positionStatus: "FAILED",
+      filltime: nowISOError,
+      text: err.message,
+    });
+    return { result: "BROKER_ERROR", message: err.message };
   }
 };
 
@@ -397,9 +342,63 @@ export const placeFyersOrder = async (user, reqInput, req) => {
 
 
 
+// // services/fyers/placeFyersOrder.js
+
+// import { setFyersAccessToken, fyers } from "../utils/fyersClient.js";
+// import Order from "../models/orderModel.js";
+// import { logSuccess, logError } from "../utils/loggerr.js";
 
 
-// ===========old workig code =============================
+// function getFyersProductCode(type) {
+//   if (!type) return "INTRADAY"; // default Fyers product
+
+//   switch (type.toUpperCase()) {
+//     case "DELIVERY":
+//       return "CNC";        // Delivery (Cash & Carry)
+
+//     case "CARRYFORWARD":
+//       return "MARGIN";     // Carryforward F&O
+
+//     case "MARGIN":
+//       return "MTF";        // Margin Trading Facility
+
+//     case "INTRADAY":
+//       return "INTRADAY";   // Intraday
+
+//     case "BO":
+//       return "BO";         // Bracket Order
+
+//     default:
+//       return type.toUpperCase(); // fallback
+//   }
+// }
+
+
+// function mapFyersOrderType(orderType) {
+//   if (!orderType) return 1; // default LIMIT
+
+//   switch (orderType.toUpperCase()) {
+//     case "LIMIT":
+//       return 1;      // LIMIT
+
+//     case "MARKET":
+//       return 2;      // MARKET
+
+//     case "STOPLOSS_LIMIT":
+//     case "SL":
+//       return 3;      // Stoploss LIMIT
+
+//     case "STOPLOSS_MARKET":
+//     case "SL-M":
+//       return 4;      // Stoploss MARKET
+
+//     default:
+//       return 1;      // fallback LIMIT
+//   }
+// }
+
+
+// // ===========old workig code =============================
 // export const placeFyersOrder = async (user, reqInput, startOfDay, endOfDay) => {
 //   try {
 //     // 1) Set Fyers access token (per user)

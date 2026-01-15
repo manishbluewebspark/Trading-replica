@@ -285,26 +285,52 @@ const GooglChart: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Group market items based on region keyword
-  const groupMarkets = (items:any): MarketsByRegion => {
-    const grouped: MarketsByRegion = { asia: items.asia||[], europe:items.europe|| [], us: items.us||[] };
+// const groupMarkets = (items: any): MarketsByRegion => {
+//   const grouped: MarketsByRegion = { asia: [], europe: [], us: [] };
 
+//   const flatItems = Object.values(items).flat(); // <-- yaha se array ban gaya
+
+//   flatItems.forEach((item: any) => {
+//     const n = (item.name || "").toLowerCase();
+//     console.log(n,'nnnnnnnn');
     
 
-    items.forEach((item:any) => {
+//     if (n.includes("nikkei") || n.includes("asia") || n.includes("nifty"))
+//       grouped.asia.push(item);
+//     else if (n.includes("ftse") || n.includes("europe"))
+//       grouped.europe.push(item);
+//     else grouped.us.push(item);
+//   });
 
-      console.log(item,'item');
-      
-      const n = item.name.toLowerCase();
+//   return grouped;
+// };
 
-      if (n.includes("nikkei") || n.includes("asia") || n.includes("nifty"))
-        grouped.asia.push(item);
-      else if (n.includes("ftse") || n.includes("europe"))
-        grouped.europe.push(item);
-      else grouped.us.push(item);
+const groupMarkets = (items: any): MarketsByRegion => {
+  const grouped: MarketsByRegion = { asia: [], europe: [], us: [] };
+
+  const flatItems = Object.values(items).flat();
+
+  flatItems.forEach((item: any) => {
+    console.log("-------------");
+    console.log("FULL ITEM:", item);
+
+    Object.keys(item).forEach((key) => {
+      console.log(`${key} => ${item[key]}`);
     });
+    console.log("-------------");
 
-    return grouped;
-  };
+    const n = (item.name || "").toLowerCase();
+
+    if (n.includes("nikkei") || n.includes("asia") || n.includes("nifty"))
+      grouped.asia.push(item);
+    else if (n.includes("ftse") || n.includes("europe"))
+      grouped.europe.push(item);
+    else grouped.us.push(item);
+  });
+
+  return grouped;
+};
+
 
   // Fetch API data
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState,useEffect } from "react";
 import Input from "../../components/form/input/InputField";
 import Button from "../../components/ui/button/Button";
 import Label from "../../components/form/Label";
@@ -26,6 +26,32 @@ const FinavasiaCrendetial: FC = () => {
   // 👁️ Toggles
   const [showTotp, setShowTotp] = useState(false);
 
+
+  const fetchFinvasia = async () => {
+  try {
+    let res = await axios.get(`${apiUrl}/finavasia/appcredential/get`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        "AngelOneToken": localStorage.getItem("angel_token") || "",
+      },
+    });
+
+    if (res?.data?.status && res?.data?.data) {
+      const d = res.data.data;
+      setClientId(d.apiKey || "");
+      setApiKey(d.clientId || "");
+      setTotpSecret(d.totpSecret || "");
+      setPin(d.pin || "");
+      setImei(d.imei || "");
+      setVc(d.vc || "");
+    }
+  } catch {}
+};
+
+
+useEffect(() => {
+  fetchFinvasia();
+}, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

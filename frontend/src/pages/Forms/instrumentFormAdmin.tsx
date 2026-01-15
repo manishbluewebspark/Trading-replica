@@ -210,14 +210,13 @@ export default function InstrumentFormAdmin() {
         },
       });
 
-      console.log(res?.data?.data);
-      
-
       if (res?.data?.status === true) {
+        
         const rawData = res?.data?.data || [];
 
-       
+        console.log(rawData,'rawData');
         
+
         const normalized = rawData.map((row: any) => mapAngelToCommon(row));
         setData(normalized);
 
@@ -311,28 +310,28 @@ export default function InstrumentFormAdmin() {
       {
         headerName: " Angelone Symbol",
         field: "symbol",
-         minWidth: 300,
+         minWidth: 260,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '18px' }
       },
-      //  {
-      //   headerName: " Expiry",
-      //   field: "expiry",
-      //    minWidth: 300,
-      //   filter: "agTextColumnFilter",
-      //   cellStyle: { fontSize: '18px' }
-      // },
+       {
+        headerName: " Expiry",
+        field: "expiry",
+         minWidth: 170,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '18px' }
+      },
       {
         headerName: "Kite Symbol",
         field: "kiteSymbol",
-         minWidth: 300,
+         minWidth: 260,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
       {
         headerName: "Finavasia Symbol",
         field: "finvasiaSymbol",
-        minWidth: 300,
+        minWidth: 260,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
       },
@@ -346,6 +345,14 @@ export default function InstrumentFormAdmin() {
        {
         headerName: "Fyers Symbol",
         field: "fyersSymbol",
+        minWidth: 300,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontSize: '20px' }
+      },
+
+       {
+        headerName: "Grow Symbol",
+        field: "growwSymbol",
         minWidth: 300,
         filter: "agTextColumnFilter",
         cellStyle: { fontSize: '20px' }
@@ -474,16 +481,18 @@ export default function InstrumentFormAdmin() {
       } else {
         toast.error(res?.data?.message || "Failed to place order.");
       }
+
+       setIsPlacing(false); // 🔓 enable after min 3 sec
     } catch (err) {
       toast.error("Something went wrong.");
     }finally {
       console.log('=============finaly=================');
 
-      const elapsed = Date.now() - startTime;
-    const remaining = Math.max(0, 5000 - elapsed); // 5 sec guarantee
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, 3000 - elapsed); // 3 sec guarantee
       
    setTimeout(() => {
-      setIsPlacing(false); // 🔓 enable after min 5 sec
+      setIsPlacing(false); // 🔓 enable after min 3 sec
     }, remaining);
 
   }

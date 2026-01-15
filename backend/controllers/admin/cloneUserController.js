@@ -982,7 +982,7 @@ export const getCloneUserTrade = async (req, res) => {
       raw: true,
     });
 
-    console.log(trades[0], "trades");
+   
 
     if (!trades || trades.length === 0) {
       return res.status(200).json({
@@ -1061,10 +1061,6 @@ export const getCloneUserTrade = async (req, res) => {
     });
 
     const totalTraded = trades.length; // number of completed trades / rows
-
-  
-    console.log(pnlData,'tradesOnline');
-    
 
     return res.status(200).json({
       status: true,

@@ -26,6 +26,7 @@ export const getAllStrategies = async (req, res) => {
   try {
     const strategies = await StrategyUserModel.findAll({
       order: [["createdAt", "DESC"]],
+      raw: true
     });
 
     return successResponse(res, "successfully fetched data", strategies);

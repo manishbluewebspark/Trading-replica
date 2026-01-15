@@ -10,6 +10,7 @@ import kiteRoute from './routes/kiteRoute.js';
 import upStoxRoute from './routes/upstockRoute.js';
 import shoonyaRoute from './routes/shoonyaRoute.js';
 import angeloneRoute from './routes/angelOneRoute.js';
+import growwRoute from './routes/growwRoutes.js';
 import adminRoute from './routes/admin/adminOrderRoute.js';
 import cors from 'cors';
 import path from 'path';
@@ -21,7 +22,7 @@ import "./scheduler/startMergeWorker.js"
 // import "./scheduler/ocoWatcher.js"
 import {seedAdmin} from './script/adminInsert.js'
 
-import "./services/kiteSocket.js"
+
 import "./script/getData.js"
 
 
@@ -74,6 +75,7 @@ app.use('/api', fyersRoute);
 app.use('/api', kiteRoute);
 app.use('/api', angeloneRoute);
 app.use('/api', shoonyaRoute);
+app.use('/api', growwRoute);
 
 app.use('/api', upStoxRoute);
 

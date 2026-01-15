@@ -24,7 +24,4 @@ router.get('/fyers/fund',authMiddleware, fyersFunds);
 router.get('/fyers/instrument', getFyersInstruments);
 
 
-
-
-
 export default router;

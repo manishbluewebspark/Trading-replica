@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState,useEffect } from "react";
 import Input from "../../components/form/input/InputField";
 import Button from "../../components/ui/button/Button";
 import Label from "../../components/form/Label";
@@ -22,21 +22,42 @@ const KiteCrendential: FC = () => {
   // 👁️ Toggles
   const [showTotp, setShowTotp] = useState(false);
 
+  useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/kite/appcredential/get`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          AngelOneToken: localStorage.getItem("angel_token"),
+        },
+      });
+
+      if (res.data.status) {
+        setPin(res.data.data.pin);
+        setApiKey(res.data.data.apiKey);
+        setClientId(res.data.data.clientId);
+        setTotpSecret(res.data.data.totpSecret);
+      }
+    } catch (err) {
+      toast.error("Failed to load credentials");
+    }
+  };
+
+  fetchData();
+}, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
             let reqData = {
-                clientId:apiKey,
+                clientId:clientId,
                 totpSecret:totpSecret,
-                apiKey:clientId,
+                apiKey:apiKey,
                 pin:pin
                 
             }
-
-           
-            
 
             let res = await axios.post(`${apiUrl}/kite/appcredential/create`, reqData, {
                     headers: {
@@ -84,8 +105,8 @@ const KiteCrendential: FC = () => {
             <div className="relative">
               <Input
                 type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
                 name="client-id"
                 id="client-id"
                 placeholder="e.g. ABC123"
@@ -134,8 +155,8 @@ const KiteCrendential: FC = () => {
             <div className="relative">
               <Input
                 type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
                 name="client-id"
                 id="client-id"
                 placeholder="e.g. ABC123"

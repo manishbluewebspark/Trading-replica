@@ -3,7 +3,7 @@ import Order from "../models/orderModel.js"; // update your model path
 import User from "../models/userModel.js"; // update your model path
 import redis from "../utils/redis.js";  // your redis client
 import axios from "axios";
-
+import { Op } from "sequelize";
 
 
 // FYERS Symbol Master CSV URLs (public)
@@ -233,9 +233,9 @@ export const fyersLogin = async (req, res) => {
 
 export const callbackFyers = async (req, res, next) => {
   try {
+
     const client_id = process.env.fyers_app_id;
     const secret_key = process.env.fyers_secret_key;
-
 
     const { auth_code } = req.query;
 
@@ -264,8 +264,6 @@ export const callbackFyers = async (req, res, next) => {
     if (response.s === "ok") {
       // Set token in SDK
       fyers.setAccessToken(response.access_token);
-
-
 
        return res.redirect(
       `${process.env.FRONTEND_URL}/dashboard?access_token=${response.access_token}`
@@ -340,7 +338,8 @@ export const fyersFunds = async (req, res) => {
 
     const funds = await fyers.get_funds();
 
-   
+
+    console.log(funds,'==============funds=================');
     
      // 5️⃣ Final response
     return res.json({

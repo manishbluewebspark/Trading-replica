@@ -455,15 +455,35 @@ export const adminMultipleSquareOff = async (req, res) => {
 
 // ==============update logger code ==============================
 export const adminGroupSquareOff = async (req, res) => {
+
+  // GLOBAL LOCK
+  const strategyLocks = new Set();
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  let reqStrategyUniqueId = req.body.strategyUniqueId
+  let reqSellQuantity = req.body?.quantity||0
+  let reason = req.body?.reason ||""
+  
   try {
 
-    let reqStrategyUniqueId = req.body.strategyUniqueId
-     let reason = req.body?.reason ||""
+    // ✔️ Agar already locked hai
+    if (strategyLocks.has(reqStrategyUniqueId)) {
+    
+      await sleep(5000); // Wait 5 secs
+      
+      strategyLocks.delete(reqStrategyUniqueId);
+    }
 
-    const afterUnderscore = reqStrategyUniqueId.split("_").pop();
+    // 🔒 Add lock for fresh request
+    strategyLocks.add(reqStrategyUniqueId);
 
-    //  Generate strategyUniqueId
-    const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
+
+    // const afterUnderscore = reqStrategyUniqueId.split("_").pop();
+
+    // //  Generate strategyUniqueId
+    // const strategyUniqueId = await generateStrategyUniqueId(afterUnderscore);
+
+     const strategyUniqueId = reqStrategyUniqueId
 
     // 1) Time window for today
     const startOfDay = new Date();
@@ -494,19 +514,9 @@ export const adminGroupSquareOff = async (req, res) => {
       });
     }
 
-    
-
     const results = await Promise.allSettled(
       openOrders.map(async (o, idx) => {
-        logSuccess(req, {
-          msg: "Processing square-off for order",
-          index: idx,
-          orderDbId: o.id,
-          orderid: o.orderid,
-          userId: o.userId,
-          symbol: o.tradingsymbol,
-          exchange: o.exchange,
-        });
+       
 
         try {
           
@@ -561,6 +571,11 @@ export const adminGroupSquareOff = async (req, res) => {
 
           const transactiontype = "SELL"; // square off leg
 
+          let sellQtyFinal =
+              reqSellQuantity && reqSellQuantity > 0
+                ? reqSellQuantity                       // partial sell request
+                : o.quantity;     
+
           // Common reqInput format for both services
           const reqInput = {
             variety: o.variety,
@@ -569,7 +584,7 @@ export const adminGroupSquareOff = async (req, res) => {
             token: o.symboltoken,
             exch_seg: o.exchange,
             orderType: o.ordertype,
-            quantity: o.quantity,
+            quantity: sellQtyFinal,
             productType: o.producttype,
             duration: o.duration,
             price: o.price,
@@ -599,12 +614,18 @@ export const adminGroupSquareOff = async (req, res) => {
           //=============== CALL BROKER SPECIFIC SERVICE ===============//
           const broker = (user.brokerName || "").toLowerCase();
 
-          
+          let sellQuantityPartial = 0
+
+           if( reqSellQuantity < o.quantity) {
+
+            sellQuantityPartial = reqSellQuantity
+
+           }
 
           if (broker === "angelone" && user.role === "user") {
            
 
-            await placeAngelOrder(user, reqInput, req);
+            await placeAngelOrder(user, reqInput, req,sellQuantityPartial);
 
            
           } else if (broker === "kite" && user.role === "user") {
@@ -649,8 +670,6 @@ export const adminGroupSquareOff = async (req, res) => {
             };
           }
 
-          
-
           return {
             orderId: o.id,
             broker: user.broker,
@@ -676,17 +695,15 @@ export const adminGroupSquareOff = async (req, res) => {
     // 4) Normalize Promise results
     const finalOutput = results.map((r, i) => {
       if (r.status === "fulfilled") {
-        logSuccess(req, {
-          msg: "Square-off promise fulfilled",
-          orderDbId: openOrders[i]?.id,
-          result: r.value?.result || "OK",
-        });
+       
         return r.value;
       }
 
       
       return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
     });
+
+      strategyLocks.delete(reqStrategyUniqueId||req.body.strategyUniqueId);
 
     return res.json({
       status: true,
@@ -696,12 +713,16 @@ export const adminGroupSquareOff = async (req, res) => {
   } catch (error) {
     logError(req, error, { msg: "adminMultipleSquareOff failed unexpectedly" });
 
+    strategyLocks.delete(reqStrategyUniqueId||req.body.strategyUniqueId);
+
     return res.json({
       status: false,
       message: "Something went wrong",
       error: safeErr(error),
     });
   }
+
+
 };
 
 // ==============update logger code ==============================
@@ -972,6 +993,14 @@ export const adminPlaceMultiTargetStoplossOrder = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
 
 
 // ==============update logger code ==============================

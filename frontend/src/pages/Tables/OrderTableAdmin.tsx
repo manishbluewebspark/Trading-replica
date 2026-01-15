@@ -340,6 +340,7 @@ const OcoActionIcons = ({
 /** ---------------- MAIN COMPONENT ---------------- */
 
 export default function OrderTableAdmin() {
+
   const apiUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
@@ -364,6 +365,77 @@ const subGridApiRef = useRef<Record<string, GridApi | null>>({});
 // orderId -> true (already executed)
 const rawOrdersRef = useRef<Order[]>([]);
 const autoExitTriggeredRef = useRef<Record<string, boolean>>({});
+
+
+
+
+// ================= PARTIAL SELL MODAL STATE =================
+const [showPartialModal, setShowPartialModal] = useState(false);
+
+const [partialData, setPartialData] = useState<{
+  quantity: number | null;
+  strategyUniqueId: string;
+  flag: "MAIN" | "SUB"; // Add flag
+  orderId: string;      // Add orderId
+} | null>(null);
+
+// open modal
+const openPartialModal = (
+  strategyUniqueId: string,
+  flag: "MAIN" | "SUB", // Add flag
+  orderId: string       // Add orderId
+) => {
+  setPartialData({
+    quantity: null,
+    strategyUniqueId,
+    flag,      // Store flag
+    orderId,   // Store orderId
+  });
+  setShowPartialModal(true);
+};
+
+// close modal
+const closePartialModal = () => {
+  setShowPartialModal(false);
+  setPartialData(null);
+};
+
+// submit
+const handlePartialSell = async () => {
+  try {
+
+    if (!partialData?.quantity || !partialData.strategyUniqueId) {
+      toast.error("Quantity required");
+      return;
+    }
+
+
+     console.log('quantity :',partialData.quantity);
+     console.log('strategyUniqueId :',partialData.strategyUniqueId);
+     console.log('flag :',partialData.flag);
+     console.log('orderId :',partialData.orderId);
+
+    await axios.post(
+      `${apiUrl}/admin/group/squareoff`,
+      {
+        quantity: partialData.quantity,
+        strategyUniqueId: partialData.strategyUniqueId,
+        flag: partialData.flag,      // Include flag
+        orderId: partialData.orderId, // Include orderId
+      },
+      { headers: authHeader }
+    );
+
+    toast.success("Partial Sell Placed");
+    closePartialModal();
+    fetchOrders();
+  } catch (e) {
+    console.error(e);
+    toast.error("Partial sell failed");
+  }
+};
+
+
 
 const shouldAutoExit = ({
   transactionType,
@@ -442,8 +514,8 @@ const callAutoExitAPI = async ({
 
     toast.success(`Auto ${reason} executed for Order ${orderId}`);
     fetchOrders()
-      // ❗ allow retry on failure
-    exitLocksRef.current.delete(strategyUniqueId);
+    //   // ❗ allow retry on failure
+    // exitLocksRef.current.delete(strategyUniqueId);
   } catch (err: any) {
     console.error("Auto exit failed", err);
      // ❗ allow retry on failure
@@ -486,6 +558,53 @@ const DetailRowRenderer = (props: any) => {
         return <SellButton disabled={disabled} onClick={() => onSellFromSub?.(r, row.parentStrategyUniqueId)} />;
       },
     },
+
+{
+  headerName: "Partial Sell",
+  width: 120,
+  sortable: false,
+  filter: false,
+  cellRenderer: (params: any) => {
+    const r: Order = params.data;
+    const disabled = String(r.transactiontype) === "SELL";
+
+    return (
+      <button
+        disabled={disabled}
+        onClick={() => openPartialModal(r.strategyUniqueId!, "SUB", r.orderid!)}
+        onMouseEnter={(e) => {
+          if (!disabled) e.currentTarget.style.background = "linear-gradient(to right, #1d4ed8, #3b82f6)";
+        }}
+        onMouseLeave={(e) => {
+          if (!disabled) e.currentTarget.style.background = "linear-gradient(to right, #3b82f6, #2563eb)";
+        }}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 14px",
+          borderRadius: "16px",
+          fontSize: "12px",
+          fontWeight: 600,
+          letterSpacing: "0.5px",
+          border: "none",
+          color: "#fff",
+          background: disabled ? "#9ca3af" : "linear-gradient(to right, #3b82f6, #2563eb)",
+          cursor: disabled ? "not-allowed" : "pointer",
+          opacity: disabled ? 0.6 : 1,
+          transition: "all 0.2s ease-in-out",
+        }}
+        title={disabled ? "Already Sold" : "Click to Partial Sell"}
+      >
+        <span style={{ fontSize: "13px", lineHeight: 1 }}>⬇</span>
+        PARTIAL
+      </button>
+    );
+  },
+},
+
+
+
 
     { headerName: "UserId", field: "userNameId", width: 120 },
     { headerName: "Broker", field: "broker", width: 130 },
@@ -1164,16 +1283,58 @@ const handlerTargetAndStoploss = (payload: any) => {
         },
       },
 
+      {
+        headerName: "Partial Sell",
+        width: 120,
+        sortable: false,
+        filter: false,
+        cellRenderer: (params: any) => {
+          const r: Order = params.data;
+          const disabled = String(r.transactiontype) === "SELL";
+
+          return (
+            <button
+              disabled={disabled}
+              onClick={() => openPartialModal(r.strategyUniqueId!, "MAIN", r.orderid!)}
+              onMouseEnter={(e) => {
+                if (!disabled) e.currentTarget.style.background = "linear-gradient(to right, #1d4ed8, #3b82f6)";
+              }}
+              onMouseLeave={(e) => {
+                if (!disabled) e.currentTarget.style.background = "linear-gradient(to right, #3b82f6, #2563eb)";
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 14px",
+                borderRadius: "16px",
+                fontSize: "12px",
+                fontWeight: 600,
+                letterSpacing: "0.5px",
+                border: "none",
+                color: "#fff",
+                background: disabled ? "#9ca3af" : "linear-gradient(to right, #3b82f6, #2563eb)",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.6 : 1,
+                transition: "all 0.2s ease-in-out",
+              }}
+              title={disabled ? "Already Sold" : "Click to Partial Sell"}
+            >
+              <span style={{ fontSize: "13px", lineHeight: 1 }}>⬇</span>
+              PARTIAL
+            </button>
+          );
+        },
+      },
+
       { headerName: "SYMBOL", field: "tradingsymbol", width: 200 },
-
-     
-
+      
       { headerName: "Price", field: "price", width: 110 },
 
       // ✅ Target (draft only) + API only on ✅
       {
         headerName: "Target",
-        width: 120,
+        width: 90,
         sortable: false,
         filter: false,
         cellRenderer: (params: any) => {
@@ -1215,7 +1376,7 @@ const handlerTargetAndStoploss = (payload: any) => {
       // ✅ Stoploss (draft only)
       {
         headerName: "Stoploss",
-        width: 120,
+       width: 90,
         sortable: false,
         filter: false,
         cellRenderer: (params: any) => {
@@ -1295,7 +1456,7 @@ const handlerTargetAndStoploss = (payload: any) => {
       {
   headerName: "CMP",
    colId: "cmp",   // ✅ ADD THIS
-  width: 110,
+  width: 90,
   sortable: false,
   filter: false,
   valueGetter: (p) => {
@@ -1310,7 +1471,7 @@ const handlerTargetAndStoploss = (payload: any) => {
    {
   headerName: "PnL",
   colId: "pnl",   // ✅ ADD THIS
-  width: 140,
+  width: 120,
   sortable: false,
   filter: false,
   valueGetter: (p) => {
@@ -1541,6 +1702,80 @@ const handlerTargetAndStoploss = (payload: any) => {
           />
         </div>
       )}
+
+{showPartialModal && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      background: "rgba(0,0,0,0.45)",
+      display: "flex",
+      alignItems: "flex-start", // Modal ko upar le jaane ke liye
+      justifyContent: "center",
+      zIndex: 9999,
+      paddingTop: "140px", // Top se 80px padding dega
+    }}
+  >
+    <div
+      style={{
+        width: 360,
+        background: "white",
+        padding: 20,
+        borderRadius: 10,
+        display: "flex",
+        flexDirection: "column",
+        gap: 15,
+      }}
+    >
+      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Partial Sell</h3>
+
+      <div>
+        <label className="font-medium text-sm">Strategy ID</label>
+        <input
+          value={partialData?.strategyUniqueId || ""}
+          disabled
+          className="border px-2 py-1 w-full rounded bg-gray-100 text-gray-700"
+        />
+      </div>
+
+      <div>
+        <label className="font-medium text-sm">Quantity</label>
+        <input
+          type="number"
+          value={partialData?.quantity || ""}
+          onChange={(e) =>
+            setPartialData((prev) =>
+              prev ? { ...prev, quantity: Number(e.target.value) } : prev
+            )
+          }
+          className="border px-2 py-1 w-full rounded"
+          placeholder="Enter Quantity"
+        />
+      </div>
+
+      <div className="flex gap-4 justify-end">
+        <button
+          onClick={closePartialModal}
+          className="px-4 py-1 rounded bg-gray-300 text-sm"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handlePartialSell}
+          className="px-4 py-1 rounded bg-blue-600 text-white text-sm"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 }

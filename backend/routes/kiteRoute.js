@@ -8,7 +8,8 @@ import { getKiteAllInstruments,getKiteFunds, kiteCallback, kiteLogin,
     getKiteHolding,
     kiteHoldingFunApi,
     placeKiteOnlineOrder,
-    cancellKiteOnlineOrder
+    cancellKiteOnlineOrder,
+    kiteAppCredentialGet
  } from '../controllers/kiteController.js';
 import { getDeshboardOrdersUpdate, getTradeDataForCommonDeshboardUpdate } from '../controllers/angelController.js';
 
@@ -32,6 +33,9 @@ router.get('/kite/callback', kiteCallback); // Handle callback (no auth needed)
 
 
 router.post('/kite/appcredential/create',authMiddleware, kiteAppCredential);
+router.get("/kite/appcredential/get", authMiddleware, kiteAppCredentialGet);
+
+
 // router.get('/kite/instrument',authMiddleware,getKiteAllInstruments)
 router.get('/kite/instrument',getKiteAllInstruments)
 
