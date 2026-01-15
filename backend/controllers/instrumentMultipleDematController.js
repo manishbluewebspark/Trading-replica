@@ -59,7 +59,7 @@ export const getMergedInstrumentsNew = async (req, res) => {
     return res.json({
       status: false,
       error: err.message,
-      message: "Preparing instruments... try again in 20-30 sec"
+      message: "Preparing instruments... try again in 20-30 Minute"
     });
   }
 };

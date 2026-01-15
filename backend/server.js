@@ -105,6 +105,9 @@ sequelize.sync({ force: false }).then(() => {
 });
 
 
+
+
+
 // url =====> https://smartapi.angelbroking.com/signup
 // password ====> Mahesh@1997
 

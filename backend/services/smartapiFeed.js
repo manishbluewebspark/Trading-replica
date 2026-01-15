@@ -245,7 +245,7 @@ export  function connectSmartSocket(authToken,feedToken,clientId,) {
           // console.log("📈 LTP:", tick,'full object');
          }
 
-         console.log("📈 LTP:", tick,'full object');
+        //  console.log("📈 LTP:", tick,'full object');
         
         // 🔥 ship to your socket clients
         emitTick(tick);
