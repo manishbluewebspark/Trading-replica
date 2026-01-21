@@ -1708,6 +1708,7 @@ const DetailRowRenderer = (props: any) => {
     },
     { headerName: "Buy Time", field: "buyTime", width: 230 },
     { headerName: "Sell Time", field: "filltime", width: 230 },
+    { headerName: "OrderTag", field: "ordertag" as any, width: 110 },
     {
       headerName: "Message",
       field: "text",
@@ -1717,6 +1718,7 @@ const DetailRowRenderer = (props: any) => {
       autoHeight: true,
       cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
     },
+       
   ];
 
   const subDefaultColDef = useMemo(
@@ -1951,6 +1953,7 @@ export default function TradeAdmin() {
       },
       { headerName: "Buy Time", field: "buyTime", width: 230 },
       { headerName: "Sell Time", field: "filltime", width: 230 },
+       { headerName: "OrderTag", field: "ordertag" as any, width: 110 },
       {
         headerName: "Message",
         field: "text",
@@ -1960,6 +1963,8 @@ export default function TradeAdmin() {
         autoHeight: true,
         cellStyle: { whiteSpace: "normal", lineHeight: "1.35" },
       },
+       
+    
     ],
     []
   );

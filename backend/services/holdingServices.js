@@ -131,8 +131,11 @@ async function syncAngelPositionsWithDB({ user, positions, req }) {
   for (const raw of positions) {
     const p = normalizeAngelPosition(raw);
 
+
+      
+
     // 🔴 Ignore squared-off positions
-    if (p.buyqty <= p.sellqty) continue;
+    if (p.buyqty === p.sellqty) continue;
 
     let positionStatus = "HOLDING";
   
@@ -145,6 +148,9 @@ async function syncAngelPositionsWithDB({ user, positions, req }) {
 //     orderstatuslocaldb: "OPEN",
 //   }
 // });
+
+
+  
 
     await Order.update(
       {
@@ -168,7 +174,6 @@ async function syncAngelPositionsWithDB({ user, positions, req }) {
 async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
   try {
     
-
     if (!Array.isArray(holdings) || !holdings.length) {
       logSuccess(req, { msg: "No holdings to sync (angelone)", userId: user?.id });
       return;
@@ -181,6 +186,10 @@ async function syncAngelHoldingsWithLocalDB({ user, holdings, req }) {
         holdingMap.set(h.symboltoken, h);
       }
     }
+
+
+    console.log(holdingMap,'holdingMap angelone');
+    
 
     const orders = await Order.findAll({
       where: {
@@ -283,13 +292,17 @@ export async function angeloneHoldingFun({ user, req, order }) {
      const afterMarket = isAfterMarketClose();
       // const afterMarket = true
 
+
+     
+      
+
       if(afterMarket) {
 
     const response = await axios.get(ANGEL_POSITION_URL, { headers });
 
     const positions = response?.data?.data || [];
 
-    console.log(positions,'positions');
+    console.log(positions,'positions',user.id);
     
 
     await syncAngelPositionsWithDB({ user, positions, req });

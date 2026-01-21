@@ -892,7 +892,7 @@ export const placeOrder = async (req, res,next) => {
     // }
 };
 
-
+//  ============ update code 16 jan 2025=======================
 export const getOrderInTables = async (req, res, next) => {
   try {
     // ⏰ Today range in JS (local)
@@ -932,7 +932,7 @@ export const getOrderInTables = async (req, res, next) => {
       raw: true,
     });
 
-    console.log("RAW orderData:", orderData);
+ 
 
     // SELL COMPLETE count
     const buyCount = await Order.count({
@@ -971,6 +971,8 @@ export const getOrderInTables = async (req, res, next) => {
           totalSellValue: 0,
           totalBuyValue: Number(item.buyvalue || item.buyprice * Number(item.buysize || 0) || 0),
           totalPNL: 0,
+          buyPriceCHeck:item.buyprice,
+          sellPriceCHeck:item.fillprice
         });
       }
 
@@ -982,7 +984,29 @@ export const getOrderInTables = async (req, res, next) => {
 
       row.totalSellQty += sellQty;
       row.totalSellValue += sellValue;
-      row.totalPNL = row.totalSellValue - (row.totalBuyValue * (row.totalSellQty / row.totalBuyQty));
+      // row.totalPNL = row.totalSellValue - (row.totalBuyValue * (row.totalSellQty / row.totalBuyQty));
+
+        
+           
+         
+        //  console.log(row.sellPriceCHeck.toFixed(2),'row.sellPriceCHeck');
+        //   console.log(row.buyPriceCHeck.toFixed(2),'row.buyPriceCHeck');
+        //   console.log(row.totalSellQty,'row.totalSellQty');
+        //   console.log((row.sellPriceCHeck - row.buyPriceCHeck) ,'values');
+        //    console.log(((row.sellPriceCHeck - row.buyPriceCHeck) * row.totalSellQty),'pnl');
+          
+           const diff =
+  Number(row.sellPriceCHeck) - Number(row.buyPriceCHeck);
+
+
+  console.log(diff,'diff');
+  
+
+  row.totalPNL = Number((diff * row.totalSellQty).toFixed(2));
+
+           
+        // row.totalPNL = ((row.sellPriceCHeck.toFixed(2) - row.buyPriceCHeck.toFixed(2)) * row.totalSellQty);
+
     }
 
     // Prepare final output (single aggregated row per unique group)
@@ -1000,6 +1024,10 @@ export const getOrderInTables = async (req, res, next) => {
         pnl: x.totalPNL.toFixed(2),
       };
 
+      
+      console.log(x.totalPNL.toFixed(2),'pnl');
+      
+
       return {
         ...x,
         quantity: x.totalSellQty,
@@ -1010,6 +1038,10 @@ export const getOrderInTables = async (req, res, next) => {
         client_data: [aggregatedClientData], // Single aggregated row in subtable
       };
     });
+
+
+    // console.log(final);
+    
 
 
     return res.json({
@@ -1030,6 +1062,9 @@ export const getOrderInTables = async (req, res, next) => {
     });
   }
 };
+
+
+
 
 
 export const adminGetOrderInTables1 = async (req, res,next) => {
@@ -1446,7 +1481,7 @@ export const adminGetTradeInTables21 = async (req, res, next) => {
 };
 
 //  final working code
-export const adminGetTradeInTables1234 = async (req, res, next) => {
+export const adminGetTradeInTables1212 = async (req, res, next) => {
   try {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -1466,10 +1501,6 @@ export const adminGetTradeInTables1234 = async (req, res, next) => {
       order: [["filltime", "DESC"]], // Latest first
       raw: true,
     });
-
-
-    console.log(orderData,'sdscscsdcsdsd');
-    
 
     const buyCount = await Order.count({
       where: {
@@ -1516,7 +1547,7 @@ export const adminGetTradeInTables1234 = async (req, res, next) => {
     return res.json({
       status: true,
       statusCode: 200,
-      data: unique, // Unique objects with client_data field
+      data: formatted, // Unique objects with client_data field
       buydata: buyCount,
       message: "get data",
     });
@@ -1533,6 +1564,7 @@ export const adminGetTradeInTables1234 = async (req, res, next) => {
 
 export const adminGetTradeInTables = async (req, res, next) => {
   try {
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -1652,11 +1684,7 @@ export const adminGetTradeInTables = async (req, res, next) => {
       });
     }
 
-
-
-
-
-
+    
 
     return res.json({
       status: true,

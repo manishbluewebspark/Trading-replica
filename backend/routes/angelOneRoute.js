@@ -32,12 +32,6 @@ router.get('/angelone/login/totp',authMiddleware,loginWithTOTPInAngelOne );   //
 router.get('/angelone/dummydatatrade',authMiddleware,getTradeDataForDeshboard)
 
 
-
-
-
-
-
-
 router.post('/agnelone/instrument/ltp',authMiddleware,getAngelOneLTP)
 router.get('/agnelone/instrument/search/:id',authMiddleware,searchInstrumentPostgre)
 
@@ -57,11 +51,6 @@ router.get('/angelone/profile', angelGetProfileController);
 router.post('/regenerate/user/token', authMiddleware,reGenerateTokenWithAngelOne);   // our code 
 router.get('/angelone/logout/user',authMiddleware, logoutAngelOne);   // our code 
 
-
-
-
-
- 
 
 
 // not used Routes

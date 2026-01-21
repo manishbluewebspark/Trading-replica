@@ -1,23 +1,14 @@
-
-
-
-import { parentPort } from "worker_threads";
+// import { parentPort } from "worker_threads";
 import redis from "../utils/redis.js";
 import crypto from "crypto";
 import axios from "axios";
 import zlib from "zlib";
 import unzipper from "unzipper";
-import { logSuccess, logError } from "../utils/loggerr.js"; // <-- path adjust
+import { logSuccess, logError } from "../utils/loggerr.js";
 import { KiteAccess } from "../utils/kiteClient.js";
 
-
-
 const MERGED_REDIS_KEY = "merged_instruments_new";
-// const TEN_HOURS_IN_SECONDS = 36000;
-
-const TEN_HOURS_IN_SECONDS = 15 * 60 * 60;  // 54000 seconds 15 hours
-
-
+const TEN_HOURS_IN_SECONDS = 15 * 60 * 60;
 
 // =======================================================
 // ✅ CONFIG: URLs
@@ -32,10 +23,8 @@ const FINVASIA_SYMBOL_MASTER_URLS = {
 
 const UPSTOX_INSTRUMENT_URLS = {
   COMPLETE: "https://assets.upstox.com/market-quote/instruments/exchange/complete.json.gz",
-  NSE: "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz",
-  BSE: "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz",
-  MCX: "https://assets.upstox.com/market-quote/instruments/exchange/MCX.json.gz",
 };
+
 const FYERS_SYMBOL_MASTER_URLS = {
   NSE_CM: "https://public.fyers.in/sym_details/NSE_CM.csv",
   BSE_CM: "https://public.fyers.in/sym_details/BSE_CM.csv",
@@ -45,10 +34,11 @@ const FYERS_SYMBOL_MASTER_URLS = {
   MCX_COM: "https://public.fyers.in/sym_details/MCX_COM.csv",
 };
 
-const GROWW_INSTRUMENT_URL =
-  "https://growwapi-assets.groww.in/instruments/instrument.csv";
+const GROWW_INSTRUMENT_URL = "https://growwapi-assets.groww.in/instruments/instrument.csv";
 
-
+// =======================================================
+// ✅ PARSERS (Original Working Version)
+// =======================================================
 function parseGrowwCSV(text) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return [];
@@ -66,55 +56,7 @@ function parseGrowwCSV(text) {
   }
   return records;
 }
- 
-async function fetchGrowwInstruments() {
-  const res = await axios.get(GROWW_INSTRUMENT_URL, {
-    responseType: "text",
-    timeout: 180000,
-  });
 
-  return parseGrowwCSV(res.data);
-}
-
-// =======================================================
-// ✅ HELPERS: Common
-// =======================================================
-const safeStr = (v) => (v === null || v === undefined ? "" : String(v));
-const normalizeExch = (ex) => safeStr(ex).trim().toUpperCase();
-const normalizeSymbol = (s) => safeStr(s).trim().toUpperCase();
-const normalizeTradingSymbolForMatch = (symbol) => normalizeSymbol(symbol).replace(/-EQ$/i, "");
-
-// =======================================================
-// ✅ HELPERS: Token and Symbol Key
-// =======================================================
-const buildTokenKey = (token) => safeStr(token).trim();
-const buildSymbolKey = (exch, symbol) => {
-  const e = normalizeExch(exch);
-  const s = normalizeTradingSymbolForMatch(symbol);
-  return e && s ? `${e}:${s}` : "";
-};
-
-// =======================================================
-// ✅ FETCH: AngelOne
-// =======================================================
-async function fetchAngelOneScripMaster() {
-  const res = await axios.get(ANGELONE_SCRIP_MASTER_URL, { timeout: 180000 });
-  return Array.isArray(res.data) ? res.data : [];
-}
-
-// =======================================================
-// ✅ FETCH: Kite
-// =======================================================
-async function fetchKiteInstruments() {
-  const apiKey = process.env.KITE_API_KEY;
-  const kite = KiteAccess(apiKey);
-  const data = await kite.getInstruments();
-  return Array.isArray(data) ? data : [];
-}
-
-// =======================================================
-// ✅ FETCH: Finvasia
-// =======================================================
 function parseFinvasiaCSV(csv) {
   const lines = csv.split("\n").map((l) => l.trim()).filter(Boolean);
   const headers = lines.shift()?.split(",") || [];
@@ -131,64 +73,7 @@ function parseFinvasiaCSV(csv) {
   });
 }
 
-async function downloadAndUnzipFinvasiaText(url) {
-  const zipRes = await axios.get(url, { responseType: "arraybuffer", timeout: 180000 });
-  const directory = await unzipper.Open.buffer(Buffer.from(zipRes.data));
-  const file = directory.files.find((f) => !f.path.endsWith("/") && f.path.toLowerCase().includes(".txt"));
-  if (!file) throw new Error(`No .txt found inside zip: ${url}`);
-  const content = await file.buffer();
-  return content.toString("utf-8");
-}
-
-async function fetchFinvasiaInstrumentsByExchange(exch) {
-  const url = FINVASIA_SYMBOL_MASTER_URLS[exch];
-  if (!url) throw new Error(`Unsupported Finvasia exchange '${exch}'`);
-  const txt = await downloadAndUnzipFinvasiaText(url);
-  const list = parseFinvasiaCSV(txt);
-  return list.map((row) => ({ exch, ...row }));
-}
-
-async function fetchAllFinvasiaInstruments() {
-  const results = await Promise.all(Object.keys(FINVASIA_SYMBOL_MASTER_URLS).map(fetchFinvasiaInstrumentsByExchange));
-  return results.flat();
-}
-
-// =======================================================
-// ✅ FETCH: Upstox
-// =======================================================
-async function fetchUpstoxJsonGz(url) {
-  const res = await axios.get(url, {
-    responseType: "arraybuffer",
-    timeout: 180000,
-    headers: { "Accept-Encoding": "gzip, deflate, br", Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-  });
-  const gzBuffer = Buffer.from(res.data);
-  const jsonText = zlib.gunzipSync(gzBuffer).toString("utf-8");
-  return JSON.parse(jsonText);
-}
-
-async function fetchUpstoxInstruments(exch = "COMPLETE") {
-  const key = normalizeExch(exch);
-  const url = UPSTOX_INSTRUMENT_URLS[key];
-  if (!url) throw new Error(`Invalid Upstox exchange '${exch}'`);
-  return fetchUpstoxJsonGz(url);
-}
-
-function getUpstoxToken(u) {
-  return u?.exchange_token ?? u?.instrument_token ?? u?.token ?? u?.exchangeToken ?? null;
-}
-
-function getUpstoxSymbol(u) {
-  return u?.tradingsymbol ?? u?.trading_symbol ?? u?.symbol ?? u?.instrument_key ?? u?.instrumentKey ?? null;
-}
-
-function getUpstoxExchange(u) {
-  return u?.exchange ?? u?.exch ?? u?.segment ?? null;
-}
-
-// =======================================================
-// ✅ FETCH: Fyers
-// =======================================================
+// Original Fyers CSV parser
 function splitFyersCSVLine(line) {
   const out = [];
   let cur = "";
@@ -218,6 +103,67 @@ function parseFyersCSV(text, segment) {
   });
 }
 
+// =======================================================
+// ✅ FETCH FUNCTIONS
+// =======================================================
+async function fetchGrowwInstruments() {
+  const res = await axios.get(GROWW_INSTRUMENT_URL, {
+    responseType: "text",
+    timeout: 180000,
+  });
+  return parseGrowwCSV(res.data);
+}
+
+async function fetchAngelOneScripMaster() {
+  const res = await axios.get(ANGELONE_SCRIP_MASTER_URL, { timeout: 180000 });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+async function fetchKiteInstruments() {
+  const apiKey = process.env.KITE_API_KEY;
+  const kite = KiteAccess(apiKey);
+  const data = await kite.getInstruments();
+  return Array.isArray(data) ? data : [];
+}
+
+async function downloadAndUnzipFinvasiaText(url) {
+  const zipRes = await axios.get(url, { responseType: "arraybuffer", timeout: 180000 });
+  const directory = await unzipper.Open.buffer(Buffer.from(zipRes.data));
+  const file = directory.files.find((f) => !f.path.endsWith("/") && f.path.toLowerCase().includes(".txt"));
+  if (!file) throw new Error(`No .txt found inside zip: ${url}`);
+  const content = await file.buffer();
+  return content.toString("utf-8");
+}
+
+async function fetchFinvasiaInstrumentsByExchange(exch) {
+  const url = FINVASIA_SYMBOL_MASTER_URLS[exch];
+  if (!url) throw new Error(`Unsupported Finvasia exchange '${exch}'`);
+  const txt = await downloadAndUnzipFinvasiaText(url);
+  const list = parseFinvasiaCSV(txt);
+  return list.map((row) => ({ exch, ...row }));
+}
+
+async function fetchAllFinvasiaInstruments() {
+  const results = await Promise.all(Object.keys(FINVASIA_SYMBOL_MASTER_URLS).map(fetchFinvasiaInstrumentsByExchange));
+  return results.flat();
+}
+
+async function fetchUpstoxJsonGz(url) {
+  const res = await axios.get(url, {
+    responseType: "arraybuffer",
+    timeout: 180000,
+    headers: { "Accept-Encoding": "gzip, deflate, br", Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+  });
+  const gzBuffer = Buffer.from(res.data);
+  const jsonText = zlib.gunzipSync(gzBuffer).toString("utf-8");
+  return JSON.parse(jsonText);
+}
+
+async function fetchUpstoxInstruments() {
+  const url = UPSTOX_INSTRUMENT_URLS.COMPLETE;
+  return fetchUpstoxJsonGz(url);
+}
+
 async function fetchFyersSegment(segment) {
   const url = FYERS_SYMBOL_MASTER_URLS[segment];
   if (!url) throw new Error(`Invalid Fyers segment '${segment}'`);
@@ -230,307 +176,271 @@ async function fetchAllFyersInstruments() {
   return results.flat();
 }
 
+// =======================================================
+// ✅ HELPER FUNCTIONS
+// =======================================================
+const safeStr = (v) => (v === null || v === undefined ? "" : String(v));
+const normalizeExch = (ex) => safeStr(ex).trim().toUpperCase();
+const normalizeSymbol = (s) => safeStr(s).trim().toUpperCase();
+const normalizeTradingSymbolForMatch = (symbol) => normalizeSymbol(symbol).replace(/-EQ$/i, "");
 
+const buildTokenKey = (token) => safeStr(token).trim();
+const buildSymbolKey = (exch, symbol) => {
+  const e = normalizeExch(exch);
+  const s = normalizeTradingSymbolForMatch(symbol);
+  return e && s ? `${e}:${s}` : "";
+};
 
-// (async () => {
+const getUpstoxToken = (u) => u?.exchange_token || u?.instrument_token || u?.token || u?.exchangeToken || null;
+const getUpstoxSymbol = (u) => u?.tradingsymbol || u?.trading_symbol || u?.symbol || u?.instrument_key || u?.instrumentKey || null;
+const getUpstoxExchange = (u) => u?.exchange || u?.exch || u?.segment || null;
 
-//   console.log('broker instrument getting !');
+// =======================================================
+// ✅ MAIN PROCESSING WITH ORIGINAL FYERS MATCHING LOGIC
+// =======================================================
+export const instrumentGetFun = async function () {
   
-
-//   const requestId = crypto.randomUUID();
+  console.log('Starting instrument merge worker...');
   
-//   const startTime = Date.now();
+  logSuccess(null, 'Broker instrument fetching started!');
 
-//   try {
-//     parentPort.postMessage({ status: "STARTED", requestId });
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
 
-//      // =======================================================
-//     // 1️⃣ Fetch all sources (with timing)
-//     // =======================================================
-//     const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData,growwData] =
-//       await Promise.all([
-//         fetchAngelOneScripMaster(),
-//         fetchKiteInstruments(),
-//         fetchAllFinvasiaInstruments(),
-//         fetchUpstoxInstruments("COMPLETE"),
-//         fetchAllFyersInstruments(),
-//         fetchGrowwInstruments(),   // 👈 NEW
-//       ]);
+  try {
+    // parentPort.postMessage({ status: "STARTED", requestId });
 
-    
-//       console.log('all broker instrument getted successfully');
-      
+    // Fetch all data in parallel
+    const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData, growwData] =
+      await Promise.all([
+        fetchAngelOneScripMaster(),
+        fetchKiteInstruments(),
+        fetchAllFinvasiaInstruments(),
+        fetchUpstoxInstruments(),
+        fetchAllFyersInstruments(),
+        fetchGrowwInstruments(),
+      ]);
 
-//     // =======================================================
-//     // 2️⃣ Build lookup maps (with timing)
-//     // =======================================================
-//     const growwTokenMap = new Map();
-//     for (const growwRecord of growwData) {
-//       growwTokenMap.set(String(growwRecord.exchange_token), growwRecord);
-//     }
+    logSuccess(null, 'All broker instruments fetched successfully');
 
-//         console.log('groww instrument map done !');
+    // Create maps for quick lookup
+    const growwTokenMap = new Map();
+    for (const growwRecord of growwData) {
+      growwTokenMap.set(String(growwRecord.exchange_token), growwRecord);
+    }
+    logSuccess(null, 'Groww instrument map done!');
 
-//     const kiteTokenMap = new Map();
-//     for (const kiteRecord of kiteData) {
-//       kiteTokenMap.set(String(kiteRecord.exchange_token), kiteRecord);
-//     }
+    const kiteTokenMap = new Map();
+    for (const kiteRecord of kiteData) {
+      kiteTokenMap.set(String(kiteRecord.exchange_token), kiteRecord);
+    }
+    logSuccess(null, 'Kite instrument map done!');
 
-//     console.log('kite  instrument map done !');
+    const finByToken = new Map();
+    const finBySymbolKey = new Map();
+    for (const f of finvasiaList) {
+      const finToken = buildTokenKey(f?.Token);
+      if (finToken) finByToken.set(finToken, f);
+      const finKey = buildSymbolKey(f?.Exchange, f?.TradingSymbol || f?.Symbol);
+      if (finKey) finBySymbolKey.set(finKey, f);
+    }
+    logSuccess(null, 'Finvasia instrument map done!');
 
-//     const finByToken = new Map();
-//     const finBySymbolKey = new Map();
-//     for (const f of finvasiaList) {
-//       const finToken = buildTokenKey(f?.Token);
-//       if (finToken) finByToken.set(finToken, f);
-//       const finKey = buildSymbolKey(f?.Exchange, f?.TradingSymbol || f?.Symbol);
-//       if (finKey) finBySymbolKey.set(finKey, f);
-//     }
+    const upsByToken = new Map();
+    const upsBySymbolKey = new Map();
+    for (const u of upstoxData) {
+      const uToken = buildTokenKey(getUpstoxToken(u));
+      if (uToken) upsByToken.set(uToken, u);
+      const uKey = buildSymbolKey(getUpstoxExchange(u), getUpstoxSymbol(u));
+      if (uKey) upsBySymbolKey.set(uKey, u);
+    }
+    logSuccess(null, 'Upstox instrument map done!');
 
-//     console.log('finavasia instrument map done !');
+    // ORIGINAL FYERS MATCHING LOGIC
+    const fyByToken = new Map();
+    const fyBySymbolKey = new Map();
+    const fyBySymbolOnlyKey = new Map();
+    for (const f of fyersData) {
+      const fyToken = buildTokenKey(f?.fytoken);
+      if (fyToken) fyByToken.set(fyToken, f);
+      const fyKey = buildSymbolKey(f?.exchange, f?.tradingsymbol);
+      if (fyKey) fyBySymbolKey.set(fyKey, f);
+      fyBySymbolOnlyKey.set(f?.tradingsymbol, f);
+    }
+    logSuccess(null, 'Fyers instrument map done!');
 
-//     const upsByToken = new Map();
-//     const upsBySymbolKey = new Map();
-//     for (const u of upstoxData) {
-//       const uToken = buildTokenKey(getUpstoxToken(u));
-//       if (uToken) upsByToken.set(uToken, u);
-//       const uKey = buildSymbolKey(getUpstoxExchange(u), getUpstoxSymbol(u));
-//       if (uKey) upsBySymbolKey.set(uKey, u);
-//     }
+    // Process AngelOne data with original Fyers matching logic
+    let fyMatchCount = 0;
+    const mergedAngel = angeloneData.map((angel) => {
+      const kiteMatch = kiteTokenMap.get(String(angel.token));
+      const kiteExch = kiteMatch?.exchange || "";
+      const kiteSymbol = kiteMatch?.tradingsymbol || "";
 
+      const angelExch = angel?.exch_seg || "";
+      const angelSymbol = angel?.symbol || "";
+      const angelExchange = angel?.exch_seg || "";
+      const symKey = buildSymbolKey(angelExch, angelSymbol);
 
-//     console.log('upstox instrument map done !');
+      const finMatch = finByToken.get(String(angel.token)) || finBySymbolKey.get(symKey) || null;
+      const upstoxMatch = upsByToken.get(String(angel.token)) || upsBySymbolKey.get(symKey) || null;
 
-//     const fyByToken = new Map();
-//     const fyBySymbolKey = new Map();    // NCO:GOLD26JUL141500CE
-//      const fyBySymbolOnlyKey = new Map();   // GOLD26JUL141500CE
+      const angelSymbolKey = `${angelExchange}:${angelSymbol}`.trim();
+      const kiteSymbolKey = `${kiteExch}:${kiteSymbol}`.trim();
 
-   
-   
+      // ORIGINAL FYERS MATCHING LOGIC
+      const fyMatch =
+        fyByToken.get(String(angel.token)) ||
+        fyBySymbolKey.get(angelSymbolKey) ||
+        fyBySymbolKey.get(kiteSymbolKey) ||
+        fyBySymbolOnlyKey.get(kiteSymbol) ||
+        null;
 
-//     for (const f of fyersData) {
+      if (fyMatch) fyMatchCount++;
 
-//      // ---- existing logic ----
-//       const fyToken = buildTokenKey(f?.fytoken);
-//       if (fyToken) fyByToken.set(fyToken, f);
-//       const fyKey = buildSymbolKey(f?.exchange, f?.tradingsymbol);
-//       if (fyKey) fyBySymbolKey.set(fyKey, f); 
-      
-//       fyBySymbolOnlyKey.set(f?.tradingsymbol,f)
-      
-//     }
+      const growwMatch = growwTokenMap.get(String(angel.token));
 
-//         console.log('fyers instrument map done !');
-  
+      return {
+        ...angel,
+        kiteSymbol: kiteMatch?.tradingsymbol || null,
+        kiteToken: kiteMatch?.exchange_token || null,
+        kiteExchange: kiteMatch?.exchange || null,
+        growwTradingSymbol: growwMatch?.trading_symbol || null,
+        growwSymbol: growwMatch?.groww_symbol || null,
+        finvasiaSymbol: finMatch?.TradingSymbol || finMatch?.Symbol || null,
+        finvasiaToken: finMatch?.Token || null,
+        upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
+        upstoxToken: getUpstoxToken(upstoxMatch) || null,
+        fyersSymbol: fyMatch?.symbol || null,
+        fyersToken: fyMatch?.fytoken || null,
+      };
+    });
 
-//     //  test 
+    logSuccess(null, `${fyMatchCount} Fyers matches found`);
+    logSuccess(null, 'Match instrument done!');
 
-//     let fyMatchCount = 0;
-    
+    // Process Finvasia-only rows with Fyers matching
+    const angelTokenSet = new Set(angeloneData.map((a) => String(a.token)));
+    const finvasiaOnlyRows = finvasiaList
+      .filter((f) => !angelTokenSet.has(String(f.Token)))
+      .map((f) => {
+        const finToken = String(f.Token);
+        const finKey = buildSymbolKey(f.Exchange, f.TradingSymbol || f.Symbol);
 
-//     //  test 
-
-
-//     // =======================================================
-//     // 3️⃣ Merge AngelOne rows
-//     // =======================================================
-//     const mergedAngel = angeloneData.map((angel) => {
-
-
-//       const kiteMatch = kiteTokenMap.get(String(angel.token));
-
-//       const kiteExch = kiteMatch?.exchange || kiteMatch?.exchange || "";
-//       const kiteSymbol = kiteMatch?.tradingsymbol || kiteMatch?.name || "";
-
-
-
-//       const angelExch = angel?.exch_seg || angel?.exchange || "";
-//       const angelSymbol = angel?.symbol || angel?.name || "";
-//       const angelExchange = angel?.exch_seg || angel?.exchange || "";
-//       const symKey = buildSymbolKey(angelExch, angelSymbol);
-      
-
-//       const finMatch =
-//         finByToken.get(String(angel.token)) || finBySymbolKey.get(symKey) || null;
-//       const upstoxMatch =
-//         upsByToken.get(String(angel.token)) || upsBySymbolKey.get(symKey) || null;
-
-       
-
-
-//         // 🆕 Convert to "EXCHANGE:TRADINGSYMBOL"
-//         const angelSymbolKey = `${angelExchange}:${angelSymbol}`.trim();
-
-//          const kiteSymbolKey = `${kiteExch}:${kiteSymbol}`.trim();
-
-
+        const kiteMatch = kiteTokenMap.get(finToken) || null;
+        const upstoxMatch = upsByToken.get(finToken) || upsBySymbolKey.get(finKey) || null;
         
-         
+        // Fyers matching for Finvasia-only rows
+        const fyMatch = fyByToken.get(finToken) || fyBySymbolKey.get(finKey) || null;
 
+        return {
+          source: "FINVASIA_ONLY",
+          exch_seg: f.Exchange,
+          token: finToken,
+          symbol: f.Symbol,
+          name: f.Symbol,
+          finvasiaSymbol: f.TradingSymbol || f.Symbol || null,
+          finvasiaToken: f.Token || null,
+          kiteSymbol: kiteMatch?.tradingsymbol || null,
+          kiteToken: kiteMatch?.exchange_token || null,
+          upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
+          upstoxToken: getUpstoxToken(upstoxMatch) || null,
+          fyersSymbol: fyMatch?.symbol || null,
+          fyersToken: fyMatch?.fytoken || null,
+        };
+      });
 
-//       const fyMatch =
-//         fyByToken.get(String(angel.token)) ||
-//         fyBySymbolKey.get(angelSymbolKey) ||     // 🆕 proper match
-//         fyBySymbolKey.get(kiteSymbolKey) ||     // 🆕 proper match
-//         fyBySymbolOnlyKey.get(kiteSymbol)||
-//         null;
+    logSuccess(null, 'Merge instrument done!');
 
-//          if(fyMatch) {
-//             fyMatchCount++
-//          }
+    const finalMerged = [...mergedAngel, ...finvasiaOnlyRows];
 
-       
-//       const growwMatch = growwTokenMap.get(String(angel.token));
+    logSuccess(null, `Final merged instruments: ${finalMerged.length} records`);
 
-     
-//       return {
-//         ...angel,
-//         kiteSymbol: kiteMatch?.tradingsymbol || null,
-//         kiteToken: kiteMatch?.exchange_token || null,
-//         kiteExchange: kiteMatch?.exchange || null,
-//         kiteInstrumentType: kiteMatch?.instrument_type || null,
+    const responseObj = {
+      status: true,
+      statusCode: 200,
+      data: finalMerged,
+      cache: false,
+      message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
+      timestamp: new Date().toISOString(),
+      counts: {
+        angelOne: angeloneData.length,
+        kite: kiteData.length,
+        finvasia: finvasiaList.length,
+        upstox: upstoxData.length,
+        fyers: fyersData.length,
+        groww: growwData.length,
+        merged: finalMerged.length,
+        fyersMatches: fyMatchCount
+      }
+    };
 
-//         growwTradingSymbol: growwMatch?.trading_symbol || null,
-//         growwSymbol: growwMatch?.groww_symbol || null,
+    logSuccess(null, 'Payload stringify instrument running...');
 
-  
+    const payload = JSON.stringify(responseObj);
 
+    logSuccess(null, 'Payload stringify instrument done!');
 
-//         finvasiaSymbol: finMatch?.TradingSymbol || finMatch?.Symbol || null,
-//         finvasiaToken: finMatch?.Token || null,
-//         finvasiaExchange: finMatch?.Exchange || null,
-//         finvasiaInstrument: finMatch?.Instrument || null,
-//         finvasiaLotSize: finMatch?.LotSize || null,
-//         finvasiaTickSize: finMatch?.TickSize || null,
+    // Save to Redis with compression
+    const saveToRedis = async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          // Compress the data
+          const compressed = zlib.gzipSync(payload);
+          console.log(`Original: ${payload.length} bytes, Compressed: ${compressed.length} bytes`);
+          
+          await redis.set(MERGED_REDIS_KEY, compressed, "EX", TEN_HOURS_IN_SECONDS);
+          console.log('✅ Compressed data stored in Redis');
+          return true;
+        } catch (e) {
+          console.error(`Redis set retry ${i+1}/3 failed:`, e.message);
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+      return false;
+    };
 
-//         upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
-//         upstoxToken: getUpstoxToken(upstoxMatch) || null,
-//         upstoxExchange: getUpstoxExchange(upstoxMatch) || null,
+    const saved = await saveToRedis();
+    if (!saved) {
+      logError("⚠️ Could not cache but continuing…");
+    }
 
-//         fyersSymbol: fyMatch?.symbol || null,
-//         fyersToken: fyMatch?.fytoken || null,
-//         fyersExchange: fyMatch?.exchange || null,
-//       };
-//     });
+    const durationMs = Date.now() - startTime;
+    logSuccess(null, `============== Duration: ${durationMs}ms ==============`);
 
+    // parentPort.postMessage({
+    //   status: "DONE",
+    //   requestId,
+    //   durationMs: durationMs,
+    //   counts: responseObj.counts
+    // });
 
+    logSuccess(null, "✔️ Worker completed successfully!");
+
+    // process.exit(0);
+
+  } catch (err) {
+    // parentPort.postMessage({
+    //   status: "ERROR",
+    //   requestId,
+    //   error: err.message,
+    // });
+
+    console.error('Worker error:', err?.stack || err?.message);
     
-//      console.log(fyMatchCount,'============fyMatchCount============');
-     
-
-//      console.log('match instrument done !');
-
-  
-//     // =======================================================
-//     // 4️⃣ Finvasia-only rows
-//     // =======================================================
-
-//     const angelTokenSet = new Set(angeloneData.map((a) => String(a.token)));
-
-//     const finvasiaOnlyRows = finvasiaList
-//       .filter((f) => !angelTokenSet.has(String(f.Token)))
-//       .map((f) => {
-//         const finToken = String(f.Token);
-//         const finKey = buildSymbolKey(f.Exchange, f.TradingSymbol || f.Symbol);
-
-//         const kiteMatch = kiteTokenMap.get(finToken) || null;
-//         const upstoxMatch = upsByToken.get(finToken) || upsBySymbolKey.get(finKey) || null;
-//         const fyMatch = fyByToken.get(finToken) || fyBySymbolKey.get(finKey) || null;
-
-//         return {
-//           source: "FINVASIA_ONLY",
-//           exch_seg: f.Exchange,
-//           token: finToken,
-//           symbol: f.Symbol,
-//           name: f.Symbol,
-
-//           finvasiaSymbol: f.TradingSymbol || f.Symbol || null,
-//           finvasiaToken: f.Token || null,
-
-//           kiteSymbol: kiteMatch?.tradingsymbol || null,
-//           kiteToken: kiteMatch?.exchange_token || null,
-
-//           upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
-//           upstoxToken: getUpstoxToken(upstoxMatch) || null,
-
-//           fyersSymbol: fyMatch?.symbol || null,
-//           fyersToken: fyMatch?.fytoken || null,
-//         };
-//       });
-
-//         console.log('merge instrument done !');
-
-   
-//     // =======================================================
-//     // 5️⃣ Combine + cache
-//     // =======================================================
-//     const finalMerged = [...mergedAngel, ...finvasiaOnlyRows];
-
-//             console.log('finalMerged instrument done !');
-
-//    const responseObj = {
-//         status: true,
-//         statusCode: 200,
-//         data: finalMerged,
-//         cache: false,
-//         message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
-//       };
-
-//     console.log('payload stringify instrument running !');
-
-//     const payload = JSON.stringify(responseObj);
-
-//      console.log('payload stringify instrument done !');
-
-
-//       await redis.set(MERGED_REDIS_KEY, payload, { EX: TEN_HOURS_IN_SECONDS });
-
-//     console.log('==============durationMs Normal response==============',Date.now() - startTime);
-
-
-//     parentPort.postMessage({
-//       status: "DONE",
-//       requestId,
-//       durationMs: Date.now() - startTime
-//     });
-
-//      console.log("✔️ Worker completed — exiting...");
-//     // process.exit(0);   // 👈 YAHAN ADD KARO
-
-//   } catch (err) {
-//     parentPort.postMessage({
-//       status: "ERROR",
-//       requestId,
-//       error: err.message
-//     });
-
-//   console.error("❌ Worker crashed — exiting...");
-//   console.error(err?.stack||err?.message);   // FULL DETAIL
-//   setTimeout(() => process.exit(1), 50);  // Give console time
-
-//   }
-// })();
+    logError(null, "❌ Worker crashed!");
+    logError(null, err?.stack || err?.message);
+    // process.exit(1);
+  }
+}
 
 
 
 
 
+// ========================================================
+// ============================ 17 jan 2025 old  ================
+// ========================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ======================= 15 Jan 2025 ===========================================
 
 // import { parentPort } from "worker_threads";
 // import redis from "../utils/redis.js";
@@ -761,53 +671,42 @@ async function fetchAllFyersInstruments() {
 //   return results.flat();
 // }
 
-
-
 // (async () => {
 
-//   console.log('broker instrument getting !');
+//   console.log('sscscsdcsdcsdcsd calling ');
   
 
+//   logSuccess(null,'broker instrument getting !');
+
 //   const requestId = crypto.randomUUID();
-  
 //   const startTime = Date.now();
 
 //   try {
 //     parentPort.postMessage({ status: "STARTED", requestId });
 
-//      // =======================================================
-//     // 1️⃣ Fetch all sources (with timing)
-//     // =======================================================
-//     const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData,growwData] =
+//     const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData, growwData] =
 //       await Promise.all([
 //         fetchAngelOneScripMaster(),
 //         fetchKiteInstruments(),
 //         fetchAllFinvasiaInstruments(),
 //         fetchUpstoxInstruments("COMPLETE"),
 //         fetchAllFyersInstruments(),
-//         fetchGrowwInstruments(),   // 👈 NEW
+//         fetchGrowwInstruments(),
 //       ]);
 
-    
-//       console.log('all broker instrument getted successfully');
-      
+//     logSuccess(null,'all broker instrument getted successfully');
 
-//     // =======================================================
-//     // 2️⃣ Build lookup maps (with timing)
-//     // =======================================================
 //     const growwTokenMap = new Map();
 //     for (const growwRecord of growwData) {
 //       growwTokenMap.set(String(growwRecord.exchange_token), growwRecord);
 //     }
-
-//         console.log('groww instrument map done !');
+//     logSuccess(null,'groww instrument map done !');
 
 //     const kiteTokenMap = new Map();
 //     for (const kiteRecord of kiteData) {
 //       kiteTokenMap.set(String(kiteRecord.exchange_token), kiteRecord);
 //     }
-
-//     console.log('kite  instrument map done !');
+//     logSuccess(null,'kite instrument map done !');
 
 //     const finByToken = new Map();
 //     const finBySymbolKey = new Map();
@@ -817,8 +716,7 @@ async function fetchAllFyersInstruments() {
 //       const finKey = buildSymbolKey(f?.Exchange, f?.TradingSymbol || f?.Symbol);
 //       if (finKey) finBySymbolKey.set(finKey, f);
 //     }
-
-//     console.log('finavasia instrument map done !');
+//     logSuccess(null,'finavasia instrument map done !');
 
 //     const upsByToken = new Map();
 //     const upsBySymbolKey = new Map();
@@ -828,136 +726,68 @@ async function fetchAllFyersInstruments() {
 //       const uKey = buildSymbolKey(getUpstoxExchange(u), getUpstoxSymbol(u));
 //       if (uKey) upsBySymbolKey.set(uKey, u);
 //     }
-
-
-//     console.log('upstox instrument map done !');
+//     logSuccess(null,'upstox instrument map done !');
 
 //     const fyByToken = new Map();
-//     const fyBySymbolKey = new Map();    // NCO:GOLD26JUL141500CE
-//      const fyBySymbolOnlyKey = new Map();   // GOLD26JUL141500CE
-
-   
-   
-
+//     const fyBySymbolKey = new Map();
+//     const fyBySymbolOnlyKey = new Map();
 //     for (const f of fyersData) {
-
-//      // ---- existing logic ----
 //       const fyToken = buildTokenKey(f?.fytoken);
 //       if (fyToken) fyByToken.set(fyToken, f);
 //       const fyKey = buildSymbolKey(f?.exchange, f?.tradingsymbol);
-//       if (fyKey) fyBySymbolKey.set(fyKey, f); 
-      
-//       fyBySymbolOnlyKey.set(f?.tradingsymbol,f)
-      
+//       if (fyKey) fyBySymbolKey.set(fyKey, f);
+//       fyBySymbolOnlyKey.set(f?.tradingsymbol, f);
 //     }
-
-//         console.log('fyers instrument map done !');
-  
-
-//     //  test 
+//     logSuccess(null,'fyers instrument map done !');
 
 //     let fyMatchCount = 0;
-    
-
-//     //  test 
-
-
-//     // =======================================================
-//     // 3️⃣ Merge AngelOne rows
-//     // =======================================================
 //     const mergedAngel = angeloneData.map((angel) => {
-
-
 //       const kiteMatch = kiteTokenMap.get(String(angel.token));
+//       const kiteExch = kiteMatch?.exchange || "";
+//       const kiteSymbol = kiteMatch?.tradingsymbol || "";
 
-//       const kiteExch = kiteMatch?.exchange || kiteMatch?.exchange || "";
-//       const kiteSymbol = kiteMatch?.tradingsymbol || kiteMatch?.name || "";
-
-
-
-//       const angelExch = angel?.exch_seg || angel?.exchange || "";
-//       const angelSymbol = angel?.symbol || angel?.name || "";
-//       const angelExchange = angel?.exch_seg || angel?.exchange || "";
+//       const angelExch = angel?.exch_seg || "";
+//       const angelSymbol = angel?.symbol || "";
+//       const angelExchange = angel?.exch_seg || "";
 //       const symKey = buildSymbolKey(angelExch, angelSymbol);
-      
 
-//       const finMatch =
-//         finByToken.get(String(angel.token)) || finBySymbolKey.get(symKey) || null;
-//       const upstoxMatch =
-//         upsByToken.get(String(angel.token)) || upsBySymbolKey.get(symKey) || null;
+//       const finMatch = finByToken.get(String(angel.token)) || finBySymbolKey.get(symKey) || null;
+//       const upstoxMatch = upsByToken.get(String(angel.token)) || upsBySymbolKey.get(symKey) || null;
 
-       
-
-
-//         // 🆕 Convert to "EXCHANGE:TRADINGSYMBOL"
-//         const angelSymbolKey = `${angelExchange}:${angelSymbol}`.trim();
-
-//          const kiteSymbolKey = `${kiteExch}:${kiteSymbol}`.trim();
-
-
-        
-         
-
+//       const angelSymbolKey = `${angelExchange}:${angelSymbol}`.trim();
+//       const kiteSymbolKey = `${kiteExch}:${kiteSymbol}`.trim();
 
 //       const fyMatch =
 //         fyByToken.get(String(angel.token)) ||
-//         fyBySymbolKey.get(angelSymbolKey) ||     // 🆕 proper match
-//         fyBySymbolKey.get(kiteSymbolKey) ||     // 🆕 proper match
-//         fyBySymbolOnlyKey.get(kiteSymbol)||
+//         fyBySymbolKey.get(angelSymbolKey) ||
+//         fyBySymbolKey.get(kiteSymbolKey) ||
+//         fyBySymbolOnlyKey.get(kiteSymbol) ||
 //         null;
 
-//          if(fyMatch) {
-//             fyMatchCount++
-//          }
+//       if (fyMatch) fyMatchCount++;
 
-       
 //       const growwMatch = growwTokenMap.get(String(angel.token));
 
-     
 //       return {
 //         ...angel,
 //         kiteSymbol: kiteMatch?.tradingsymbol || null,
 //         kiteToken: kiteMatch?.exchange_token || null,
 //         kiteExchange: kiteMatch?.exchange || null,
-//         kiteInstrumentType: kiteMatch?.instrument_type || null,
-
 //         growwTradingSymbol: growwMatch?.trading_symbol || null,
 //         growwSymbol: growwMatch?.groww_symbol || null,
-
-  
-
-
 //         finvasiaSymbol: finMatch?.TradingSymbol || finMatch?.Symbol || null,
 //         finvasiaToken: finMatch?.Token || null,
-//         finvasiaExchange: finMatch?.Exchange || null,
-//         finvasiaInstrument: finMatch?.Instrument || null,
-//         finvasiaLotSize: finMatch?.LotSize || null,
-//         finvasiaTickSize: finMatch?.TickSize || null,
-
 //         upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
 //         upstoxToken: getUpstoxToken(upstoxMatch) || null,
-//         upstoxExchange: getUpstoxExchange(upstoxMatch) || null,
-
 //         fyersSymbol: fyMatch?.symbol || null,
 //         fyersToken: fyMatch?.fytoken || null,
-//         fyersExchange: fyMatch?.exchange || null,
 //       };
 //     });
 
-
-    
-//      console.log(fyMatchCount,'============fyMatchCount============');
-     
-
-//      console.log('match instrument done !');
-
-  
-//     // =======================================================
-//     // 4️⃣ Finvasia-only rows
-//     // =======================================================
+//     logSuccess(null,`${fyMatchCount} ============fyMatchCount============`);
+//     logSuccess(null,'match instrument done !');
 
 //     const angelTokenSet = new Set(angeloneData.map((a) => String(a.token)));
-
 //     const finvasiaOnlyRows = finvasiaList
 //       .filter((f) => !angelTokenSet.has(String(f.Token)))
 //       .map((f) => {
@@ -965,8 +795,10 @@ async function fetchAllFyersInstruments() {
 //         const finKey = buildSymbolKey(f.Exchange, f.TradingSymbol || f.Symbol);
 
 //         const kiteMatch = kiteTokenMap.get(finToken) || null;
-//         const upstoxMatch = upsByToken.get(finToken) || upsBySymbolKey.get(finKey) || null;
-//         const fyMatch = fyByToken.get(finToken) || fyBySymbolKey.get(finKey) || null;
+//         const upstoxMatch =
+//           upsByToken.get(finToken) || upsBySymbolKey.get(finKey) || null;
+//         const fyMatch =
+//           fyByToken.get(finToken) || fyBySymbolKey.get(finKey) || null;
 
 //         return {
 //           source: "FINVASIA_ONLY",
@@ -974,301 +806,84 @@ async function fetchAllFyersInstruments() {
 //           token: finToken,
 //           symbol: f.Symbol,
 //           name: f.Symbol,
-
 //           finvasiaSymbol: f.TradingSymbol || f.Symbol || null,
 //           finvasiaToken: f.Token || null,
-
 //           kiteSymbol: kiteMatch?.tradingsymbol || null,
 //           kiteToken: kiteMatch?.exchange_token || null,
-
 //           upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
 //           upstoxToken: getUpstoxToken(upstoxMatch) || null,
-
 //           fyersSymbol: fyMatch?.symbol || null,
 //           fyersToken: fyMatch?.fytoken || null,
 //         };
 //       });
 
-//         console.log('merge instrument done !');
+//     logSuccess(null,'merge instrument done !');
 
-   
-//     // =======================================================
-//     // 5️⃣ Combine + cache
-//     // =======================================================
 //     const finalMerged = [...mergedAngel, ...finvasiaOnlyRows];
 
-//             console.log('finalMerged instrument done !');
+//     logSuccess(null,'finalMerged instrument done !');
 
-//    const responseObj = {
-//         status: true,
-//         statusCode: 200,
-//         data: finalMerged,
-//         cache: false,
-//         message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
-//       };
+//     const responseObj = {
+//       status: true,
+//       statusCode: 200,
+//       data: finalMerged,
+//       cache: false,
+//       message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
+//     };
 
-//     console.log('payload stringify instrument running !');
+//     logSuccess(null,'payload stringify instrument running !');
 
 //     const payload = JSON.stringify(responseObj);
 
-//      console.log('payload stringify instrument done !');
+//     logSuccess(null,'payload stringify instrument done !');
 
+//     // ===============================================================
+//     // 🆕 REDIS RETRY LOGIC (ONLY ADDITION)
+//     // ===============================================================
+//         const saveToRedis = async () => {
+//         for (let i = 0; i < 3; i++) {
+//           try {
+//             await redis.set(MERGED_REDIS_KEY, payload, 'EX', TEN_HOURS_IN_SECONDS);
+//             return true;
+//           } catch (e) {
+//             console.error(`Redis set retry ${i+1}/3 failed`, e.message);
+//             await new Promise(r => setTimeout(r, 200));
+//           }
+//         }
+//         return false;
+//       };
 
-//       await redis.set(MERGED_REDIS_KEY, payload, { EX: TEN_HOURS_IN_SECONDS });
+//     const saved = await saveToRedis();
+//     if (!saved) {
+//       logError("⚠️ Could not cache but continuing…");
+//     }
 
-//     console.log('==============durationMs Normal response==============',Date.now() - startTime);
-
+//     logSuccess(null,
+//       '==============durationMs Normal response============== ' +
+//         (Date.now() - startTime)
+//     );
 
 //     parentPort.postMessage({
 //       status: "DONE",
 //       requestId,
-//       durationMs: Date.now() - startTime
+//       durationMs: Date.now() - startTime,
 //     });
 
-//      console.log("✔️ Worker completed — exiting...");
-//     // process.exit(0);   // 👈 YAHAN ADD KARO
+//     logSuccess(null,"✔️ Worker completed — exiting...");
+//     // process.exit(0);
 
 //   } catch (err) {
 //     parentPort.postMessage({
 //       status: "ERROR",
 //       requestId,
-//       error: err.message
+//       error: err.message,
 //     });
 
-//   console.error("❌ Worker crashed — exiting...");
-//   console.error(err?.stack||err?.message);   // FULL DETAIL
-//   setTimeout(() => process.exit(1), 50);  // Give console time
+//     console.log(err?.stack || err?.message);
+    
+//     logError(null,"❌ Worker crashed — exiting...");
+//     logError(null,err?.stack || err?.message);
 
+//    // setTimeout(() => process.exit(1), 50);
 //   }
 // })();
-
-
-
-
-(async () => {
-
-  console.log('sscscsdcsdcsdcsd calling ');
-  
-
-  logSuccess(null,'broker instrument getting !');
-
-  const requestId = crypto.randomUUID();
-  const startTime = Date.now();
-
-  try {
-    parentPort.postMessage({ status: "STARTED", requestId });
-
-    const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData, growwData] =
-      await Promise.all([
-        fetchAngelOneScripMaster(),
-        fetchKiteInstruments(),
-        fetchAllFinvasiaInstruments(),
-        fetchUpstoxInstruments("COMPLETE"),
-        fetchAllFyersInstruments(),
-        fetchGrowwInstruments(),
-      ]);
-
-    logSuccess(null,'all broker instrument getted successfully');
-
-    const growwTokenMap = new Map();
-    for (const growwRecord of growwData) {
-      growwTokenMap.set(String(growwRecord.exchange_token), growwRecord);
-    }
-    logSuccess(null,'groww instrument map done !');
-
-    const kiteTokenMap = new Map();
-    for (const kiteRecord of kiteData) {
-      kiteTokenMap.set(String(kiteRecord.exchange_token), kiteRecord);
-    }
-    logSuccess(null,'kite instrument map done !');
-
-    const finByToken = new Map();
-    const finBySymbolKey = new Map();
-    for (const f of finvasiaList) {
-      const finToken = buildTokenKey(f?.Token);
-      if (finToken) finByToken.set(finToken, f);
-      const finKey = buildSymbolKey(f?.Exchange, f?.TradingSymbol || f?.Symbol);
-      if (finKey) finBySymbolKey.set(finKey, f);
-    }
-    logSuccess(null,'finavasia instrument map done !');
-
-    const upsByToken = new Map();
-    const upsBySymbolKey = new Map();
-    for (const u of upstoxData) {
-      const uToken = buildTokenKey(getUpstoxToken(u));
-      if (uToken) upsByToken.set(uToken, u);
-      const uKey = buildSymbolKey(getUpstoxExchange(u), getUpstoxSymbol(u));
-      if (uKey) upsBySymbolKey.set(uKey, u);
-    }
-    logSuccess(null,'upstox instrument map done !');
-
-    const fyByToken = new Map();
-    const fyBySymbolKey = new Map();
-    const fyBySymbolOnlyKey = new Map();
-    for (const f of fyersData) {
-      const fyToken = buildTokenKey(f?.fytoken);
-      if (fyToken) fyByToken.set(fyToken, f);
-      const fyKey = buildSymbolKey(f?.exchange, f?.tradingsymbol);
-      if (fyKey) fyBySymbolKey.set(fyKey, f);
-      fyBySymbolOnlyKey.set(f?.tradingsymbol, f);
-    }
-    logSuccess(null,'fyers instrument map done !');
-
-    let fyMatchCount = 0;
-    const mergedAngel = angeloneData.map((angel) => {
-      const kiteMatch = kiteTokenMap.get(String(angel.token));
-      const kiteExch = kiteMatch?.exchange || "";
-      const kiteSymbol = kiteMatch?.tradingsymbol || "";
-
-      const angelExch = angel?.exch_seg || "";
-      const angelSymbol = angel?.symbol || "";
-      const angelExchange = angel?.exch_seg || "";
-      const symKey = buildSymbolKey(angelExch, angelSymbol);
-
-      const finMatch = finByToken.get(String(angel.token)) || finBySymbolKey.get(symKey) || null;
-      const upstoxMatch = upsByToken.get(String(angel.token)) || upsBySymbolKey.get(symKey) || null;
-
-      const angelSymbolKey = `${angelExchange}:${angelSymbol}`.trim();
-      const kiteSymbolKey = `${kiteExch}:${kiteSymbol}`.trim();
-
-      const fyMatch =
-        fyByToken.get(String(angel.token)) ||
-        fyBySymbolKey.get(angelSymbolKey) ||
-        fyBySymbolKey.get(kiteSymbolKey) ||
-        fyBySymbolOnlyKey.get(kiteSymbol) ||
-        null;
-
-      if (fyMatch) fyMatchCount++;
-
-      const growwMatch = growwTokenMap.get(String(angel.token));
-
-      return {
-        ...angel,
-        kiteSymbol: kiteMatch?.tradingsymbol || null,
-        kiteToken: kiteMatch?.exchange_token || null,
-        kiteExchange: kiteMatch?.exchange || null,
-        growwTradingSymbol: growwMatch?.trading_symbol || null,
-        growwSymbol: growwMatch?.groww_symbol || null,
-        finvasiaSymbol: finMatch?.TradingSymbol || finMatch?.Symbol || null,
-        finvasiaToken: finMatch?.Token || null,
-        upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
-        upstoxToken: getUpstoxToken(upstoxMatch) || null,
-        fyersSymbol: fyMatch?.symbol || null,
-        fyersToken: fyMatch?.fytoken || null,
-      };
-    });
-
-    logSuccess(null,`${fyMatchCount} ============fyMatchCount============`);
-    logSuccess(null,'match instrument done !');
-
-    const angelTokenSet = new Set(angeloneData.map((a) => String(a.token)));
-    const finvasiaOnlyRows = finvasiaList
-      .filter((f) => !angelTokenSet.has(String(f.Token)))
-      .map((f) => {
-        const finToken = String(f.Token);
-        const finKey = buildSymbolKey(f.Exchange, f.TradingSymbol || f.Symbol);
-
-        const kiteMatch = kiteTokenMap.get(finToken) || null;
-        const upstoxMatch =
-          upsByToken.get(finToken) || upsBySymbolKey.get(finKey) || null;
-        const fyMatch =
-          fyByToken.get(finToken) || fyBySymbolKey.get(finKey) || null;
-
-        return {
-          source: "FINVASIA_ONLY",
-          exch_seg: f.Exchange,
-          token: finToken,
-          symbol: f.Symbol,
-          name: f.Symbol,
-          finvasiaSymbol: f.TradingSymbol || f.Symbol || null,
-          finvasiaToken: f.Token || null,
-          kiteSymbol: kiteMatch?.tradingsymbol || null,
-          kiteToken: kiteMatch?.exchange_token || null,
-          upstoxSymbol: getUpstoxSymbol(upstoxMatch) || null,
-          upstoxToken: getUpstoxToken(upstoxMatch) || null,
-          fyersSymbol: fyMatch?.symbol || null,
-          fyersToken: fyMatch?.fytoken || null,
-        };
-      });
-
-    logSuccess(null,'merge instrument done !');
-
-    const finalMerged = [...mergedAngel, ...finvasiaOnlyRows];
-
-    logSuccess(null,'finalMerged instrument done !');
-
-    const responseObj = {
-      status: true,
-      statusCode: 200,
-      data: finalMerged,
-      cache: false,
-      message: "Angel + Kite + Finvasia + Upstox + Fyers merged",
-    };
-
-    logSuccess(null,'payload stringify instrument running !');
-
-    const payload = JSON.stringify(responseObj);
-
-    logSuccess(null,'payload stringify instrument done !');
-
-    // ===============================================================
-    // 🆕 REDIS RETRY LOGIC (ONLY ADDITION)
-    // ===============================================================
-        const saveToRedis = async () => {
-        for (let i = 0; i < 3; i++) {
-          try {
-            await redis.set(MERGED_REDIS_KEY, payload, 'EX', TEN_HOURS_IN_SECONDS);
-            return true;
-          } catch (e) {
-            console.error(`Redis set retry ${i+1}/3 failed`, e.message);
-            await new Promise(r => setTimeout(r, 200));
-          }
-        }
-        return false;
-      };
-
-    const saved = await saveToRedis();
-    if (!saved) {
-      logError("⚠️ Could not cache but continuing…");
-    }
-
-    logSuccess(null,
-      '==============durationMs Normal response============== ' +
-        (Date.now() - startTime)
-    );
-
-    parentPort.postMessage({
-      status: "DONE",
-      requestId,
-      durationMs: Date.now() - startTime,
-    });
-
-    logSuccess(null,"✔️ Worker completed — exiting...");
-    // process.exit(0);
-
-  } catch (err) {
-    parentPort.postMessage({
-      status: "ERROR",
-      requestId,
-      error: err.message,
-    });
-
-    console.log(err?.stack || err?.message);
-    
-    logError(null,"❌ Worker crashed — exiting...");
-    logError(null,err?.stack || err?.message);
-
-   // setTimeout(() => process.exit(1), 50);
-  }
-})();
-
-
-
-
-
-
-
-
-
-
-

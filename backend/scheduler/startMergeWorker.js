@@ -5,9 +5,10 @@ import { logSuccess, logError } from "../utils/loggerr.js";
 import redis from "../utils/redis.js";  // your redis client
 
 // =======================================================
-// ⏱ Cron Job — Run every day at 7:00 AM
+// ⏱ Cron Job — Run every day at 6:00 AM
 // =======================================================
-cron.schedule("0 7 * * *", async () => {
+cron.schedule("0 6 * * *", async () => {
+// const callManual =  async () => {
 
   const now = new Date();
 
@@ -18,13 +19,13 @@ try {
     await redis.del(MERGED_REDIS_KEY)
 
      // Log success
-    logSuccess( {
+    logSuccess( null,{
         msg: `🕖 old redish data is delete`,
       }
     );
 
   // Log success
-    logSuccess(
+    logSuccess(null,
       { cronTime: now.toISOString() },
       {
         msg: `🕖 Cron triggered startMergeWorker at ${now.toLocaleString()}`,
@@ -37,7 +38,7 @@ try {
     await startMergeWorker();
 
     // Log success
-    logSuccess(
+    logSuccess(null,
       { cronTime: now.toISOString() },
       {
         msg: "startMergeWorker executed successfully",
@@ -48,7 +49,7 @@ try {
     console.log(`✔️ startMergeWorker completed successfully at ${new Date().toLocaleString()}`);
   } catch (err) {
     // Log error
-    logError(
+    logError(null,
       { cronTime: now.toISOString() },
       {
         msg: "startMergeWorker failed",
@@ -60,8 +61,11 @@ try {
 
     console.error(`❌ startMergeWorker failed at ${new Date().toLocaleString()}:`, err);
   }
-});
+}
+);
 
+
+// callManual()
 
 // ====================ref code 7 jan  2025 ==========================
 

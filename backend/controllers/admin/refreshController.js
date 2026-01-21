@@ -88,11 +88,14 @@ const fetchBrokerOrders = async (user) => {
 
 export const GetOrderStatusPerticularSymbol = async (req, res) => {
   try {
+
+
     // Get all software BUY orders (OPEN or COMPLETE) to sync with DEMAT
     const softwareOrders = await Order.findAll({
       where: {
         transactiontype: "BUY",
         status: "COMPLETE",
+        orderstatuslocaldb : "OPEN",
       },
       raw: true,
     });

@@ -371,8 +371,15 @@ export const getAngelOneProfileFund = async function (req,res,next) {
 export const getAngelOneOrder = async (req, res,next) => {
     try {
 
-    const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRFExTWpJeE55d2libUptSWpveE56WTRNelkxTmpNM0xDSnBZWFFpT2pFM05qZ3pOalUyTXpjc0ltcDBhU0k2SWpKaFpqQmlNVGcyTFdKbFpqVXROREkzTlMwNU9ESmlMVGsyTURjd1pHUTFNamc1WkNJc0lsUnZhMlZ1SWpvaUluMC5YSEdBX2pxOGNzMmF5ejRVT2NtU0NCdzNzNFM0UmFNRDJMNThCYWloZzB0cnkzSWFRZVNuY1U5b0pndEhZaFg3QXU4RnRrdmVRMndwQ0Q5OFF6WjYyQUNRZ1FvNkh1dXJXU1hzSnpJVU1CdlhPZmlILWJjSDdxTlBySGRKclhGYjZ4d2M3M0FKXzBvMzBjejI1NTdUYVItaHdOcXNVLTlTclc3QVQ4aDRlMHMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjgzNjU4MTcsImV4cCI6MTc2ODQxNTQwMH0.oxAbnfa9foMIA46OxXBP9y2XqZKg_6XzZ5kpEFm2LEdU0Q_lwM2rKtK-cE-TB29dq3NF_VTs7MFkKUew6MWvfg'
-  if (!angelToken) {
+      //  Gopal
+      // let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRGc1TlRNMU55d2libUptSWpveE56WTRPREE0TnpjM0xDSnBZWFFpT2pFM05qZzRNRGczTnpjc0ltcDBhU0k2SWprM1lqSTBNRFExTFRJMk16QXRORGN4TnkwNVltWXpMVFkzTW1ReE9EQmtOMkZpT0NJc0lsUnZhMlZ1SWpvaUluMC5yQVl3aEpCYUIxM25sNmNZNHBCRm5NVkNyT0pCZFZtNURhek9YLTVNX2JXTGEwUUNOdU5xX0VEMExWS05BOVkzeWN0c2MzZm1wRDAwZmgzUGRwZHF4WktwY0xMOTI2OGsxT2dJcUFkY2wzaEtQWXd4WlVUY3BvVXNkQXdsTGlzNlZjUTRTaUFBaS1qbEJaUFVOSDdRZjlJdmd3a0ExcXZRV2pyVmhETl85UXMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MDg5NTcsImV4cCI6MTc2ODg0NzQwMH0.kdfxh-5a24xvPa8gNP2_u0EaVEUbYRw8ZwBvJ1Lsbd_onkT_PGfhQNxjRJIcBWWICK5a3Lg--eL5wKx0b-eemw"
+
+      //  Gurdeep Kaur Arora
+    let  angelToken =  "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ikc0MDQ2ODMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrYzBNRFEyT0RNaUxDSmxlSEFpT2pFM05qZzVOakV5TXpRc0ltNWlaaUk2TVRjMk9EZzNORFkxTkN3aWFXRjBJam94TnpZNE9EYzBOalUwTENKcWRHa2lPaUl6WVRnMU9ESTNNeTFtWW1WakxUUmtPV1V0T1dReE9DMHdNMkZpTVdKbFpqWmlZVGtpTENKVWIydGxiaUk2SWlKOS5DWVJHMGlJNTQzUUtNaXY5SnphTm8tWUZXMlgxWUVsNWxzOVRvU3UyM0NOWmQ4MnRfSFpqQ3lfNXlTbWlsMmlobWV3NVQtdXk3UVl4QkJCSWhyVTJwNndIam5KeTM4cXJZRm44Mm9aRU1BNWRaWGVNWlZ6MVhReWljTnlKZGNxTU1lV1hIYzhPQUlpMFgyVEh1dERBSGpmQkR0c2M4ZnVtRnRKMGZLS0RsWFEiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4NzQ4MzQsImV4cCI6MTc2ODkzMzgwMH0.VgHPDiO7gti1pSWmCz8JTAYDsD4RvV0tyX96PFn1_wp9UpUMwOLHOGp15iKpw6d_rTZpc9KxSoOeD4FqlUse7w"
+      // prince
+    //let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGt3TWpVeE1Dd2libUptSWpveE56WTRPREUxT1RNd0xDSnBZWFFpT2pFM05qZzRNVFU1TXpBc0ltcDBhU0k2SW1WbU56YzNZMlUyTFdWbE1HTXRORE5tWlMwNFl6TXlMV0k1TW1VNE1HUm1PV0l6WWlJc0lsUnZhMlZ1SWpvaUluMC5ZSFVHSGFwejFjUnFQVkVVRnpySGlnOGZuZ0xpVUxkUnFHb19Db2xZYzJtajc1NkFrY0xYcmEybWw4ejdiR0VKeDFuanBMVmwzT3pKWm5xVld4UWNWY1prVVNIc3NDSjdBS2JfdGNOLTVIUlhXbHJXWS1vdnk1cmhGTFdmZjVjWERKU1Q3X3pKOGJ1Z3dkS2UzVE1TdnZndTdYUl9jREx1X2J3NFhQUVd6bmMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MTYxMTAsImV4cCI6MTc2ODg0NzQwMH0.3NimCUWV1aDlCAP2rarnypMjUs2Br1JiOx62dxevW-Ona90TjBbM7yXnuyJDwWcBbPDLvGxzixjJbBHBiTmnMQ"
+    
+    if (!angelToken) {
     
      return res.json({
             status: false,
@@ -557,7 +564,7 @@ export const reGenerateTokenWithAngelOne = async function (req,res,next) {
 export const getTradeBook = async (req, res) => {
     try {
         
-      const angelToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTkRFME5UWXlOQ3dpYm1KbUlqb3hOelkwTURVNU1EUTBMQ0pwWVhRaU9qRTNOalF3TlRrd05EUXNJbXAwYVNJNklqTXlNREJpWW1FMExUTTBNV1F0TkRJMU15MWlPVEkxTFRsa1lqRXdabVU0TmpkaFpDSXNJbFJ2YTJWdUlqb2lJbjAuZE8zWUUxSXdTRVhJN0ZtemtoMGFGU1lOYjEweGc3cUFlRkNPUXktd2FhX0t3bGc1Y3M2U0FRcllMUHp2WGM0ZWRwMkdPSzNJcVpfVlJCLTVkMHVOcmNkM3h4UW5Xb3dFMFFUSVc0dElPZHUwX3F4Ty16X1VqUElMSU9rRjZHYXdFUWNLbS1qS0FGa3psQVVfYUhuZVotS1JWd3JhcVQwLTVHTmxZeWViQjRvIiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY0MDU5MjI0LCJleHAiOjE3NjQwOTU0MDB9.OA0TlacLUm8EuI4jKGblV1teFfxLB1t5RKHpmQZRuqR5Abo_yHyDn_nD5vuu3W_Y0e4iwly5t3xgTK7LdUIBJQ'
+      const angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGczTkRJek15d2libUptSWpveE56WTROemczTmpVekxDSnBZWFFpT2pFM05qZzNPRGMyTlRNc0ltcDBhU0k2SW1VeVpUY3lOREF6TFRkbE5HRXROREkwTXkwNVltVTBMV0kyWkRjNU0yRTRNRFV4T1NJc0lsUnZhMlZ1SWpvaUluMC5tQTlNM05FQWZ5d2xibzA5MnY5cjJVX18teXJESGVWOHkxdl9uWjBkWWtlLW9IUTZZTHYycnFCLTVCc2hLQ3JROGRMWXFrSlV6RDJvU3hzTTJieUxLNnVkalBKaTRQcUNQaHMzY0ZUZkc1SG9HUlQzQWFUZGNxUmpnV3hKYXlZMndZM2hQblFXdmoxYzA5SWJHeGJzWmpuQjlZdU9JaXBoTnNHcUpCR2hqUjgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODc4MzMsImV4cCI6MTc2ODg0NzQwMH0.iOU4qSD_IVPqLRwXqwwswls5hUc1JUzetgNvYoLBZCychEPhiJDo8vnTIijC-pSpyzvo3ydir99T7sdQOcyJ2A"
 
      if (!angelToken) {
     
@@ -1145,7 +1152,7 @@ export const getTradeDataForDeshboard = async function (req,res,next) {
 
 
 // ============= update code =================================
-export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
+export const getTradeDataForCommonDeshboardUpdate1212 = async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -1224,6 +1231,10 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
        (1 SELL = 1 TRADE)
     ===================================================== */
    const sellTrades = trades.filter((t) => t.transactiontype === "SELL");
+
+
+   console.log(sellTrades,'csdcscscscsdcsdc');
+   
 
     // Use Set to store unique strategyUniqueId
     const uniqueStrategyIds = new Set(sellTrades.map((t) => t.strategyUniqueId));
@@ -1330,6 +1341,9 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
 
 
 
+    console.log(Number(realizedPnL.toFixed(2)),'hhhhhy pnl');
+    
+
     
     return res.json({
       status: true,
@@ -1353,7 +1367,7 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
 };
 
 // ==============old code ====================================
-export const getTradeDataForCommonDeshboardUpdate1212 = async function (req, res) {
+export const getTradeDataForCommonDeshboardUpdateRunning = async function (req, res) {
   try {
 
 
@@ -1530,7 +1544,222 @@ export const getTradeDataForCommonDeshboardUpdate1212 = async function (req, res
   }
 };
 
-export const getDeshboardOrdersUpdate = async (req, res) => {
+export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // ===============================
+    // 📅 Today UTC Range
+    // ===============================
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
+
+    const end = new Date();
+    end.setUTCHours(23, 59, 59, 999);
+
+    const startISO = start.toISOString();
+    const endISO = end.toISOString();
+
+    // ===============================
+    // 1️⃣ Fetch today's COMPLETE trades
+    // ===============================
+    const todayTrades = await Order.findAll({
+      where: {
+        userId,
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+      raw: true,
+    });
+
+    // ===============================
+    // Counts (OLD COMPATIBLE)
+    // ===============================
+    const totalTraded = await Order.count({
+      where: {
+        userId,
+        transactiontype: "BUY",
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+    });
+
+    const totalOpen = await Order.count({
+      where: {
+        userId,
+        orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+      },
+    });
+
+    if (!todayTrades.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No trades found",
+        data: [],
+        onlineTrades: [],
+        pnl: 0,
+        totalTraded,
+        totalOpen,
+      });
+    }
+
+    // ===============================
+    // 2️⃣ Collect SELL buyOrderIds
+    // ===============================
+    const buyOrderIds = [
+      ...new Set(
+        todayTrades
+          .filter(
+            t =>
+              t.transactiontype === "SELL" &&
+              t.buyOrderId &&
+              t.buyOrderId !== "0"
+          )
+          .map(t => String(t.buyOrderId).trim())
+      ),
+    ];
+
+    // ===============================
+    // 3️⃣ Fetch missing BUY orders
+    // ===============================
+    const previousBuys = buyOrderIds.length
+      ? await Order.findAll({
+          where: {
+            userId,
+            transactiontype: "BUY",
+            orderstatuslocaldb: "COMPLETE",
+            orderid: { [Op.in]: buyOrderIds },
+          },
+          raw: true,
+        })
+      : [];
+
+    // ===============================
+    // 4️⃣ Merge & sort (OLD LOGIC)
+    // ===============================
+    const tradeMap = new Map();
+    [...previousBuys, ...todayTrades].forEach(t => {
+      tradeMap.set(`${t.orderid}_${t.transactiontype}`, t);
+    });
+
+    const trades = Array.from(tradeMap.values());
+
+    trades.sort((a, b) => {
+      const ta = new Date(a.filltime).getTime();
+      const tb = new Date(b.filltime).getTime();
+      if (ta !== tb) return ta - tb;
+      return a.transactiontype === "BUY" ? -1 : 1;
+    });
+
+    // ===============================
+    // 5️⃣ FIFO ENGINE (buyOrderId priority)
+    // ===============================
+    const grouped = {};
+    let totalPnL = 0;
+
+    for (const t of trades) {
+      const symbol = t.tradingsymbol;
+      const qty = Number(t.fillsize || t.quantity || 0);
+      const price = Number(t.fillprice || t.averageprice || 0);
+      if (!qty || !price) continue;
+
+      if (!grouped[symbol]) {
+        grouped[symbol] = {
+          buys: [],
+          totalBuyValue: 0,
+          totalBuyQty: 0,
+          totalSellValue: 0,
+          totalSellQty: 0,
+          pnl: 0,
+        };
+      }
+
+      const g = grouped[symbol];
+
+      // BUY
+      if (t.transactiontype === "BUY") {
+        g.buys.push({
+          orderid: String(t.orderid).trim(),
+          qty,
+          price,
+        });
+        g.totalBuyQty += qty;
+        g.totalBuyValue += qty * price;
+      }
+
+      // SELL
+      if (t.transactiontype === "SELL") {
+        g.totalSellQty += qty;
+        g.totalSellValue += qty * price;
+
+        let remaining = qty;
+        let buyQueue = g.buys;
+
+        if (t.buyOrderId && t.buyOrderId !== "0") {
+          const id = String(t.buyOrderId).trim();
+          buyQueue = buyQueue.filter(b => b.orderid === id);
+        }
+
+        for (const buy of buyQueue) {
+          if (remaining <= 0) break;
+          const matched = Math.min(buy.qty, remaining);
+
+          const pnl = (price - buy.price) * matched;
+          g.pnl += pnl;
+          totalPnL += pnl;
+
+          buy.qty -= matched;
+          remaining -= matched;
+        }
+      }
+    }
+
+    // ===============================
+    // 6️⃣ OLD FORMAT OUTPUT (FRONTEND SAFE)
+    // ===============================
+    const pnlData = [];
+
+    for (const [symbol, g] of Object.entries(grouped)) {
+      if (g.totalBuyQty > 0 && g.totalSellQty > 0) {
+        pnlData.push({
+          label: symbol,
+          win: Number((g.totalBuyValue / g.totalBuyQty).toFixed(2)),
+          loss: Number((g.totalSellValue / g.totalSellQty).toFixed(2)),
+          quantity: Math.min(g.totalBuyQty, g.totalSellQty),
+          pnl: Number(g.pnl.toFixed(2)),
+        });
+      }
+    }
+
+    // ===============================
+    // ✅ FINAL RESPONSE (UNCHANGED FOR FE)
+    // ===============================
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "tradebook fetched",
+      data: pnlData,
+      onlineTrades: trades,
+      pnl: Number(totalPnL.toFixed(2)),
+      totalTraded,
+      totalOpen,
+    });
+  } catch (err) {
+    console.error("Tradebook Error:", err);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal error",
+      error: err.message,
+    });
+  }
+};
+
+
+
+
+export const getDeshboardOrdersUpdateRunning = async (req, res) => {
   try {
 
     // 1️⃣ Set date range (today by default)
@@ -1642,8 +1871,161 @@ const mergeSellByBuyOrderId = (orders) => {
   }
 };
 
+export const getDeshboardOrdersUpdate = async (req, res) => {
+  try {
+    const userId = req.userId;
 
-export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
+    // ===============================
+    // 📅 Today UTC range
+    // ===============================
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    // ===============================
+    // 1️⃣ Fetch today's COMPLETE orders
+    // ===============================
+    const orders = await Order.findAll({
+      where: {
+        userId,
+        orderstatuslocaldb: "COMPLETE",
+        filltime: { [Op.between]: [startISO, endISO] },
+      },
+      order: [["createdAt", "DESC"]],
+      raw: true,
+    });
+
+    if (!orders.length) {
+      return res.json({
+        status: true,
+        message: "No orders found",
+        data: {
+          totalOrders: [],
+          recentOrders: [],
+        },
+      });
+    }
+
+    // ===============================
+    // 2️⃣ Map to frontend format (UNCHANGED)
+    // ===============================
+    const mappedOrders = orders.map(o => ({
+      tradingsymbol: o.tradingsymbol,
+      orderid: String(o.orderid).trim(),
+      buyOrderId: String(o.buyOrderId || "0").trim(),
+      transactiontype: o.transactiontype,
+      lotsize: Number(o.quantity || 0),
+      averageprice: Number(o.fillprice || o.averageprice || 0),
+      orderstatus: o.orderstatuslocaldb,
+      ordertime: o.filltime || o.createdAt,
+    }));
+
+    // ===============================
+    // 3️⃣ Recent 5 orders (UNCHANGED)
+    // ===============================
+    const recentFiveOrders = mappedOrders.slice(0, 5);
+
+    // ===============================
+    // 4️⃣ Merge SELLs by buyOrderId (FIXED)
+    // ===============================
+    const mergeByBuyOrderId = (orders) => {
+      const buyMap = {};
+      const sellMap = {};
+
+      for (const o of orders) {
+        const qty = Number(o.lotsize || 0);
+        const price = Number(o.averageprice || 0);
+
+        // BUY
+        if (o.transactiontype === "BUY") {
+          buyMap[o.orderid] = {
+            ...o,
+          };
+        }
+
+        // SELL
+        if (o.transactiontype === "SELL") {
+          const key = o.buyOrderId && o.buyOrderId !== "0"
+            ? o.buyOrderId
+            : "__NO_BUY__";
+
+          if (!sellMap[key]) {
+            sellMap[key] = {
+              ...o,
+              lotsize: 0,
+              totalValue: 0,
+            };
+          }
+
+          sellMap[key].lotsize += qty;
+          sellMap[key].totalValue += qty * price;
+        }
+      }
+
+      const result = [];
+
+      // 🔗 Combine BUY + SELL
+      for (const [buyId, buy] of Object.entries(buyMap)) {
+        result.push(buy);
+
+        if (sellMap[buyId]) {
+          const s = sellMap[buyId];
+          s.averageprice = s.totalValue / s.lotsize;
+          delete s.totalValue;
+          result.push(s);
+          delete sellMap[buyId];
+        }
+      }
+
+      // 🔥 Remaining SELLs (no BUY found today)
+      for (const s of Object.values(sellMap)) {
+        s.averageprice = s.totalValue / s.lotsize;
+        delete s.totalValue;
+        result.push(s);
+      }
+
+      return result;
+    };
+
+    // ===============================
+    // 5️⃣ Role based output
+    // ===============================
+    let finalOrders = [];
+
+    if (req.role === "clone-user") {
+      finalOrders = mappedOrders;
+    } else {
+      finalOrders = mergeByBuyOrderId(mappedOrders);
+    }
+
+    // ===============================
+    // ✅ RESPONSE (FRONTEND SAFE)
+    // ===============================
+    return res.json({
+      status: true,
+      message: "orders retrieved successfully",
+      data: {
+        totalOrders: finalOrders,
+        recentOrders: recentFiveOrders,
+      },
+    });
+  } catch (error) {
+    console.error("Dashboard Orders Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Error fetching orders",
+      error: error.message,
+    });
+  }
+};
+
+// 21 jan 2025
+export const getAngelOneTradeDataUserPostionRunning = async function (req, res, next) {
   try {
     const angelToken = req.headers.angelonetoken;
 
@@ -1686,6 +2068,10 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
     }
 
     const trades = response.data?.data || [];
+
+
+    console.log('===========trades=========',trades);
+    
 
     if (!trades.length) {
       return res.json({
@@ -1784,15 +2170,224 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
   }
 };
 
+export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
+  try {
+    const angelToken = req.headers.angelonetoken;
+
+    if (!angelToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login In AngelOne Account",
+        onlineTrades: [],
+        error: null,
+      });
+    }
+
+    const headers = {
+      Authorization: `Bearer ${angelToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-UserType": "USER",
+      "X-SourceID": "WEB",
+      "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+      "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+      "X-MACAddress": process.env.MAC_Address,
+      "X-PrivateKey": process.env.PRIVATE_KEY,
+    };
+
+    // =====================================================
+    // 1️⃣ POSITION API (OLD LOGIC)
+    // =====================================================
+    const positionRes = await axios.get(
+      "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition",
+      { headers }
+    );
+
+    const trades = positionRes.data?.data || [];
+
+    if (!trades.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No Trade in User Position",
+        onlineTrades: [],
+        error: null,
+      });
+    }
+
+    // =====================================================
+    // 2️⃣ ORDER BOOK API (NEW)
+    // =====================================================
+    const orderRes = await axios.get(
+      "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook",
+      { headers }
+    );
+
+    const orders = orderRes.data?.data || [];
+
+    // =====================================================
+    // 3️⃣ TRADE BOOK API (NEW)
+    // =====================================================
+    const tradeRes = await axios.get(
+      "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook",
+      { headers }
+    );
+
+    const tradeBook = tradeRes.data?.data || [];
+
+    // =====================================================
+    // 4️⃣ FIRST FILL MAP (orderid → trade)
+    // =====================================================
+    const tradeMap = {};
+    for (const t of tradeBook) {
+      if (!tradeMap[t.orderid]) {
+        tradeMap[t.orderid] = t; // FIRST FILL
+      }
+    }
+
+
+  
+    
+
+    // =====================================================
+    // 5️⃣ OLD MAPPING + NEW DATA MERGE
+    // =====================================================
+    const mappedTrades = trades.map((t) => {
+
+      
+
+      const buyQty = Number(t.buyqty || 0);
+      const sellQty = Number(t.sellqty || 0);
+
+      let transaction_type;
+      let quantity;
+
+      if (buyQty > sellQty) {
+        transaction_type = "BUY";
+        quantity = buyQty - sellQty;
+      } else if (sellQty === buyQty) {
+
+        //  return null;
+       
+        
+        transaction_type = "SELL";
+         if((sellQty - buyQty)===0) {
+          quantity = sellQty 
+         }else{
+           quantity = sellQty - buyQty;
+         }
+        
+      } else {
+        return null;
+      }
+
+      // 🔍 MATCH ORDER
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === t.tradingsymbol &&
+        o.producttype === t.producttype &&
+        o.transactiontype === transaction_type &&
+        o.status === "complete"
+      );
+
+      // 🔍 MATCH TRADE (FIRST FILL)
+      const matchedTrade = matchedOrder
+        ? tradeMap[matchedOrder.orderid]
+        : null;
+
+
+        console.log(t,'matchedTrade');
+        
+
+      const fillPrice = Number(t.buyavgprice || 0);
+
+      return {
+        // ================= GRID =================
+        tradingsymbol: t.tradingsymbol || "-",
+        exchange: t.exchange || "-",
+        transaction_type,
+        product: t.producttype || "-",
+        average_price: Number(t.averageprice || fillPrice || 0),
+        quantity,
+
+        // ================= IDS (NOW REAL) =================
+        order_id: matchedOrder?.orderid || "",
+        trade_id: matchedTrade?.fillid || "",     // 👈 fillid
+        uniqueorderid: matchedOrder?.uniqueorderid || "",
+
+        // ================= MOBILE =================
+        transactiontype: transaction_type,
+        ordertype: matchedOrder?.ordertype || "MARKET",
+        producttype: t.producttype || "-",
+        fillprice: String(fillPrice || ""),
+        price: String(fillPrice || ""),
+        fillsize: quantity,
+        orderid: matchedOrder?.orderid || "",
+        status: "COMPLETE",
+        instrumenttype:t?.instrumenttype,
+        orderstatus: matchedOrder?.status || "COMPLETE",
+        text: "",
+        updatetime:
+          matchedOrder?.updatetime ||
+          matchedTrade?.exchtime ||
+          "",
+
+        exchangeorderid:
+          matchedOrder?.exchangeorderid || "",
+
+        // ================= SOCKET =================
+        symboltoken: String(t.symboltoken || ""),
+
+        // ================= RAW =================
+        buyqty: t.buyqty,
+        sellqty: t.sellqty,
+        netqty: t.netqty,
+        pnl: t.pnl,
+        ltp: t.ltp,
+        instrumenttype: t.instrumenttype,
+
+        createdAt: t.createdAt || null,
+        updatedAt: t.updatedAt || null,
+      };
+    }).filter(Boolean); // 👈 null remove
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "Trade in User Position",
+      onlineTrades: mappedTrades,
+      error: null,
+    });
+
+  } catch (error) {
+
+    console.log(error,'rrr');
+    
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Error getting AngelOne trade data",
+      onlineTrades: [],
+      error: error?.message || null,
+    });
+  }
+};
+
+
 
 
 export const getPosition = async (req, res,next) => {
     try {
 
+       // Gurdeep Kaur Arora
+       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ikc0MDQ2ODMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrYzBNRFEyT0RNaUxDSmxlSEFpT2pFM05qZzROelE1TmpJc0ltNWlaaUk2TVRjMk9EYzRPRE00TWl3aWFXRjBJam94TnpZNE56ZzRNemd5TENKcWRHa2lPaUl4TXpFME5EaG1NeTFtTURJNUxUUXhabUl0WWpsa01pMDBZVGsyWW1RNU5HUmxaV0VpTENKVWIydGxiaUk2SWlKOS5jZGlBZzBwckZYTkx2ZzhHa0NNaldfNy1OTVdYRXpIV0VCUFNPalFJZW1jSUlwSzNfU1hERVdDcUd6TWlQTG1pZm0tSWtBUERWTDJnUVJwU19rTVRlR2dFVFRjVE0wMF9aMktJc2dRaDI4TWdUZmNKb1pndndlMnR5S0lkT0JyMEJTMm1KRUNHaWtIeTB0eU5JZ3hNbGh0UzlzVEp1akRlb1VWOGNGZ0NQQ1EiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODg1NjIsImV4cCI6MTc2ODg0NzQwMH0.9LgVy_pVuX4qA5oyrXXrrUou8GYzaleXS9lKxsrOq4ZyLfcg2LWTMxGPMOdbpOUosEbqdJU8EjNeZJ611433wA"
+
+      // let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRGc1TlRNMU55d2libUptSWpveE56WTRPREE0TnpjM0xDSnBZWFFpT2pFM05qZzRNRGczTnpjc0ltcDBhU0k2SWprM1lqSTBNRFExTFRJMk16QXRORGN4TnkwNVltWXpMVFkzTW1ReE9EQmtOMkZpT0NJc0lsUnZhMlZ1SWpvaUluMC5yQVl3aEpCYUIxM25sNmNZNHBCRm5NVkNyT0pCZFZtNURhek9YLTVNX2JXTGEwUUNOdU5xX0VEMExWS05BOVkzeWN0c2MzZm1wRDAwZmgzUGRwZHF4WktwY0xMOTI2OGsxT2dJcUFkY2wzaEtQWXd4WlVUY3BvVXNkQXdsTGlzNlZjUTRTaUFBaS1qbEJaUFVOSDdRZjlJdmd3a0ExcXZRV2pyVmhETl85UXMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MDg5NTcsImV4cCI6MTc2ODg0NzQwMH0.kdfxh-5a24xvPa8gNP2_u0EaVEUbYRw8ZwBvJ1Lsbd_onkT_PGfhQNxjRJIcBWWICK5a3Lg--eL5wKx0b-eemw"
+
 
       // let token = req.headers.angelonetoken
 
-       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ik0xNjI0MjMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjE5TENKcGMzTWlPaUowY21Ga1pWOXNiMmRwYmw5elpYSjJhV05sSWl3aWMzVmlJam9pVFRFMk1qUXlNeUlzSW1WNGNDSTZNVGMyTnpnME16azBNU3dpYm1KbUlqb3hOelkzTnpVM016WXhMQ0pwWVhRaU9qRTNOamMzTlRjek5qRXNJbXAwYVNJNkltSTBaRFJoTTJVeExXUm1Oekl0Tkdaall5MWhOMlZtTFRJMVl6STBZbVk1WXpkbE5DSXNJbFJ2YTJWdUlqb2lJbjAuUmlrTjJhWk5UVkIycXB3YWdGZE42bGJVdFBLX05MVGc5Yzl5Q2RuaF9LU3hadlViMU4xeDI2VV85NWtJRWlHZkZaT0JxWHI5aTFDTHhCSVJ6SERDT19FZzE4anRNRUNFc200Y0xLVjNRZldLdDFFTlFMTVVYazdoaUduSGFZXzZFRGp6Y25Ga2pQNEtkaTVkLXZJS3FTXy1ZSXBlMndoVGpxcGNtSmtuX3Q0IiwiQVBJLUtFWSI6InlKYnJubmt4IiwiWC1PTEQtQVBJLUtFWSI6dHJ1ZSwiaWF0IjoxNzY3NzU3NTQxLCJleHAiOjE3Njc4MTA2MDB9.pGZAoTn23Az5x7HsSKDzIMVJx2taST8DuRQNYufG_0x6wTZQgYP-1sVq76_QP-4OLaYpGaCX0c7MkGQXFpjhLA"
+      //   const token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGczTkRJek15d2libUptSWpveE56WTROemczTmpVekxDSnBZWFFpT2pFM05qZzNPRGMyTlRNc0ltcDBhU0k2SW1VeVpUY3lOREF6TFRkbE5HRXROREkwTXkwNVltVTBMV0kyWkRjNU0yRTRNRFV4T1NJc0lsUnZhMlZ1SWpvaUluMC5tQTlNM05FQWZ5d2xibzA5MnY5cjJVX18teXJESGVWOHkxdl9uWjBkWWtlLW9IUTZZTHYycnFCLTVCc2hLQ3JROGRMWXFrSlV6RDJvU3hzTTJieUxLNnVkalBKaTRQcUNQaHMzY0ZUZkc1SG9HUlQzQWFUZGNxUmpnV3hKYXlZMndZM2hQblFXdmoxYzA5SWJHeGJzWmpuQjlZdU9JaXBoTnNHcUpCR2hqUjgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODc4MzMsImV4cCI6MTc2ODg0NzQwMH0.iOU4qSD_IVPqLRwXqwwswls5hUc1JUzetgNvYoLBZCychEPhiJDo8vnTIijC-pSpyzvo3ydir99T7sdQOcyJ2A"
 
       var config = {
         method: 'get',

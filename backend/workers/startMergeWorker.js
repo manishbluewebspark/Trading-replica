@@ -1,39 +1,48 @@
 
 import { Worker } from "worker_threads";
+import { instrumentGetFun } from "./mergeInstruments.worker.js";
 
 export const startMergeWorker = () => {
-  return new Promise((resolve, reject) => {
-    try {
-      const worker = new Worker(
-        new URL("../workers/mergeInstruments.worker.js", import.meta.url),
-        {
-          resourceLimits: {
-            maxOldGenerationSizeMb: 4096,
-          },
-        }
-      );
 
-      worker.on("message", (msg) => {
-        console.log("Worker:", msg);
-      });
+  instrumentGetFun()
+  // return new Promise((resolve, reject) => {
+  //   try {
 
-      worker.on("error", (err) => {
-        console.error("❌ Worker error:", err);
-        reject(err); // IMPORTANT
-      });
 
-      worker.on("exit", (code) => {
-        if (code === 0) {
-          console.log("✔️ Worker finished successfully");
-          resolve();
-        } else {
-          reject(new Error(`Worker exited with code ${code}`));
-        }
-      });
-    } catch (err) {
-      reject(err); // IMPORTANT
-    }
-  });
+
+  //     // const worker = new Worker(
+  //     //   new URL("../workers/mergeInstruments.worker.js", import.meta.url),
+  //     //   {
+  //     //     resourceLimits: {
+  //     //       maxOldGenerationSizeMb: 4096,
+  //     //     },
+  //     //   }
+  //     // );
+
+  //     // worker.on("message", (msg) => {
+  //     //   console.log("Worker:", msg);
+  //     // });
+
+  //     // worker.on("error", (err) => {
+  //     //   console.error("❌ Worker error:", err);
+  //     //   reject(err); // IMPORTANT
+  //     // });
+
+  //     // worker.on("exit", (code) => {
+  //     //   if (code === 0) {
+  //     //     console.log("✔️ Worker finished successfully");
+  //     //     resolve();
+  //     //   } else {
+  //     //     reject(new Error(`Worker exited with code ${code}`));
+  //     //   }
+  //     // });
+  //   } catch (err) {
+
+  //     console.log(err,'reject error');
+      
+  //     reject(err); // IMPORTANT
+  //   }
+  // });
 };
 
 

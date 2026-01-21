@@ -5,20 +5,8 @@ import User from "../../models/userModel.js";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import sequelize from "../../config/db.js";
-import dayjs from "dayjs";
 import {emitOrderGet} from "../../services/smartapiFeed.js"
 import { generateStrategyUniqueId } from "../../utils/randomWords.js";
-
-
-const input = "2025-12-03 04:12:29.272+00";
-
-const converted = dayjs(input)
-  .utc()
-  .millisecond(0)
-  .format("YYYY-MM-DDTHH:mm:ss.000[Z]");
-
-console.log(converted,'update data');
-
 
 
 
@@ -37,14 +25,19 @@ function generateFillId() {
   return Math.floor(1000000 + Math.random() * 9000000);
 }
 
-
 export const createManualOrderWithBrokerPrice = async (req, res) => {
   try {
 
     let data = req.body;
 
      let strategyUniqueId = await generateStrategyUniqueId("clone-user")
-  
+
+     const user = await User.findOne({
+          where: { id: data.userId,
+            
+          }
+        });
+    
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
       return res.status(400).json({ status: false, message: "Tradingsymbol required" });
@@ -79,6 +72,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.uniqueorderid = generateUniqueOrderUUID();
     data.fillid = generateFillId();
     data.userNameId = data.username
+    data.broker = user?.brokerName ||""
     // -------- Default Values --------
     data.text = data.text || "";
     data.status = data.status || "COMPLETE";
@@ -106,15 +100,8 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.strategyUniqueId = strategyUniqueId||""
 
     data.angelOneSymbol =  data.tradingsymbol,
-    data.angelOneToken =  data.symboltoken,
+    data.angelOneToken =  data.symboltoken
 
-
-
-    console.log(now,'now');
-
-
-
-    
 
     // ------------------------------------------------------
     //              FIND TODAY'S BUY ORDER
@@ -172,8 +159,6 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
       }
     }
 
-
-
     // -------- Save Final Order --------
     const order = await Order.create(data);
 
@@ -187,8 +172,6 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
       );
 
      }
-
-    
 
     emitOrderGet()
 
@@ -238,6 +221,10 @@ export const createManualOrder = async (req, res) => {
 
     let strategyUniqueId = await generateStrategyUniqueId("clone-user")
 
+      const user = await User.findOne({
+          where: { id: data.userId }
+        });
+    
     // Common defaults
     const common = {
       ...data,
@@ -272,6 +259,7 @@ export const createManualOrder = async (req, res) => {
       orderid: generateOrderId(),
       uniqueorderid: generateUniqueOrderUUID(),
       fillid: generateFillId(),
+      broker : user?.brokerName ||"",
 
       transactiontype: "BUY",
       ordertag: "AUTO_BUY_FROM_MANUAL",
@@ -309,6 +297,7 @@ export const createManualOrder = async (req, res) => {
 
       transactiontype: "SELL",
       ordertag: data.ordertag || "MANUAL_ORDER",
+      broker : user?.brokerName ||"",
 
       // Link sell to buy (choose one)
       parentorderid: buyOrder.orderid, // ✅ strong link
@@ -344,7 +333,7 @@ export const createManualOrder = async (req, res) => {
     return res.status(201).json({
       status: true,
       message: "BUY created first, then SELL created successfully",
-      data: { buyOrder, sellOrder },
+      data: { buyOrder,sellOrder },
     });
   } catch (err) {
     await t.rollback();

@@ -256,6 +256,7 @@ export const adminMultipleSquareOff = async (req, res) => {
       where: {
         orderstatuslocaldb: "OPEN",
         transactiontype: "BUY",
+        positionStatus:"OPEN",
         createdAt: { [Op.between]: [startOfDay, endOfDay] },
       },
       raw: true,
@@ -469,7 +470,7 @@ export const adminGroupSquareOff = async (req, res) => {
     // ✔️ Agar already locked hai
     if (strategyLocks.has(reqStrategyUniqueId)) {
     
-      await sleep(5000); // Wait 5 secs
+      await sleep(60000); // Wait 1 minute
       
       strategyLocks.delete(reqStrategyUniqueId);
     }
@@ -516,17 +517,12 @@ export const adminGroupSquareOff = async (req, res) => {
 
     const results = await Promise.allSettled(
       openOrders.map(async (o, idx) => {
-       
-
         try {
-          
-
           const user = await User.findOne({
             where: { id: o.userId },
             raw: true,
           });
 
-         
           if (!user) {
             logSuccess(req, {
               msg: "Square-off skipped: user not found",
@@ -649,11 +645,8 @@ export const adminGroupSquareOff = async (req, res) => {
            
             await placeUpstoxOrder(user, reqInput, req, true);
 
-           
           }
            else {
-
-            
 
             logSuccess(req, {
               msg: "Square-off skipped: invalid/unknown broker",
@@ -690,8 +683,6 @@ export const adminGroupSquareOff = async (req, res) => {
       })
     );
 
-    
-
     // 4) Normalize Promise results
     const finalOutput = results.map((r, i) => {
       if (r.status === "fulfilled") {
@@ -699,7 +690,6 @@ export const adminGroupSquareOff = async (req, res) => {
         return r.value;
       }
 
-      
       return { orderId: openOrders[i].id, result: "PROMISE_REJECTED" };
     });
 

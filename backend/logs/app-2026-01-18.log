@@ -1,0 +1,84 @@
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 16:54:09"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"All broker instruments fetched successfully","message":"API Request Completed","timestamp":"2026-01-18 16:54:51"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Groww instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:51"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Kite instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:51"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Finvasia instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:52"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Upstox instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:52"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Fyers instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:52"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"141830 Fyers matches found","message":"API Request Completed","timestamp":"2026-01-18 16:54:54"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Match instrument done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:54"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Merge instrument done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:55"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Final merged instruments: 243364 records","message":"API Request Completed","timestamp":"2026-01-18 16:54:55"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument running...","message":"API Request Completed","timestamp":"2026-01-18 16:54:55"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument done!","message":"API Request Completed","timestamp":"2026-01-18 16:54:55"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"============== Duration: 48103ms ==============","message":"API Request Completed","timestamp":"2026-01-18 16:54:57"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 16:59:51"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"All broker instruments fetched successfully","message":"API Request Completed","timestamp":"2026-01-18 17:00:19"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Groww instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:19"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Kite instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:19"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Finvasia instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:19"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Upstox instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:19"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Fyers instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:20"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"141830 Fyers matches found","message":"API Request Completed","timestamp":"2026-01-18 17:00:22"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Match instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:22"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Merge instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:22"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Final merged instruments: 243367 records","message":"API Request Completed","timestamp":"2026-01-18 17:00:22"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument running...","message":"API Request Completed","timestamp":"2026-01-18 17:00:22"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:00:23"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"============== Duration: 33426ms ==============","message":"API Request Completed","timestamp":"2026-01-18 17:00:25"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{},"message":"API Request Completed","timestamp":"2026-01-18 17:04:00"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"msg":"🕖 Cron triggered startMergeWorker at 1/18/2026, 5:04:00 PM","timestamp":"1/18/2026, 5:04:00 PM"},"message":"API Request Completed","timestamp":"2026-01-18 17:04:00"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 17:04:00"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"All broker instruments fetched successfully","message":"API Request Completed","timestamp":"2026-01-18 17:04:37"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Groww instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:37"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Kite instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:37"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Finvasia instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:37"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Upstox instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:37"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Fyers instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:38"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"141830 Fyers matches found","message":"API Request Completed","timestamp":"2026-01-18 17:04:40"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Match instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:40"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Merge instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:40"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Final merged instruments: 243377 records","message":"API Request Completed","timestamp":"2026-01-18 17:04:40"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument running...","message":"API Request Completed","timestamp":"2026-01-18 17:04:40"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:04:41"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"============== Duration: 43118ms ==============","message":"API Request Completed","timestamp":"2026-01-18 17:04:43"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"msg":"startMergeWorker executed successfully","timestamp":"1/18/2026, 5:04:00 PM"},"message":"API Request Completed","timestamp":"2026-01-18 17:04:43"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"msg":"🕖 old redish data is delete"},"message":"API Request Completed","timestamp":"2026-01-18 17:06:00"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"cronTime":"2026-01-18T11:36:00.019Z"},"message":"API Request Completed","timestamp":"2026-01-18 17:06:00"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 17:06:00"}
+{"level":"error","url":"","method":"","status":false,"userId":null,"data":{},"message":"API Request Failed","timestamp":"2026-01-18 17:06:10"}
+{"level":"error","url":"","method":"","status":false,"userId":null,"data":{"msg":"startMergeWorker failed","timestamp":"1/18/2026, 5:06:10 PM","error":"Worker exited with code 1","stack":"Error: Worker exited with code 1\n    at Worker.<anonymous> (file:///Users/maheshnayak/Downloads/01-PROJECTS/BLUE-WEB-BACKUP/21-dec-github-project-01/Trading-replica-main/backend/workers/startMergeWorker.js:30:18)\n    at Worker.emit (node:events:517:28)\n    at [kOnExit] (node:internal/worker:303:10)\n    at Worker.<computed>.onexit (node:internal/worker:222:20)"},"message":"API Request Failed","timestamp":"2026-01-18 17:06:10"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"msg":"🕖 old redish data is delete"},"message":"API Request Completed","timestamp":"2026-01-18 17:14:16"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"cronTime":"2026-01-18T11:44:16.080Z"},"message":"API Request Completed","timestamp":"2026-01-18 17:14:16"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 17:14:16"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"All broker instruments fetched successfully","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Groww instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Kite instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Finvasia instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Upstox instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Fyers instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:42"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"141830 Fyers matches found","message":"API Request Completed","timestamp":"2026-01-18 17:14:45"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Match instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:45"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Merge instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:45"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Final merged instruments: 243367 records","message":"API Request Completed","timestamp":"2026-01-18 17:14:45"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument running...","message":"API Request Completed","timestamp":"2026-01-18 17:14:45"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:14:46"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"============== Duration: 31755ms ==============","message":"API Request Completed","timestamp":"2026-01-18 17:14:48"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"cronTime":"2026-01-18T11:44:16.080Z"},"message":"API Request Completed","timestamp":"2026-01-18 17:14:48"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"msg":"🕖 old redish data is delete"},"message":"API Request Completed","timestamp":"2026-01-18 17:15:03"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"cronTime":"2026-01-18T11:45:03.631Z"},"message":"API Request Completed","timestamp":"2026-01-18 17:15:03"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Broker instrument fetching started!","message":"API Request Completed","timestamp":"2026-01-18 17:15:03"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"All broker instruments fetched successfully","message":"API Request Completed","timestamp":"2026-01-18 17:15:32"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Groww instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:32"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Kite instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:32"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Finvasia instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:33"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Upstox instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:33"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Fyers instrument map done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:33"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"141830 Fyers matches found","message":"API Request Completed","timestamp":"2026-01-18 17:15:35"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Match instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:35"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Merge instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:35"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Final merged instruments: 243377 records","message":"API Request Completed","timestamp":"2026-01-18 17:15:35"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument running...","message":"API Request Completed","timestamp":"2026-01-18 17:15:35"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"Payload stringify instrument done!","message":"API Request Completed","timestamp":"2026-01-18 17:15:36"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":"============== Duration: 34990ms ==============","message":"API Request Completed","timestamp":"2026-01-18 17:15:38"}
+{"level":"info","url":"","method":"","status":true,"userId":null,"data":{"cronTime":"2026-01-18T11:45:03.631Z"},"message":"API Request Completed","timestamp":"2026-01-18 17:15:38"}

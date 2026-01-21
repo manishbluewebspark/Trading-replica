@@ -1,9 +1,5 @@
 import { io, Socket } from "socket.io-client";
 
-
-
-
-
 type Tick = {
   mode: 1 | 2 | 3;
   exchangeType: number;

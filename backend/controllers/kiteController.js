@@ -1567,9 +1567,11 @@ export const getKiteHolding = async (req, res) => {
 export const getKiteTrades = async (req, res) => {
   try {
 
-    const  kite  = await getKiteClientForUserId(43)
+    const  kite  = await getKiteClientForUserId(55)
 
-      console.log('vssdsdvsvs');
+
+    
+    
 
     //  const  kite  = await getKiteClientForUserId(13)
 
@@ -1579,11 +1581,14 @@ export const getKiteTrades = async (req, res) => {
     //       item => item.status?.toLowerCase() === "complete"
     //     );
 
-        // const orders = await kite.getOrders();
-              //  const orders = await kite.getOrderTrades("2004398212261355520");
-         const orders = await kite.getOrders();
+        const orders = await kite.getOrders();
 
-         console.log(orders,'==========orders===========');
+        console.log('kite request !',orders);
+
+              //  const orders = await kite.getOrderTrades("2004398212261355520");
+        //  const orders = await kite.getPositions();
+
+         
          
 
     // const orders = await kite.getHoldings();
@@ -1612,6 +1617,9 @@ export const getKiteTrades = async (req, res) => {
       message: "Successfully fetched orders with trades",
     });
   } catch (error) {
+
+    console.log(error);
+    
     return res.json({
       status: false,
       statusCode: 500,
@@ -1701,7 +1709,7 @@ export const getKiteOrders = async (req, res) => {
 
   //  const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("NIFTY2612025800CE");
+    const orders = await kite.getOrderTrades("260119150182582");
     
 
     // console.log(orders,'orders orders');

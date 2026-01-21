@@ -13,6 +13,9 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { useInstrumentStore } from "../../instrumentStore";
 
 
+
+
+
 // 🔹 Type + Exchange options (Angel share same codes)
 type ExchangeOption = {
   code: string;
@@ -210,11 +213,13 @@ export default function InstrumentFormAdmin() {
         },
       });
 
+        console.log(res,'rawData');
+
       if (res?.data?.status === true) {
         
         const rawData = res?.data?.data || [];
 
-        console.log(rawData,'rawData');
+      
         
 
         const normalized = rawData.map((row: any) => mapAngelToCommon(row));
@@ -233,7 +238,7 @@ export default function InstrumentFormAdmin() {
        }
      
     } catch (err: any) {
-      console.error(err);
+      console.error(err,'hhhy');
       toast.error(err?.message || "Something went wrong");
       setError(err?.message || "Something went wrong");
     } finally {

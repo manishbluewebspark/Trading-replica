@@ -50,7 +50,7 @@ type Order = {
   parentorderid: string;
   uniqueorderid: string;
   exchangeorderid: string;
-  createdAt: string;
+  createdAt: any;
   tradedValue: any;
   buyprice: any;
   pnl: any;
@@ -292,9 +292,16 @@ export default function RejectedHistory() {
   const textCellRenderer = (params: any) => {
     const text = params.value || "—";
     return (
-      <span title={text} className="inline-block overflow-hidden text-ellipsis whitespace-nowrap max-w-[360px]">
-        {text}
-      </span>
+      // <span title={text} className="inline-block overflow-hidden text-ellipsis whitespace-nowrap max-w-[360px]">
+      //   {text}
+      // </span>
+<span
+  title={text}
+  className="block break-words whitespace-normal"
+  style={{ width: "100%" }}
+>
+  {text}
+</span>
     );
   };
 
@@ -304,7 +311,7 @@ export default function RejectedHistory() {
     return <span title={title}>{params.value}</span>;
   };
 
-  const columnDefs: ColDef<Order>[] = useMemo(
+  const columnDefs: ColDef<any>[] = useMemo(
     () => [
       {
         headerName: "User Id",
@@ -392,8 +399,8 @@ export default function RejectedHistory() {
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       {
-        headerName: "Message",
-        field: "text",
+        headerName: "Broker",
+        field: "broker",
         filter: true,
         sortable: true,
         cellRenderer: textCellRenderer,
@@ -401,15 +408,51 @@ export default function RejectedHistory() {
         minWidth: 650,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
+      // {
+      //   headerName: "Message",
+      //   field: "text",
+      //   filter: true,
+      //   sortable: true,
+      //   cellRenderer: textCellRenderer,
+      //   width: 770,
+      //   minWidth: 650,
+      //   cellStyle: { borderRight: "1px solid #e2e8f0" },
+      // },
+
+      {
+  headerName: "Message",
+  field: "text",
+  filter: true,
+  sortable: true,
+  cellRenderer: textCellRenderer,
+  autoHeight: true,
+  wrapText: true,
+  width: 770,
+  minWidth: 650,
+  cellStyle: {
+    borderRight: "1px solid #e2e8f0",
+    whiteSpace: "normal"
+  },
+},
+
       {
         headerName: "Created Time",
-        field: "filltime",
+        field: "createdAt",
         filter: true,
         sortable: true,
         width: 280,
         minWidth: 260,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
+      //  {
+      //   headerName: "Fill Time",
+      //   field: "filltime",
+      //   filter: true,
+      //   sortable: true,
+      //   width: 280,
+      //   minWidth: 260,
+      //   cellStyle: { borderRight: "1px solid #e2e8f0" },
+      // },
     ],
     []
   );

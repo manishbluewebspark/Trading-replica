@@ -48,7 +48,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("price", null);
     } else {
-      this.setDataValue("price", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("price", Number(parseFloat(value).toFixed(5)));
     }
   },
     },
@@ -63,7 +63,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("triggerprice", null);
     } else {
-      this.setDataValue("triggerprice", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("triggerprice", Number(parseFloat(value).toFixed(5)));
     }
   },
     },
@@ -184,7 +184,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("tradedValue", null);
     } else {
-      this.setDataValue("tradedValue", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("tradedValue", Number(parseFloat(value).toFixed(5)));
     }
   },
       
@@ -196,7 +196,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("fillprice", null);
     } else {
-      this.setDataValue("fillprice", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("fillprice", Number(parseFloat(value).toFixed(5)));
     }
   },
 
@@ -213,7 +213,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("buyvalue", null);
     } else {
-      this.setDataValue("buyvalue", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("buyvalue", Number(parseFloat(value).toFixed(5)));
     }
   },
     },
@@ -225,7 +225,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("buyprice", null);
     } else {
-      this.setDataValue("buyprice", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("buyprice", Number(parseFloat(value).toFixed(5)));
     }
   },
     },
@@ -242,7 +242,7 @@ const Order = sequelize.define(
     if (value === null || value === undefined) {
       this.setDataValue("pnl", null);
     } else {
-      this.setDataValue("pnl", Number(parseFloat(value).toFixed(2)));
+      this.setDataValue("pnl", Number(parseFloat(value).toFixed(5)));
     }
   },
     },

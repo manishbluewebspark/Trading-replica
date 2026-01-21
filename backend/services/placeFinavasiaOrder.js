@@ -213,7 +213,7 @@ const fetchTradeBookWithRetry = async ({ uid, susertoken, orderid, expectedQty, 
 
       const fills = tradeBook.filter((t) => String(t.norenordno) === String(orderid));
 
-            console.log('--------------------fills-----------',fills);
+      console.log('--------------------fills-----------',fills);
 
       let totalQty = fills.reduce((sum, fill) => sum + (Number(fill.flqty) || 0), 0);
 
@@ -552,6 +552,7 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
   await newOrder.update({
     tradedValue: avgPrice * totalQty,
     fillprice: avgPrice,
+    price: avgPrice,
     fillsize: totalQty,
     fillid: firstFill?.flid,
     filltime: firstFill?.fltm ? await toISOStringUTC(firstFill.fltm) : nowISOError,

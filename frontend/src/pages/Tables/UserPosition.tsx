@@ -278,6 +278,16 @@ export default function UserPosition () {
       minWidth: 120,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+     { 
+      headerName: "OrderType", 
+      field: "ordertype",
+      cellRenderer: (params: any) => {
+        return <div className="py-2">{params.value}</div>;
+      },
+      width: 130,
+      minWidth: 120,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
     { 
       headerName: "Price", 
       field: "average_price",
@@ -335,6 +345,26 @@ export default function UserPosition () {
       minWidth: 140,
       cellStyle: { borderRight: '1px solid #e2e8f0' }
     },
+      { 
+      headerName: "Status", 
+      field: "status",
+      cellRenderer: (params: any) => {
+        return <div className="py-2">{params.value}</div>;
+      },
+      width: 120,
+      minWidth: 120,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
+     { 
+      headerName: "Instrument", 
+      field: "instrumenttype",
+      cellRenderer: (params: any) => {
+        return <div className="py-2">{params.value}</div>;
+      },
+      width: 120,
+      minWidth: 120,
+      cellStyle: { borderRight: '1px solid #e2e8f0' }
+    },
   ], [ltpByToken]);
 
   const defaultColDef = useMemo(() => ({
@@ -362,9 +392,9 @@ export default function UserPosition () {
   };
 
   const MobileOrderCard = ({ order }: { order: Order }) => {
-    const live = order.symboltoken ? ltpByToken[order.symboltoken] : undefined;
+    const live = order?.symboltoken ? ltpByToken[order?.symboltoken] : undefined;
     const pnl = live !== undefined
-      ? ((live - Number(order.fillprice)) * Number(order.fillsize)).toFixed(2)
+      ? ((live - Number(order?.fillprice)) * Number(order?.fillsize)).toFixed(2)
       : "—";
 
     return (
@@ -372,25 +402,25 @@ export default function UserPosition () {
         {/* Header */}
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="font-semibold text-gray-900 text-lg">{order.tradingsymbol}</h3>
-            <p className="text-sm text-gray-600">{order.instrumenttype}</p>
+            <h3 className="font-semibold text-gray-900 text-lg">{order?.tradingsymbol}</h3>
+            <p className="text-sm text-gray-600">{order?.instrumenttype}</p>
           </div>
-          <TransactionBadge type={order.transactiontype} />
+          <TransactionBadge type={order?.transactiontype} />
         </div>
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-3 text-sm mb-3">
           <div>
             <span className="text-gray-500">Order Type</span>
-            <p className="font-medium">{order.ordertype}</p>
+            <p className="font-medium">{order?.ordertype}</p>
           </div>
           <div>
             <span className="text-gray-500">Product</span>
-            <p className="font-medium">{order.producttype}</p>
+            <p className="font-medium">{order?.producttype}</p>
           </div>
           <div>
             <span className="text-gray-500">Price</span>
-            <p className="font-medium">{order.fillprice || "—"}</p>
+            <p className="font-medium">{order?.fillprice || "—"}</p>
           </div>
           <div>
             <span className="text-gray-500">PnL</span>
@@ -400,11 +430,11 @@ export default function UserPosition () {
           </div>
           <div>
             <span className="text-gray-500">Quantity</span>
-            <p className="font-medium">{order.quantity}</p>
+            <p className="font-medium">{order?.quantity}</p>
           </div>
           <div>
             <span className="text-gray-500">Filled</span>
-            <p className="font-medium">{order.fillsize}</p>
+            <p className="font-medium">{order?.fillsize}</p>
           </div>
         </div>
 
@@ -412,16 +442,16 @@ export default function UserPosition () {
         <div className="border-t border-gray-100 pt-3 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-500 text-sm">Order ID</span>
-            <span className="font-mono text-sm">{order.orderid}</span>
+            <span className="font-mono text-sm">{order?.orderid}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-500 text-sm">Status</span>
-            <StatusBadge status={order.status || order.orderstatus} />
+            <StatusBadge status={order?.status || order?.orderstatus} />
           </div>
-          {order.text && (
+          {order?.text && (
             <div>
               <span className="text-gray-500 text-sm">Message</span>
-              <p className="text-sm mt-1 text-gray-700 line-clamp-2">{order.text}</p>
+              <p className="text-sm mt-1 text-gray-700 line-clamp-2">{order?.text}</p>
             </div>
           )}
         </div>
@@ -492,7 +522,7 @@ export default function UserPosition () {
               )}
 
               {!loading && !error && filtered.map((order) => (
-                <MobileOrderCard key={order.orderid} order={order} />
+                <MobileOrderCard key={order?.orderid} order={order} />
               ))}
             </div>
           ) : (

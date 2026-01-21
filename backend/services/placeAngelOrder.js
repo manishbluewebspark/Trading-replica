@@ -3,6 +3,7 @@
 import axios from "axios";
 import Order from "../models/orderModel.js";
 import { logSuccess, logError } from "../utils/loggerr.js";
+import { raw } from "express";
 
 
 // -----------------------
@@ -16,6 +17,18 @@ const ANGEL_ONE_DETAILS_URL = (uniqueId) =>
 
 const ANGEL_ONE_TRADE_BOOK_URL =
   "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getTradeBook";
+
+const ANGEL_ONE_POSITION_URL =
+  "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition";  
+
+const ANGEL_ONE_ORDER_BOOK_URL =
+  "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook";
+
+
+
+
+
+
 
 
 
@@ -58,6 +71,10 @@ function extractBrokerError(err) {
 
   return { status, msg, data };
 }
+
+
+
+
 
 async function getDetailsWithPolling(user, uniqueOrderId, req) {
   const maxPolls = 6;
@@ -199,7 +216,6 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
           transactiontype: "BUY",
           orderstatuslocaldb: "OPEN",
           status:"COMPLETE",
-
         },
       });
 
@@ -239,12 +255,13 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
       buyOrderId: reqInput?.buyOrderId || null,
       strategyName: reqInput?.groupName || "",
       strategyUniqueId: reqInput?.strategyUniqueId || "",
-      text: "",
+      text: reqInput?.text||"",
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
     };
 
     tempOrder = await Order.create(orderData);
+    
     logSuccess(req, {
       msg: `Temp ${reqInput.transactiontype} order created in DB`,
       tempOrderId: tempOrder.id,
@@ -347,6 +364,8 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
         tempOrderId: tempOrder.id,
         brokerMessage: detailsText,
       });
+
+      
       return { result: detailsStatus.toUpperCase() };
     }
 
@@ -576,8 +595,8 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
       price: avgPrice,
       fillsize: totalQty,
       quantity: totalQty,
-      filltime: firstFill?.fill_timestamp
-        ? new Date(firstFill.fill_timestamp).toISOString()
+      filltime: matched?.fill_timestamp
+        ? new Date(matched.fill_timestamp).toISOString()
         : nowISOError,
 
       fillid: matched?.fillid,
@@ -624,6 +643,87 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
     };
   }
 };
+
+
+
+async function angelOneFIFOWithAPI(headers, symbol) {
+ 
+  
+  const ORDER_BOOK_URL =
+    "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getOrderBook";
+
+  const normalize = v => v?.trim().toUpperCase();
+
+  // 1️⃣ Call AngelOne Order Book API
+  const res = await axios.get(ORDER_BOOK_URL, { headers });
+  const orderBookData = res?.data?.data || [];
+
+  // 2️⃣ Filter & sort completed orders for symbol
+  const orders = orderBookData
+    .filter(o =>
+      normalize(o.tradingsymbol) === normalize(symbol) &&
+      o.status === "complete"
+    )
+    .sort((a, b) => new Date(a.updatetime) - new Date(b.updatetime));
+
+
+      console.log(orders);
+
+  const buyQueue = [];
+  const trades = [];
+
+  // 3️⃣ FIFO matching logic
+  for (const o of orders) {
+    let qty = Number(o.quantity);
+    const price = Number(o.averageprice || o.price);
+
+    if (o.transactiontype === "BUY") {
+      buyQueue.push({
+        qty,
+        price,
+        orderid: o.orderid,
+        time: o.updatetime
+      });
+    }
+
+    if (o.transactiontype === "SELL") {
+      let sellQty = qty;
+
+      while (sellQty > 0 && buyQueue.length) {
+        const buy = buyQueue[0];
+        const matchedQty = Math.min(buy.qty, sellQty);
+
+        trades.push({
+          symbol: o.tradingsymbol,
+          buyOrderId: buy.orderid,
+          sellOrderId: o.orderid,
+          quantity: matchedQty,
+          buyPrice: buy.price,
+          sellPrice: price,
+          pnl: (price - buy.price) * matchedQty,
+          buyTime: buy.time,
+          sellTime: o.updatetime,
+          broker: "ANGELONE"
+        });
+
+        buy.qty -= matchedQty;
+        sellQty -= matchedQty;
+
+        if (buy.qty === 0) buyQueue.shift();
+      }
+    }
+  }
+
+  return trades;
+}
+
+// const trades = await angelOneFIFOWithAPI(
+//   angelHeaders('eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPVEExTkRRM01Td2libUptSWpveE56WTRPVFkzT0RreExDSnBZWFFpT2pFM05qZzVOamM0T1RFc0ltcDBhU0k2SW1aalpEUXlORE0wTFdaaVlXRXROR0pqTWkxaU1UZGxMV1ZqWmpsa05XVm1aRFUzTnlJc0lsUnZhMlZ1SWpvaUluMC5kVmMxaFZtQm9uUnQ0N1pYbTUzaG8wckVOZDVYY0E2QThQdEFlekNaSnBvWVFnVUVzRDlkYlFZRi1CWUxTTEUzMFJaR3d6RmhHbHJNeExUdDlmN1lmLWtsbEtjVHFPMlRoUXNvZTQ1QUdUSmJ6MWk1ckJDWkZxRkpkeTE3Q2x2NjBfYmF2VGd5OEFUS01lWjlLalBkcmdGVXJtaHpwR19kMEhCaU9qRTBpUDgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg5NjgwNzEsImV4cCI6MTc2OTAyMDIwMH0.deBzjQxxy0gqayuL7xdk7RpU_X7SJR6J3NOyH62dpbgPO6ZBcQHqAu40s2bxp4inz3sDx-Xmf5kGOOIX0bicEA'),
+//   "NIFTY27JAN2625250PE"
+// );
+
+
+// console.log(trades,'trades check');
 
 
 

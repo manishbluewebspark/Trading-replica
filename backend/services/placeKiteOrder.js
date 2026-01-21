@@ -153,7 +153,7 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
       strategyUniqueId: reqInput?.strategyUniqueId || "",
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
-      text: "",
+      text: reqInput?.text||"",
     };
 
     newOrder = await Order.create(orderData);
@@ -387,6 +387,7 @@ if (!trades?.length) {
     await newOrder.update({
       tradedValue: avgPrice * totalQty,
       fillprice: avgPrice,
+      price: avgPrice,
       fillsize: totalQty,
       quantity: totalQty,
       uniqueorderid: firstFill?.exchange_order_id,

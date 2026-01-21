@@ -31,6 +31,16 @@ router.get('/tokenstatussummary',AdminAuthMiddleware,getTokenStatusSummary)
 
 //  update fetch function start 
 
+const successMiddleware = (req, res, next) => {
+
+  console.log('req controll check 2 !');
+
+  return res.json({
+    status: true,
+    message: "Success middleware response",
+  });
+};
+
 
 router.get('/fetchorderdetails',GetOrderStatusPerticularSymbol)
 
@@ -181,13 +191,7 @@ router.get("/cache/merged/ttl", getMergedInstrumentsCacheTTL);
 router.get("/cache/merged/clear", clearMergedInstrumentsCache);
 
 
-
-
 router.post('/testing/app',testingInstrument)
-
-
-
-
 
 //=================== webhook for all borker==================
 
@@ -196,7 +200,6 @@ router.post("/webhook/kite/trade", kiteTradeWebhookController);
 
 // POST /api/webhook/angel/trade
 router.post("/webhook/angelone/trade", angelTradeWebhookController);
-
 
 
 export default router;
