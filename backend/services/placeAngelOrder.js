@@ -3,7 +3,7 @@
 import axios from "axios";
 import Order from "../models/orderModel.js";
 import { logSuccess, logError } from "../utils/loggerr.js";
-import { raw } from "express";
+
 
 
 // -----------------------
@@ -74,6 +74,33 @@ function extractBrokerError(err) {
 
 
 
+const getAngelPositions = async (user) => {
+  try {
+    const res = await axios.get(ANGEL_ONE_POSITION_URL, {
+      headers: angelHeaders(user.authToken),
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error(
+      "❌ Angel One Position GET API Error:",
+      err.response?.data || err.message
+    );
+    throw err;
+  }
+};
+
+
+
+const hasAngelOpenPosition = (positionData, tradingSymbol) => {
+  if (!positionData?.data) return false;
+
+  return positionData.data.some(
+    (pos) =>
+      pos.tradingsymbol === tradingSymbol &&
+      Number(pos.netqty) !== 0
+  );
+};
 
 
 async function getDetailsWithPolling(user, uniqueOrderId, req) {
@@ -186,7 +213,224 @@ async function getTradebookWithRetry(
   return lastTradebook;
 }
 
+// ======================= codde auto sell fetch code start  =======================
 
+
+function angelTimeToISO(dateStr) {
+  return dateStr
+    ? new Date(dateStr + " GMT+0530").toISOString()
+    : null;
+}
+
+
+async function angelOneFIFOWithAPI(headers, symbol,user) {
+
+  try {
+
+    const ORDER_BOOK_URL =
+    "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getOrderBook";
+
+  const TRADE_BOOK_URL =
+    "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook";
+
+  const normalize = v => v?.trim().toUpperCase();
+
+  // 1️⃣ Fetch OrderBook & TradeBook
+  const [orderRes, tradeRes] = await Promise.all([
+    axios.get(ORDER_BOOK_URL, { headers }),
+    axios.get(TRADE_BOOK_URL, { headers })
+  ]);
+
+  const orderBook = orderRes?.data?.data || [];
+  const tradeBook = tradeRes?.data?.data || [];
+
+  // 2️⃣ Group TradeBook by orderid
+  const tradeMap = new Map();
+  for (const t of tradeBook) {
+    const key = String(t.orderid);
+    if (!tradeMap.has(key)) tradeMap.set(key, []);
+    tradeMap.get(key).push(t);
+  }
+
+  // 3️⃣ Filter completed orders for symbol (FIFO)
+  const orders = orderBook
+    .filter(o =>
+      normalize(o.tradingsymbol) === normalize(symbol) &&
+      o.status === "complete"
+    )
+    .sort((a, b) => new Date(a.updatetime) - new Date(b.updatetime));
+
+  const buyQueue = [];
+  const results = [];
+
+  // 4️⃣ FIFO Matching
+  for (const o of orders) {
+
+    const orderQty = Number(o.quantity);
+
+    // ===== BUY =====
+    if (o.transactiontype === "BUY") {
+      buyQueue.push({
+        qty: orderQty,
+        price: Number(o.averageprice || o.price),
+        orderid: o.orderid,
+        uniqueorderid: o.uniqueorderid,
+        fillid: tradeMap.get(String(o.orderid))?.[0]?.fillid || null,
+        tradeid: tradeMap.get(String(o.orderid))?.[0]?.tradeid || null,
+        time: o.updatetime
+      });
+    }
+
+    // ===== SELL =====
+    if (o.transactiontype === "SELL") {
+
+      const sellTrades = tradeMap.get(String(o.orderid)) || [];
+      if (!sellTrades.length) continue;
+
+      // 🔥 Merge SELL fills
+      let totalSellQty = 0;
+      let totalSellValue = 0;
+
+      for (const t of sellTrades) {
+        const q = Number(t.fillsize);
+        const p = Number(t.fillprice);
+        totalSellQty += q;
+        totalSellValue += q * p;
+      }
+
+      const avgSellPrice = totalSellValue / totalSellQty;
+
+      let remainingQty = totalSellQty;
+      let totalPnl = 0;
+      let buyOrderIds = [];
+
+      // FIFO consume BUYs
+      while (remainingQty > 0 && buyQueue.length) {
+        const buy = buyQueue[0];
+        const matchedQty = Math.min(buy.qty, remainingQty);
+
+        totalPnl += (avgSellPrice - buy.price) * matchedQty;
+        remainingQty -= matchedQty;
+        buy.qty -= matchedQty;
+
+        buyOrderIds.push(buy.orderid);
+
+        if (buy.qty === 0) buyQueue.shift();
+      }
+
+      // ✅ PUSH SINGLE OBJECT
+      results.push({
+        symbol: o.tradingsymbol,
+
+        buyOrderIds, // multiple BUYs possible
+        sellOrderId: o.orderid,
+        ordertag: o?.ordertag,
+        sellUniqueOrderId: o.uniqueorderid,
+
+        buyPriceAvg: null, // optional if you want
+        sellPriceAvg: Number(avgSellPrice.toFixed(2)),
+
+        quantity: totalSellQty,
+        pnl: Number(totalPnl.toFixed(2)),
+
+        sellFillIds: sellTrades.map(t => t.fillid),
+        sellTradeIds: sellTrades.map(t => t.tradeid || null),
+
+        buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+        sellTime: o.updatetime,
+
+        broker: "ANGELONE"
+      });
+    }
+  }
+
+      let orderBuyFind = await Order.findOne({
+        where: {
+          orderid: results[0]?.buyOrderIds,
+          transactiontype: "BUY"
+        },
+        order: [["createdAt", "ASC"]],
+        raw:true
+      });
+
+       const sellPayload = {
+      userId:orderBuyFind?.userId||"",
+      userNameId:orderBuyFind?.userNameId||"",
+      tradingsymbol:orderBuyFind?.tradingsymbol||"",
+      variety:orderBuyFind?.variety||"",
+      ordertype:orderBuyFind?.ordertype||"",
+      producttype:orderBuyFind?.producttype||"",
+      duration:orderBuyFind?.duration||"",
+      exchange:orderBuyFind?.exchange||"",
+      symboltoken:orderBuyFind?.symboltoken||"",
+      instrumenttype:orderBuyFind?.instrumenttype||"",
+      optiontype:orderBuyFind?.optiontype||"",
+      text:"User Manual Sell",
+      ordertag:"User Manual Sell",
+      angelOneToken:orderBuyFind?.angelOneToken||"",
+      angelOneSymbol:orderBuyFind?.angelOneSymbol||"",
+      strategyName:orderBuyFind?.strategyName||"",
+      strategyUniqueId:orderBuyFind?.strategyUniqueId||"",
+      transactiontype: "SELL",
+      orderid: results[0]?.sellOrderId||"",
+      uniqueorderid: results[0]?.sellUniqueOrderId||"",
+      quantity: orderBuyFind?.fillsize||results[0]?.quantity||0,
+      actualQuantity: results[0]?.quantity||0,
+      buyOrderId:orderBuyFind?.orderid||"",
+      buyTime:orderBuyFind?.filltime||"",
+      buysize:orderBuyFind?.fillsize||"",
+      buyprice: orderBuyFind?.fillprice||"",
+      buyvalue:  orderBuyFind?.tradedValue||"",
+      price: results[0]?.sellPriceAvg||"",
+      fillprice:results[0]?.sellPriceAvg||0,
+      fillid:results[0]?.sellFillIds[0]||0,
+      tradedValue:results[0]?.sellPriceAvg*results[0]?.quantity||0,
+      fillsize:orderBuyFind?.fillsize||results[0]?.quantity||0,
+      pnl: Number(results[0]?.pnl.toFixed(5))||0,
+      status: "COMPLETE",
+      orderstatus: "COMPLETE",
+      positionStatus:"COMPLETE",
+      orderstatuslocaldb:"COMPLETE",
+      filltime: angelTimeToISO(results[0]?.sellTime),
+      broker:orderBuyFind?.broker||"",
+    };
+
+     await Order.create(sellPayload);
+
+     await Order.update(
+      {
+        orderstatus: "COMPLETE",
+        orderstatuslocaldb: "COMPLETE",
+        positionStatus: "COMPLETE",
+      },
+      {
+        where: {
+          id: orderBuyFind?.id   // ✅ safest (primary key)
+        }
+      }
+    );
+
+  return results;
+    
+  } catch (err) {
+
+    console.log(err);
+    
+
+     logSuccess(req, {
+        msg: "angelOneFIFOWithAPI",
+        error:err?.message||err,
+        userId:user?.id
+      });
+
+       return [];
+    
+  }
+
+  
+}
+
+// ======================= codde auto sell fetch code start  =======================
 
 // =======================
 // SINGLE placeAngelOrder (FULL UPDATED)
@@ -259,6 +503,23 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
       angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
       angelOneToken: reqInput.angelOneToken || reqInput.token,
     };
+
+    if(reqInput.transactiontype==='SELL') {
+
+      const positions = await getAngelPositions(user);
+
+    if (
+      !hasAngelOpenPosition(positions, reqInput.symbol)
+      )  {
+
+      await angelOneFIFOWithAPI(angelHeaders(user?.authToken),reqInput?.symbol,user)
+  
+      return { result: "BROKER_REJECTED", orderid: "" };
+     
+    }
+      
+    }
+   
 
     tempOrder = await Order.create(orderData);
     
@@ -365,7 +626,13 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
         brokerMessage: detailsText,
       });
 
-      
+
+      if(reqInput.transactiontype.toUpperCase()==='SELL'&& detailsStatus.toUpperCase()==='REJECTED') {
+
+         await angelOneFIFOWithAPI(angelHeaders(user?.authToken),reqInput?.symbol,user)
+           
+      }
+
       return { result: detailsStatus.toUpperCase() };
     }
 
@@ -621,6 +888,7 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
       orderid,
       uniqueOrderId,
     };
+
   } catch (err) {
     if (tempOrder?.id) {
       await tempOrder.update({
@@ -646,86 +914,229 @@ export const placeAngelOrder = async (user, reqInput, req, sellQuantityPartial =
 
 
 
-async function angelOneFIFOWithAPI(headers, symbol) {
- 
-  
+
+// =======================test codde auto sell fetch code start  =======================
+
+
+function angelTimeToISO1(dateStr) {
+  return dateStr
+    ? new Date(dateStr + " GMT+0530").toISOString()
+    : null;
+}
+
+
+async function angelOneFIFOWithAPI1(headers, symbol) {
+
   const ORDER_BOOK_URL =
     "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getOrderBook";
 
+  const TRADE_BOOK_URL =
+    "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook";
+
   const normalize = v => v?.trim().toUpperCase();
 
-  // 1️⃣ Call AngelOne Order Book API
-  const res = await axios.get(ORDER_BOOK_URL, { headers });
-  const orderBookData = res?.data?.data || [];
+  // 1️⃣ Fetch OrderBook & TradeBook
+  const [orderRes, tradeRes] = await Promise.all([
+    axios.get(ORDER_BOOK_URL, { headers }),
+    axios.get(TRADE_BOOK_URL, { headers })
+  ]);
 
-  // 2️⃣ Filter & sort completed orders for symbol
-  const orders = orderBookData
+  const orderBook = orderRes?.data?.data || [];
+  const tradeBook = tradeRes?.data?.data || [];
+
+  // 2️⃣ Group TradeBook by orderid
+  const tradeMap = new Map();
+  for (const t of tradeBook) {
+    const key = String(t.orderid);
+    if (!tradeMap.has(key)) tradeMap.set(key, []);
+    tradeMap.get(key).push(t);
+  }
+
+  // 3️⃣ Filter completed orders for symbol (FIFO)
+  const orders = orderBook
     .filter(o =>
       normalize(o.tradingsymbol) === normalize(symbol) &&
       o.status === "complete"
     )
     .sort((a, b) => new Date(a.updatetime) - new Date(b.updatetime));
 
-
-      console.log(orders);
-
   const buyQueue = [];
-  const trades = [];
+  const results = [];
 
-  // 3️⃣ FIFO matching logic
+  // 4️⃣ FIFO Matching
   for (const o of orders) {
-    let qty = Number(o.quantity);
-    const price = Number(o.averageprice || o.price);
 
+    const orderQty = Number(o.quantity);
+
+    // ===== BUY =====
     if (o.transactiontype === "BUY") {
       buyQueue.push({
-        qty,
-        price,
+        qty: orderQty,
+        price: Number(o.averageprice || o.price),
         orderid: o.orderid,
+        uniqueorderid: o.uniqueorderid,
+        fillid: tradeMap.get(String(o.orderid))?.[0]?.fillid || null,
+        tradeid: tradeMap.get(String(o.orderid))?.[0]?.tradeid || null,
         time: o.updatetime
       });
     }
 
+    // ===== SELL =====
     if (o.transactiontype === "SELL") {
-      let sellQty = qty;
 
-      while (sellQty > 0 && buyQueue.length) {
+      const sellTrades = tradeMap.get(String(o.orderid)) || [];
+      if (!sellTrades.length) continue;
+
+      // 🔥 Merge SELL fills
+      let totalSellQty = 0;
+      let totalSellValue = 0;
+
+      for (const t of sellTrades) {
+        const q = Number(t.fillsize);
+        const p = Number(t.fillprice);
+        totalSellQty += q;
+        totalSellValue += q * p;
+      }
+
+      const avgSellPrice = totalSellValue / totalSellQty;
+
+      let remainingQty = totalSellQty;
+      let totalPnl = 0;
+      let buyOrderIds = [];
+
+      // FIFO consume BUYs
+      while (remainingQty > 0 && buyQueue.length) {
         const buy = buyQueue[0];
-        const matchedQty = Math.min(buy.qty, sellQty);
+        const matchedQty = Math.min(buy.qty, remainingQty);
 
-        trades.push({
-          symbol: o.tradingsymbol,
-          buyOrderId: buy.orderid,
-          sellOrderId: o.orderid,
-          quantity: matchedQty,
-          buyPrice: buy.price,
-          sellPrice: price,
-          pnl: (price - buy.price) * matchedQty,
-          buyTime: buy.time,
-          sellTime: o.updatetime,
-          broker: "ANGELONE"
-        });
-
+        totalPnl += (avgSellPrice - buy.price) * matchedQty;
+        remainingQty -= matchedQty;
         buy.qty -= matchedQty;
-        sellQty -= matchedQty;
+
+        buyOrderIds.push(buy.orderid);
 
         if (buy.qty === 0) buyQueue.shift();
       }
+
+      // ✅ PUSH SINGLE OBJECT
+      results.push({
+        symbol: o.tradingsymbol,
+
+        buyOrderIds, // multiple BUYs possible
+        sellOrderId: o.orderid,
+        ordertag: o?.ordertag,
+        sellUniqueOrderId: o.uniqueorderid,
+
+        buyPriceAvg: null, // optional if you want
+        sellPriceAvg: Number(avgSellPrice.toFixed(2)),
+
+        quantity: totalSellQty,
+        pnl: Number(totalPnl.toFixed(2)),
+
+        sellFillIds: sellTrades.map(t => t.fillid),
+        sellTradeIds: sellTrades.map(t => t.tradeid || null),
+
+        buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+        sellTime: o.updatetime,
+
+        broker: "ANGELONE"
+      });
     }
   }
 
-  return trades;
+      let orderBuyFind = await Order.findOne({
+        where: {
+          orderid: results[0]?.buyOrderIds,
+          transactiontype: "BUY"
+        },
+        order: [["createdAt", "ASC"]],
+        raw:true
+      });
+
+      console.log(orderBuyFind,'================orderBuyFind=============');
+      
+
+
+       const sellPayload = {
+
+      userId:orderBuyFind?.userId||"",
+      userNameId:orderBuyFind?.userNameId||"",
+      tradingsymbol:orderBuyFind?.tradingsymbol||"",
+      variety:orderBuyFind?.variety||"",
+      ordertype:orderBuyFind?.ordertype||"",
+      producttype:orderBuyFind?.producttype||"",
+      duration:orderBuyFind?.duration||"",
+      exchange:orderBuyFind?.exchange||"",
+      symboltoken:orderBuyFind?.symboltoken||"",
+      instrumenttype:orderBuyFind?.instrumenttype||"",
+      optiontype:orderBuyFind?.optiontype||"",
+      text:"User Manual Sell",
+      ordertag:"User Manual Sell",
+      angelOneToken:orderBuyFind?.angelOneToken||"",
+      angelOneSymbol:orderBuyFind?.angelOneSymbol||"",
+      strategyName:orderBuyFind?.strategyName||"",
+      strategyUniqueId:orderBuyFind?.strategyUniqueId||"",
+      transactiontype: "SELL",
+      orderid: results[0]?.sellOrderId||"",
+      uniqueorderid: results[0]?.sellUniqueOrderId||"",
+      quantity: results[0]?.quantity||0,
+      actualQuantity: results[0]?.quantity||0,
+      buyOrderId:orderBuyFind?.orderid||"",
+      buyTime:orderBuyFind?.filltime||"",
+      buysize:orderBuyFind?.fillsize||"",
+      buyprice: orderBuyFind?.fillprice||"",
+      buyvalue:  orderBuyFind?.tradedValue||"",
+      price: results[0]?.sellPriceAvg||"",
+      fillprice:results[0]?.sellPriceAvg||0,
+      fillid:results[0]?.sellFillIds[0]||0,
+      tradedValue:results[0]?.sellPriceAvg*results[0]?.quantity||0,
+      fillsize:results[0]?.quantity||0,
+      pnl: Number(results[0]?.pnl.toFixed(5))||0,
+      status: "COMPLETE",
+      orderstatus: "COMPLETE",
+      positionStatus:"COMPLETE",
+      orderstatuslocaldb:"COMPLETE",
+      filltime: angelTimeToISO(results[0]?.sellTime),
+      broker:orderBuyFind?.broker||"",
+    };
+
+     await Order.create(sellPayload);
+
+     await Order.update(
+  {
+    orderstatus: "COMPLETE",
+    orderstatuslocaldb: "COMPLETE",
+    positionStatus: "COMPLETE",
+  },
+  {
+    where: {
+      id: orderBuyFind?.id   // ✅ safest (primary key)
+    }
+  }
+);
+
+     
+      
+console.log(results,'===========results=========');
+
+  
+
+  return results;
 }
 
+
+
 // const trades = await angelOneFIFOWithAPI(
-//   angelHeaders('eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPVEExTkRRM01Td2libUptSWpveE56WTRPVFkzT0RreExDSnBZWFFpT2pFM05qZzVOamM0T1RFc0ltcDBhU0k2SW1aalpEUXlORE0wTFdaaVlXRXROR0pqTWkxaU1UZGxMV1ZqWmpsa05XVm1aRFUzTnlJc0lsUnZhMlZ1SWpvaUluMC5kVmMxaFZtQm9uUnQ0N1pYbTUzaG8wckVOZDVYY0E2QThQdEFlekNaSnBvWVFnVUVzRDlkYlFZRi1CWUxTTEUzMFJaR3d6RmhHbHJNeExUdDlmN1lmLWtsbEtjVHFPMlRoUXNvZTQ1QUdUSmJ6MWk1ckJDWkZxRkpkeTE3Q2x2NjBfYmF2VGd5OEFUS01lWjlLalBkcmdGVXJtaHpwR19kMEhCaU9qRTBpUDgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg5NjgwNzEsImV4cCI6MTc2OTAyMDIwMH0.deBzjQxxy0gqayuL7xdk7RpU_X7SJR6J3NOyH62dpbgPO6ZBcQHqAu40s2bxp4inz3sDx-Xmf5kGOOIX0bicEA'),
-//   "NIFTY27JAN2625250PE"
+//   //angelHeaders("eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ikc0MDQ2ODMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrYzBNRFEyT0RNaUxDSmxlSEFpT2pFM05qa3lNamMyTkRFc0ltNWlaaUk2TVRjMk9URTBNVEEyTVN3aWFXRjBJam94TnpZNU1UUXhNRFl4TENKcWRHa2lPaUl4T0RBeVkyRmtNQzAwWkRWbExUUmhOVEF0WVRrek1pMWlOalJtT1RjNFlqa3dObVlpTENKVWIydGxiaUk2SWlKOS5STHdUa0JDeENkYldDRlQ5QXBGSjA2Um5IeV9VYmhUMmw3M0I5ZHY3TEFYbTk2aTdxclg1cGMyaVVYeERBNEN0WTl1NkhpRU0yaFdreTM5SWhxNHA4MnczYmlhQ1VWSlVIa3JUbW1ZZDlYLUh1OTluUk5qQ1RGWDRGaWhZa29GQjFWMjk2a1R4RE93cGFyZlFkd3lOdk1JZnV1LUI5em5QNHAwVVBVRnRHYzQiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjkxNDEyNDEsImV4cCI6MTc2OTE5MzAwMH0.1iEaDDAWlgtTBFNH4Hp1sepe1V9Nl6DKVy3VeM7WpPOPWAudEimVpEG-3ETqbZP1mFCU04wLAUqXRyPJOvmm2A"),
+//   angelHeaders('eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkMxOTEzMzEiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrTXhPVEV6TXpFaUxDSmxlSEFpT2pFM05qa3lNemcyTkRjc0ltNWlaaUk2TVRjMk9URTFNakEyTnl3aWFXRjBJam94TnpZNU1UVXlNRFkzTENKcWRHa2lPaUkwWmpobU1qVmtNUzB6TnpNd0xUUmxORFV0WWpZNU1pMDNZV05pWWpsaU1UQTJORGtpTENKVWIydGxiaUk2SWlKOS5McjFvQ0VWNkFKeGtnTVVxY2JGbEZNZktEb05UaHRlUnNETG01Z2N2TmRRTkFQYVVvakFzUDhTbEw2ekEzT1NnVm1ncWFkLUJLTF9ZOGxaekczaXR2TE5mNlU5MVYtYlpaQ24yWGNxSi1FemZON3E1WVhxQjZjRHhLRVVtV0xBSmhyT1QzdHh6ckZRaTV2dXU5a1FkY2RTamZ2YkpWVjRGTFpTSmxxeFAwd1EiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjkxNTIyNDcsImV4cCI6MTc2OTE5MzAwMH0.PNRSEOGVTPSJpTX3SB5vdtWoZzK5FrDOPrhpBdXkV1tIb0xxXoWe7RUFuSYHlJMizxHPigMDBb06cRB899HEgg'),
+//   "NIFTY27JAN2625300CE"
 // );
 
 
 // console.log(trades,'trades check');
 
 
+// =======================test codde auto sell fetch code end   =======================
 
 // ======================== 08 jan 2025 ======================
 

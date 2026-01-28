@@ -454,18 +454,19 @@ export default function InstrumentFormAdmin() {
       groupName,
       angelOneToken: selectedScriptRow.angelToken,
       angelOneSymbol: selectedScriptRow.angelSymbol,
-      kiteToken: selectedScriptRow.token,
-      kiteSymbol: selectedScriptRow.kiteSymbol,
+      kiteToken: selectedScriptRow?.token,
+      kiteSymbol: selectedScriptRow?.kiteSymbol,
 
       // update cde
-      finavasiaToken: selectedScriptRow.finvasiaToken,
-      finavasiaSymbol: selectedScriptRow.finvasiaSymbol,
-      fyersToken: selectedScriptRow.fyersToken,
-      fyersSymbol: selectedScriptRow.fyersSymbol,
-      upstoxToken: selectedScriptRow.upstoxToken,
-      upstoxSymbol: selectedScriptRow.upstoxSymbol,
-      growToken: "",
-      growSymbol: "",
+      finavasiaToken: selectedScriptRow?.finvasiaToken||"",
+      finavasiaSymbol: selectedScriptRow?.finvasiaSymbol||"",
+      fyersToken: selectedScriptRow?.fyersToken||"",
+      fyersSymbol: selectedScriptRow?.fyersSymbol||"",
+      upstoxToken: selectedScriptRow?.upstoxToken||"",
+      upstoxSymbol: selectedScriptRow?.upstoxSymbol||"",
+      growToken: selectedScriptRow?.growwTradingSymbol||"",
+      growSymbol: selectedScriptRow?.growwSymbol||"",
+      growwTradingSymbol:selectedScriptRow?.growwTradingSymbol||""
     };
 
     try {
@@ -568,6 +569,9 @@ export default function InstrumentFormAdmin() {
             animateRows
             rowSelection="single"
             pagination
+              // ✅ COPY ENABLE
+  enableCellTextSelection={true}
+  ensureDomOrder={true}
             paginationPageSize={10000}
             rowHeight={45}
             suppressFieldDotNotation

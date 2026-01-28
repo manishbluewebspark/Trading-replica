@@ -282,6 +282,171 @@ export const getFinvasiaAppCredential = async (req, res) => {
 
 
 
+export const getFinvasiaTradesDataUserPosition = async function (req, res) {
+  try {
+
+    const userId = req.userId; // assuming middleware se aa raha hai
+
+    let userData = await User.findOne({
+      where:{
+        id:userId
+      },
+      raw:true
+    })
+
+    const uid = userData.kite_client_id; // Finvasia UID
+
+    let finvasiaToken = userData.authToken
+    
+    const BASE_URL = process.env.SHOONYA_BASE_URL;
+
+    /* -------------------------------
+       COMMON API CALL HELPER
+    --------------------------------*/
+    const callShoonyaAPI = async (endpoint, payload) => {
+
+        const body = `jKey=${finvasiaToken}&jData=${JSON.stringify({
+          uid,
+          actid: uid,
+        })}`;
+
+      const res = await axios.post(`${BASE_URL}/${endpoint}`, body, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+      return res.data;
+    };
+
+    /* -------------------------------
+       FETCH POSITIONS / ORDERS / TRADES
+    --------------------------------*/
+    const positionsRes = await callShoonyaAPI("PositionBook", {
+      uid,
+      actid: uid,
+    });
+
+    const ordersRes = await callShoonyaAPI("OrderBook", {
+      uid,
+    });
+
+    const tradesRes = await callShoonyaAPI("TradeBook", {
+      uid,
+    });
+
+    let positions = Array.isArray(positionsRes) ? positionsRes : [];
+    const orders = Array.isArray(ordersRes) ? ordersRes : [];
+    let trades = Array.isArray(tradesRes) ? tradesRes : [];
+
+
+      const now = new Date();
+
+      // IST time nikalna
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+
+      // 3:20 PM ke baad condition
+      const isAfter320 =
+        hours > 15 || (hours === 15 && minutes >= 20);
+
+        positions = isAfter320 ? [] : positions;
+
+    if (!positions.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No Trade in User Position",
+        onlineTrades: [],
+        error: null,
+      });
+    }    
+
+    /* -------------------------------
+       BUILD ORDER → TRADE MAP
+    --------------------------------*/
+    const tradeMap = {};
+    for (const t of trades) {
+      if (!tradeMap[t.orderno]) {
+        tradeMap[t.orderno] = t;
+      }
+    }
+
+    /* -------------------------------
+       MAP POSITIONS
+    --------------------------------*/
+    const mappedTrades = [];
+
+    for (const p of positions) {
+      const netQty = Number(p.netqty || 0);
+      if (netQty === 0) continue;
+
+      const quantity = Math.abs(netQty);
+      const transaction_type = netQty > 0 ? "BUY" : "SELL";
+
+      const matchedOrder = orders.find(
+        (o) =>
+          o.tsym === p.tsym &&
+          o.trantype === transaction_type &&
+          o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder
+        ? tradeMap[matchedOrder.orderno]
+        : null;
+
+      mappedTrades.push({
+        tradingsymbol: p.tsym || "-",
+        exchange: p.exch || "-",
+        transaction_type,
+        product: p.prd || "-",
+        average_price: Number(p.netavgprc || 0),
+        quantity,
+        order_id: matchedOrder?.orderno || "",
+        trade_id: matchedTrade?.tradeid || "",
+        uniqueorderid: matchedOrder?.orderno || "",
+        transactiontype: transaction_type,
+        ordertype: matchedOrder?.prctyp || "MARKET",
+        producttype: p.prd || "-",
+        fillprice: String(p.netavgprc || ""),
+        price: String(p.netavgprc || ""),
+        pnl: String(p.pnl || ""),
+        cmp: String(p.ltp || ""),
+        fillsize: quantity,
+        orderid: matchedOrder?.orderno || "",
+        status: "COMPLETE",
+        instrumenttype: p.instname || "",
+        orderstatus: matchedOrder?.status || "COMPLETE",
+        text: "",
+        updatetime:
+          matchedTrade?.norentm ||
+          matchedOrder?.exch_tm ||
+          "",
+
+        symboltoken: String(p.token || ""),
+        createdAt: null,
+        updatedAt: null,
+      });
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "User Position Trades (Finvasia)",
+      onlineTrades: mappedTrades,
+    });
+  } catch (error) {
+    console.error("Finvasia Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
 // -------------------------------
 // POST FUNDS CONTROLLER
 // -------------------------------
@@ -296,10 +461,6 @@ export const getShoonyaFunds = async (req, res) => {
       raw: true,
     });
 
-
-    console.log(user,'===============user====================');
-    
-
     if (!user) {
       return res.status(404).json({
         status: false,
@@ -309,9 +470,7 @@ export const getShoonyaFunds = async (req, res) => {
 
     // Extract values from user table
     const uid = user.kite_client_id;       // Shoonya Login ID
-    
-
-
+  
     const url = `${SHOONYA_BASE_URL}/Limits`;
 
     // 👇 This object will become the JSON in jData

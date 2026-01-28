@@ -1,5 +1,5 @@
 import express from 'express';
-import {  adminFetchOrderHolding, adminGetCloneUserHolding, AdminGetHoldingMultiple, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
+import {  adminFetchOrderHolding, adminFetchUserPositionData, adminGetCloneUserHolding, AdminGetHoldingMultiple, adminGetRecentOrder, AdminGetTotalUsers, AdminLoginMultipleUser, adminPlaceMultipleOrder, adminSequareOff, refreshAngelFundsForAllUsers } from '../../controllers/admin/adminOrderController.js';
 import { getTokens, storeTokens } from '../../controllers/testController.js';
 import {AdminAuthMiddleware, authMiddleware} from '../../middleware/authMiddleware.js';
 import { adminGetUserAngelToken } from '../../controllers/userController.js';
@@ -168,7 +168,7 @@ router.get("/get/recent/order",AdminAuthMiddleware, adminGetRecentOrder);
 router.get('/get/holdingdata',AdminAuthMiddleware, adminGetCloneUserHolding)
 router.get('/getall/holdingdata',AdminAuthMiddleware,syncHoldingsAllBrokers, AdminGetHoldingMultiple)
 
-
+router.get('/userpostionshow',AdminAuthMiddleware, adminFetchUserPositionData)
 router.get('/fetch/borker/order',AdminAuthMiddleware,adminFetchOrderHolding)
 
 

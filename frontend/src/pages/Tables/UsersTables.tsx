@@ -58,6 +58,8 @@ export type User = {
   packageDis?: string | null;
   packageDate?: string | null;
   packageFromDate?: string | null;
+   sourceName:any
+  employeeName:any
 };
 
 type EditForm = {
@@ -79,9 +81,12 @@ type EditForm = {
   packageFromDate: string;
   packageDate: string;
   updatedAt: any;
+  sourceName:any
+  employeeName:any
 };
 
 const API_URL = import.meta.env.VITE_API_URL;
+const apiCRMURL = import.meta.env.VITE__CRM_API_URL;
 
 export default function UsersTables() {
   
@@ -98,6 +103,8 @@ export default function UsersTables() {
   const [menuDirection, setMenuDirection] = useState<"bottom" | "top">("bottom");
 
   console.log(menuDirection);
+
+   
   
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const gridRef = useRef<AgGridReact>(null);
@@ -115,6 +122,13 @@ export default function UsersTables() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+
+
+
+  // Dropdown list data
+const [sourceList, setSourceList] = useState<string[]>([]);
+const [employeeList, setEmployeeList] = useState<string[]>([]);
+
 
   const fetchUsers = async () => {
     try {
@@ -139,8 +153,72 @@ export default function UsersTables() {
     }
   };
 
+
+  // 🔹 Employee API
+const getEmployeeList = async () => {
+  try {
+    const res = await axios.get(`${apiCRMURL}/employee/get`);
+
+    // 🔥 Transform API response to static-like format
+    return {
+      status: true,
+      data: res.data.map((emp: any) => emp.name),
+    };
+  } catch (error) {
+    console.error("Employee API error", error);
+    return {
+      status: false,
+      data: [],
+    };
+  }
+};
+
+// 🔹 Source API
+const getSourceList = async () => {
+  try {
+    const res = await axios.get(`${apiCRMURL}/customers/get-batches`);
+
+    // 🔥 Convert backend response to static-like format
+    return {
+      status: true,
+      data: res.data.map((item: any) => item.source_name),
+    };
+  } catch (error) {
+    console.error("Source API error", error);
+    return {
+      status: false,
+      data: [],
+    };
+  }
+};
+
+
   useEffect(() => {
     fetchUsers();
+
+    const fetchSourceAndEmployee = async () => {
+
+    // 🔹 Source API (static for now)
+       let sourceData =  await getSourceList()
+
+        if(sourceData.status) {
+           setSourceList(sourceData.data)
+        }
+
+      
+
+      
+       
+
+    // 🔹 Employee API (static for now)
+     let employeeRes =  await getEmployeeList()
+   
+    if (employeeRes.status) {
+      setEmployeeList(employeeRes.data);
+    }
+  };
+
+  fetchSourceAndEmployee();
   }, []);
 
   // Close menu on scroll
@@ -360,7 +438,9 @@ export default function UsersTables() {
       packageDis: user.packageDis ?? "",
       packageDate: isoDate,
       packageFromDate: isoDateFrom,
-      updatedAt: user.updatedAt
+      updatedAt: user.updatedAt,
+      sourceName: user.sourceName || "",      // ✅ add this
+      employeeName: user.employeeName || "",  // ✅ add this
     };
 
     setEditForm(form);
@@ -456,6 +536,10 @@ export default function UsersTables() {
         packageName: editForm.packageName || null,
         packageDis: editForm.packageDis || null,
         packageDate: editForm.packageDate || null,
+        source: editForm.sourceName || null,
+        assignEmp: editForm.employeeName || null,
+
+         
       };
 
       if (editForm.password.trim()) {
@@ -725,37 +809,65 @@ export default function UsersTables() {
         );
       }
     },
+
     {
-      field: 'updatedAt',
-      headerName: 'Last Updated',
+      field: 'source',
+      headerName: 'SourceName',
       width: 160,
       cellRenderer: (params: any) => params.value ? (
-        <div className="text-xs text-gray-600">
-          {new Date(params.value).toLocaleDateString("en-IN")}
-          <div className="text-gray-400">
-            {new Date(params.value).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
-      ) : '-'
+        <span className="bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-medium">
+          {params.value}
+        </span>
+      ) : (
+        <span className="text-gray-400">-</span>
+      )
     },
-    {
-      field: 'role',
-      headerName: 'Role',
-      width: 120,
-      cellRenderer: (params: any) => {
-        const role = params.value as Role;
-        const colors: Record<Role, string> = {
-          admin: 'bg-red-100 text-red-800',
-          user: 'bg-green-100 text-green-800',
-          'clone-user': 'bg-blue-100 text-blue-800'
-        };
-        return (
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors[role]}`}>
-            {role.toUpperCase()}
-          </span>
-        );
-      }
+     {
+      field: 'assignEmp',
+      headerName: 'AssignEmp',
+      width: 160,
+      cellRenderer: (params: any) => params.value ? (
+        <span className="bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-medium">
+          {params.value}
+        </span>
+      ) : (
+        <span className="text-gray-400">-</span>
+      )
     },
+
+
+    // {
+    //   field: 'updatedAt',
+    //   headerName: 'Last Updated',
+    //   width: 160,
+    //   cellRenderer: (params: any) => params.value ? (
+    //     <div className="text-xs text-gray-600">
+    //       {new Date(params.value).toLocaleDateString("en-IN")}
+    //       <div className="text-gray-400">
+    //         {new Date(params.value).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+    //       </div>
+    //     </div>
+    //   ) : '-'
+    // },
+    // {
+    //   field: 'role',
+    //   headerName: 'Role',
+    //   width: 120,
+    //   cellRenderer: (params: any) => {
+    //     const role = params.value as Role;
+    //     const colors: Record<Role, string> = {
+    //       admin: 'bg-red-100 text-red-800',
+    //       user: 'bg-green-100 text-green-800',
+    //       'clone-user': 'bg-blue-100 text-blue-800'
+    //     };
+    //     return (
+    //       <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors[role]}`}>
+    //         {role.toUpperCase()}
+    //       </span>
+    //     );
+    //   }
+    // },
+
     {
       field: undefined,
       headerName: 'Login',
@@ -989,6 +1101,7 @@ export default function UsersTables() {
                  // ✅ COPY ENABLE
   enableCellTextSelection={true}
   ensureDomOrder={true}
+  
   
                 onGridReady={onGridReady}
                 animateRows={true}
@@ -1478,6 +1591,65 @@ export default function UsersTables() {
                       </div>
                     </div>
                   </div>
+
+
+                    {/* Source Details */}
+<div className="bg-gray-50 rounded-xl p-5">
+  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+    <FiPackage className="h-5 w-5 text-indigo-500" />
+    Source Details
+  </h4>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    {/* Source Name */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Source Name
+      </label>
+
+      <select
+        value={editForm.sourceName || ""}
+        onChange={(e) =>
+          updateEditForm("sourceName", e.target.value)
+        }
+        className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="">Select Source</option>
+        {sourceList.map((src) => (
+          <option key={src} value={src}>
+            {src}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* Employee Name */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Employee Name
+      </label>
+
+      <select
+        value={editForm.employeeName || ""}
+        onChange={(e) =>
+          updateEditForm("employeeName", e.target.value)
+        }
+        className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="">Select Employee</option>
+        {employeeList.map((emp) => (
+          <option key={emp} value={emp}>
+            {emp}
+          </option>
+        ))}
+      </select>
+    </div>
+
+  </div>
+</div>
+
+
                 </div>
               </div>
 

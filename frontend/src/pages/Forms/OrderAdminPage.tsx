@@ -1,3 +1,8 @@
+
+
+
+
+
 // import { useState, useEffect, useCallback, useRef } from "react";
 // import axios from "axios";
 // import { toast } from "react-toastify";
@@ -168,14 +173,13 @@
 //   useEffect(() => {
 //     const loadInstruments = async () => {
 //       try {
-//         const res = await axios.get(`${apiUrl}/agnelone/instrument`, {
+//         // const res = await axios.get(`${apiUrl}/agnelone/instrument`, {
+//         const res = await axios.get(`${apiUrl}/agnelone/instrumentnew`, {  
 //           headers: {
 //             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 //             AngelOneToken: localStorage.getItem("angel_token") || "",
 //           },
 //         });
-
-//         console.log(res);
 
 //         if (res?.data?.status) {
 //           const rawList: Instrument[] = res.data.data || [];
@@ -320,32 +324,34 @@
 //       return toast.error("Select transaction type");
 //     if (!formData.exchange) return toast.error("Select exchange");
 
+//     console.log(formData,'===============formData==============');
+    
 //     setLoadingSubmit(true);
-//     try {
-//       const res = await axios.post(
-//         `${apiUrl}/admin/manual/create`,
-//         formData,
-//         {
-//           headers: {
-//             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-//           },
-//         }
-//       );
+//     // try {
+//     //   const res = await axios.post(
+//     //     `${apiUrl}/admin/manual/create`,
+//     //     formData,
+//     //     {
+//     //       headers: {
+//     //         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+//     //       },
+//     //     }
+//     //   );
 
-//       if (res?.data?.status) {
-//         toast.success("Order created successfully!");
-//         setFormData(defaultValues);
-//         setSearchTerm("");
-//         navigate(`/admin/user-clone`);
-//       } else {
-//         toast.error(res?.data?.message || "Order failed");
-//       }
-//     } catch (err: any) {
-//       console.error(err);
-//       toast.error(err?.message || "Something went wrong");
-//     } finally {
-//       setLoadingSubmit(false);
-//     }
+//     //   if (res?.data?.status) {
+//     //     toast.success("Order created successfully!");
+//     //     setFormData(defaultValues);
+//     //     setSearchTerm("");
+//     //     navigate(`/admin/user-clone`);
+//     //   } else {
+//     //     toast.error(res?.data?.message || "Order failed");
+//     //   }
+//     // } catch (err: any) {
+//     //   console.error(err);
+//     //   toast.error(err?.message || "Something went wrong");
+//     // } finally {
+//     //   setLoadingSubmit(false);
+//     // }
 //   };
 
 //   return (
@@ -409,15 +415,7 @@
 //                 {field}
 //               </label>
 
-//               {field === "userId" || field === "username" ? (
-//                 <input
-//                   type="text"
-//                   name={field}
-//                   value={formData[field]}
-//                   // readOnly
-//                   className="border p-2 rounded bg-gray-100 text-xs"
-//                 />
-//               ) : field === "transactiontype" ? (
+//               {field === "transactiontype" ? (
 //                 <select
 //                   name={field}
 //                   value={formData[field]}
@@ -504,8 +502,6 @@
 //     </div>
 //   );
 // }
-
-
 
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -633,7 +629,7 @@ const filterInstruments = (
 
 export default function OrderAdminPage() {
   const navigate = useNavigate();
-  const { userId, username } = useParams();
+  const { userId, username ,broker} = useParams();
   const apiUrl = import.meta.env.VITE_API_URL;
 
   const defaultValues = {
@@ -659,6 +655,9 @@ export default function OrderAdminPage() {
     sellPrice: "",
     buyTime: "",
     sellTime: "",
+    brokerName: "" as any,
+    // brokerInstrument: null as any,
+
   };
 
   type FormDataType = typeof defaultValues;
@@ -670,22 +669,25 @@ export default function OrderAdminPage() {
   const [searchResults, setSearchResults] = useState<InstrumentWithKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [allInstruments, setAllInstruments] = useState<InstrumentWithKey[]>([]);
+  const [selectedInstrument, setSelectedInstrument] = useState<InstrumentWithKey | null>(null);
 
   // Debounce timer ref
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hiddenFields: (keyof FormDataType)[] = [
+  "brokerName",
+];
 
   // Load all instruments once
   useEffect(() => {
     const loadInstruments = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/agnelone/instrument`, {
+        const res = await axios.get(`${apiUrl}/agnelone/instrumentnew`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             AngelOneToken: localStorage.getItem("angel_token") || "",
           },
         });
-
-        console.log(res);
 
         if (res?.data?.status) {
           const rawList: Instrument[] = res.data.data || [];
@@ -796,6 +798,7 @@ export default function OrderAdminPage() {
 
     setSearchTerm(item.symbol);
     setSearchResults([]);
+    setSelectedInstrument(item); // Store selected instrument
   };
 
   // Handle form field changes
@@ -828,20 +831,32 @@ export default function OrderAdminPage() {
       return toast.error("Please select a symbol");
     if (!formData.transactiontype)
       return toast.error("Select transaction type");
-    if (!formData.exchange) return toast.error("Select exchange");
+    if (!formData.exchange)
+      return toast.error("Select exchange");
+
+    if (!selectedInstrument) {
+      toast.error("No instrument selected!");
+      return;
+    }
+
+    // formData.brokerInstrument = selectedInstrument
+    formData.brokerName = broker
+    
+
+    // Aap yahan apni API call update kar sakte hain
+    // Example:
 
     setLoadingSubmit(true);
     try {
       const res = await axios.post(
         `${apiUrl}/admin/manual/create`,
-        formData,
+        { ...formData, instrument: selectedInstrument },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
         }
       );
-
       if (res?.data?.status) {
         toast.success("Order created successfully!");
         setFormData(defaultValues);
@@ -910,86 +925,91 @@ export default function OrderAdminPage() {
         )}
       </div>
 
+      
+
       {/* FORM */}
       <form onSubmit={handleSubmit}>
         <div className="p-6 space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(Object.keys(formData) as (keyof FormDataType)[]).map((field) => (
-            <div key={field} className="flex flex-col">
-              <label className="text-xs font-semibold text-gray-700 mb-1">
-                {field}
-              </label>
+         {(Object.keys(formData) as (keyof FormDataType)[])
+  .filter((field) => !hiddenFields.includes(field))
+  .map((field) => (
+    <div key={field} className="flex flex-col">
+      <label className="text-xs font-semibold text-gray-700 mb-1">
+        {field}
+      </label>
 
-              {field === "transactiontype" ? (
-                <select
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                >
-                  <option value="">Select Transaction</option>
-                  <option value="BUY">BUY</option>
-                  <option value="SELL">SELL</option>
-                </select>
-              ) : field === "exchange" ? (
-                <select
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                >
-                  <option value="">Select Exchange</option>
-                  <option value="BSE">BSE</option>
-                  <option value="NSE">NSE</option>
-                  <option value="NFO">NFO</option>
-                  <option value="MCX">MCX</option>
-                  <option value="BFO">BFO</option>
-                  <option value="CDS">CDS</option>
-                </select>
-              ) : field === "duration" ? (
-                <select
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                >
-                  <option value="DAY">DAY</option>
-                  <option value="IOC">IOC</option>
-                </select>
-              ) : field === "price" ||
-                field === "totalPrice" ||
-                field === "triggerprice" ||
-                field === "squareoff" ||
-                field === "stoploss" ||
-                field === "trailingstoploss" ||
-                field === "lotSize" ||
-                field === "buyPrice" ||
-                field === "sellPrice" ? (
-                <input
-                  type="number"
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                />
-              ) : field === "buyTime" || field === "sellTime" ? (
-                <input
-                  type="datetime-local"
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                />
-              ) : (
-                <input
-                  type="text"
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="border p-2 rounded text-sm"
-                />
-              )}
-            </div>
-          ))}
+      {field === "transactiontype" ? (
+        <select
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        >
+          <option value="">Select Transaction</option>
+          <option value="BUY">BUY</option>
+          <option value="SELL">SELL</option>
+        </select>
+      ) : field === "exchange" ? (
+        <select
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        >
+          <option value="">Select Exchange</option>
+          <option value="BSE">BSE</option>
+          <option value="NSE">NSE</option>
+          <option value="NFO">NFO</option>
+          <option value="MCX">MCX</option>
+          <option value="BFO">BFO</option>
+          <option value="CDS">CDS</option>
+        </select>
+      ) : field === "duration" ? (
+        <select
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        >
+          <option value="DAY">DAY</option>
+          <option value="IOC">IOC</option>
+        </select>
+      ) : field === "price" ||
+        field === "totalPrice" ||
+        field === "triggerprice" ||
+        field === "squareoff" ||
+        field === "stoploss" ||
+        field === "trailingstoploss" ||
+        field === "lotSize" ||
+        field === "buyPrice" ||
+        field === "sellPrice" ? (
+        <input
+          type="number"
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        />
+      ) : field === "buyTime" || field === "sellTime" ? (
+        <input
+          type="datetime-local"
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        />
+      ) : (
+        <input
+          type="text"
+          name={field}
+          value={formData[field]}
+          onChange={handleChange}
+          className="border p-2 rounded text-sm"
+        />
+      )}
+    </div>
+  ))}
+
         </div>
 
         {/* SUBMIT */}

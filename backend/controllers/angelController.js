@@ -375,9 +375,9 @@ export const getAngelOneOrder = async (req, res,next) => {
       // let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRGc1TlRNMU55d2libUptSWpveE56WTRPREE0TnpjM0xDSnBZWFFpT2pFM05qZzRNRGczTnpjc0ltcDBhU0k2SWprM1lqSTBNRFExTFRJMk16QXRORGN4TnkwNVltWXpMVFkzTW1ReE9EQmtOMkZpT0NJc0lsUnZhMlZ1SWpvaUluMC5yQVl3aEpCYUIxM25sNmNZNHBCRm5NVkNyT0pCZFZtNURhek9YLTVNX2JXTGEwUUNOdU5xX0VEMExWS05BOVkzeWN0c2MzZm1wRDAwZmgzUGRwZHF4WktwY0xMOTI2OGsxT2dJcUFkY2wzaEtQWXd4WlVUY3BvVXNkQXdsTGlzNlZjUTRTaUFBaS1qbEJaUFVOSDdRZjlJdmd3a0ExcXZRV2pyVmhETl85UXMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MDg5NTcsImV4cCI6MTc2ODg0NzQwMH0.kdfxh-5a24xvPa8gNP2_u0EaVEUbYRw8ZwBvJ1Lsbd_onkT_PGfhQNxjRJIcBWWICK5a3Lg--eL5wKx0b-eemw"
 
       //  Gurdeep Kaur Arora
-    let  angelToken =  "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ikc0MDQ2ODMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrYzBNRFEyT0RNaUxDSmxlSEFpT2pFM05qZzVOakV5TXpRc0ltNWlaaUk2TVRjMk9EZzNORFkxTkN3aWFXRjBJam94TnpZNE9EYzBOalUwTENKcWRHa2lPaUl6WVRnMU9ESTNNeTFtWW1WakxUUmtPV1V0T1dReE9DMHdNMkZpTVdKbFpqWmlZVGtpTENKVWIydGxiaUk2SWlKOS5DWVJHMGlJNTQzUUtNaXY5SnphTm8tWUZXMlgxWUVsNWxzOVRvU3UyM0NOWmQ4MnRfSFpqQ3lfNXlTbWlsMmlobWV3NVQtdXk3UVl4QkJCSWhyVTJwNndIam5KeTM4cXJZRm44Mm9aRU1BNWRaWGVNWlZ6MVhReWljTnlKZGNxTU1lV1hIYzhPQUlpMFgyVEh1dERBSGpmQkR0c2M4ZnVtRnRKMGZLS0RsWFEiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4NzQ4MzQsImV4cCI6MTc2ODkzMzgwMH0.VgHPDiO7gti1pSWmCz8JTAYDsD4RvV0tyX96PFn1_wp9UpUMwOLHOGp15iKpw6d_rTZpc9KxSoOeD4FqlUse7w"
-      // prince
-    //let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGt3TWpVeE1Dd2libUptSWpveE56WTRPREUxT1RNd0xDSnBZWFFpT2pFM05qZzRNVFU1TXpBc0ltcDBhU0k2SW1WbU56YzNZMlUyTFdWbE1HTXRORE5tWlMwNFl6TXlMV0k1TW1VNE1HUm1PV0l6WWlJc0lsUnZhMlZ1SWpvaUluMC5ZSFVHSGFwejFjUnFQVkVVRnpySGlnOGZuZ0xpVUxkUnFHb19Db2xZYzJtajc1NkFrY0xYcmEybWw4ejdiR0VKeDFuanBMVmwzT3pKWm5xVld4UWNWY1prVVNIc3NDSjdBS2JfdGNOLTVIUlhXbHJXWS1vdnk1cmhGTFdmZjVjWERKU1Q3X3pKOGJ1Z3dkS2UzVE1TdnZndTdYUl9jREx1X2J3NFhQUVd6bmMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MTYxMTAsImV4cCI6MTc2ODg0NzQwMH0.3NimCUWV1aDlCAP2rarnypMjUs2Br1JiOx62dxevW-Ona90TjBbM7yXnuyJDwWcBbPDLvGxzixjJbBHBiTmnMQ"
+   let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkMxOTEzMzEiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrTXhPVEV6TXpFaUxDSmxlSEFpT2pFM05qa3lNamszT0Rrc0ltNWlaaUk2TVRjMk9URTBNekl3T1N3aWFXRjBJam94TnpZNU1UUXpNakE1TENKcWRHa2lPaUl3WkRsbE1EQTBaaTAxTjJZeExUUmpOMll0T0RWa1pDMDROelZrTW1ZeVkyRmpOV0VpTENKVWIydGxiaUk2SWlKOS51Z1BEcHBjcHZYalNHaTBpQm94aHRfbEFjbjJsMXRtMmxscXZSMURjLUZ0cTZmWWszSkhkd0FoTXMwaGFrOVU5am1ZRGM0S1dRVFI5LVBFZVphXzNPS0lOTlZHWV9hcGlNLVNtaXUzd0puYWdvMlVFSnpLdml5S0wtd253Q05YSmNfY1FfVTJJMmVvVjhaZVpZdEhkUE1UMEdnV3B2Skd0ZlgxdXJydjJ4YzQiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjkxNDMzODksImV4cCI6MTc2OTE5MzAwMH0.8HGQhWWv0L08eratd3lJY0Zv2QegdeYkuR76wt14jI3fDM_xN2hQMC-ZpD0oh5-AeJgiA3ObYngmTUD2jX7Xng"  // prince
+   
+   //let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGt3TWpVeE1Dd2libUptSWpveE56WTRPREUxT1RNd0xDSnBZWFFpT2pFM05qZzRNVFU1TXpBc0ltcDBhU0k2SW1WbU56YzNZMlUyTFdWbE1HTXRORE5tWlMwNFl6TXlMV0k1TW1VNE1HUm1PV0l6WWlJc0lsUnZhMlZ1SWpvaUluMC5ZSFVHSGFwejFjUnFQVkVVRnpySGlnOGZuZ0xpVUxkUnFHb19Db2xZYzJtajc1NkFrY0xYcmEybWw4ejdiR0VKeDFuanBMVmwzT3pKWm5xVld4UWNWY1prVVNIc3NDSjdBS2JfdGNOLTVIUlhXbHJXWS1vdnk1cmhGTFdmZjVjWERKU1Q3X3pKOGJ1Z3dkS2UzVE1TdnZndTdYUl9jREx1X2J3NFhQUVd6bmMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MTYxMTAsImV4cCI6MTc2ODg0NzQwMH0.3NimCUWV1aDlCAP2rarnypMjUs2Br1JiOx62dxevW-Ona90TjBbM7yXnuyJDwWcBbPDLvGxzixjJbBHBiTmnMQ"
     
     if (!angelToken) {
     
@@ -564,8 +564,8 @@ export const reGenerateTokenWithAngelOne = async function (req,res,next) {
 export const getTradeBook = async (req, res) => {
     try {
         
-      const angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGczTkRJek15d2libUptSWpveE56WTROemczTmpVekxDSnBZWFFpT2pFM05qZzNPRGMyTlRNc0ltcDBhU0k2SW1VeVpUY3lOREF6TFRkbE5HRXROREkwTXkwNVltVTBMV0kyWkRjNU0yRTRNRFV4T1NJc0lsUnZhMlZ1SWpvaUluMC5tQTlNM05FQWZ5d2xibzA5MnY5cjJVX18teXJESGVWOHkxdl9uWjBkWWtlLW9IUTZZTHYycnFCLTVCc2hLQ3JROGRMWXFrSlV6RDJvU3hzTTJieUxLNnVkalBKaTRQcUNQaHMzY0ZUZkc1SG9HUlQzQWFUZGNxUmpnV3hKYXlZMndZM2hQblFXdmoxYzA5SWJHeGJzWmpuQjlZdU9JaXBoTnNHcUpCR2hqUjgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODc4MzMsImV4cCI6MTc2ODg0NzQwMH0.iOU4qSD_IVPqLRwXqwwswls5hUc1JUzetgNvYoLBZCychEPhiJDo8vnTIijC-pSpyzvo3ydir99T7sdQOcyJ2A"
-
+     let angelToken = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkMxOTEzMzEiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrTXhPVEV6TXpFaUxDSmxlSEFpT2pFM05qa3lNamszT0Rrc0ltNWlaaUk2TVRjMk9URTBNekl3T1N3aWFXRjBJam94TnpZNU1UUXpNakE1TENKcWRHa2lPaUl3WkRsbE1EQTBaaTAxTjJZeExUUmpOMll0T0RWa1pDMDROelZrTW1ZeVkyRmpOV0VpTENKVWIydGxiaUk2SWlKOS51Z1BEcHBjcHZYalNHaTBpQm94aHRfbEFjbjJsMXRtMmxscXZSMURjLUZ0cTZmWWszSkhkd0FoTXMwaGFrOVU5am1ZRGM0S1dRVFI5LVBFZVphXzNPS0lOTlZHWV9hcGlNLVNtaXUzd0puYWdvMlVFSnpLdml5S0wtd253Q05YSmNfY1FfVTJJMmVvVjhaZVpZdEhkUE1UMEdnV3B2Skd0ZlgxdXJydjJ4YzQiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3NjkxNDMzODksImV4cCI6MTc2OTE5MzAwMH0.8HGQhWWv0L08eratd3lJY0Zv2QegdeYkuR76wt14jI3fDM_xN2hQMC-ZpD0oh5-AeJgiA3ObYngmTUD2jX7Xng"  // prince
+   
      if (!angelToken) {
     
      return res.json({
@@ -1407,7 +1407,8 @@ export const getTradeDataForCommonDeshboardUpdateRunning = async function (req, 
     const openOrders = await Order.count({
       where: {
         userId,
-        orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+        // orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+         orderstatuslocaldb: { [Op.in]: ["OPEN", ] },
       },
     });
 
@@ -1587,9 +1588,22 @@ export const getTradeDataForCommonDeshboardUpdate = async (req, res) => {
     const totalOpen = await Order.count({
       where: {
         userId,
-        orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+        // orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+         orderstatuslocaldb: { [Op.in]: ["OPEN", ] },
       },
     });
+
+    const totalOpenData = await Order.findAll({
+      where: {
+        userId,
+        // orderstatuslocaldb: { [Op.in]: ["OPEN", "PENDING"] },
+        orderstatuslocaldb: { [Op.in]: ["OPEN"] },
+      },
+    });
+
+
+    console.log(totalOpenData,'================totalOpenData=============');
+    
 
     if (!todayTrades.length) {
       return res.json({
@@ -2170,8 +2184,52 @@ export const getAngelOneTradeDataUserPostionRunning = async function (req, res, 
   }
 };
 
+
+// =============================== getAngelOneTradeDataUserPostion start====================== 
+
+  const EXCHANGE_TYPE = {
+  NSE: 1,
+  NFO: 2,
+  BSE: 3,
+  BFO: 4,
+  MCX: 5,
+  NCX: 7,
+  CDS: 13,
+  CDE: 13,
+};
+
+
+function buildSocketTokenList(orders) {
+
+  const bucket = new Map(); // exchangeType => Set(tokens)
+
+  for (const o of orders) {
+
+    const exch = o.exchange?.toUpperCase().trim();
+    const exchangeType = EXCHANGE_TYPE[exch];
+    const token = String(o.symboltoken || "").trim();
+
+    if (!exchangeType || !token) continue;
+
+    if (!bucket.has(exchangeType)) {
+      bucket.set(exchangeType, new Set());
+    }
+
+    bucket.get(exchangeType).add(token);
+  }
+
+  return Array.from(bucket.entries()).map(
+    ([exchangeType, tokens]) => ({
+      exchangeType,
+      tokens: Array.from(tokens),
+    })
+  );
+}
+
+
 export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
   try {
+
     const angelToken = req.headers.angelonetoken;
 
     if (!angelToken) {
@@ -2204,7 +2262,19 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
       { headers }
     );
 
-    const trades = positionRes.data?.data || [];
+    const finalTrades = positionRes.data?.data || [];
+
+      const now = new Date();
+
+      // IST time nikalna
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+
+      // 3:20 PM ke baad condition
+      const isAfter320 =
+        hours > 15 || (hours === 15 && minutes >= 20);
+
+      const trades = isAfter320 ? [] : finalTrades;
 
     if (!trades.length) {
       return res.json({
@@ -2246,16 +2316,10 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
       }
     }
 
-
-  
-    
-
     // =====================================================
     // 5️⃣ OLD MAPPING + NEW DATA MERGE
     // =====================================================
     const mappedTrades = trades.map((t) => {
-
-      
 
       const buyQty = Number(t.buyqty || 0);
       const sellQty = Number(t.sellqty || 0);
@@ -2266,19 +2330,21 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
       if (buyQty > sellQty) {
         transaction_type = "BUY";
         quantity = buyQty - sellQty;
-      } else if (sellQty === buyQty) {
+      } 
+      // else if (sellQty === buyQty) {
 
-        //  return null;
+      //   //  return null;
        
         
-        transaction_type = "SELL";
-         if((sellQty - buyQty)===0) {
-          quantity = sellQty 
-         }else{
-           quantity = sellQty - buyQty;
-         }
+      //   transaction_type = "SELL";
+      //    if((sellQty - buyQty)===0) {
+      //     quantity = sellQty 
+      //    }else{
+      //      quantity = sellQty - buyQty;
+      //    }
         
-      } else {
+      // }
+       else {
         return null;
       }
 
@@ -2294,10 +2360,6 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
       const matchedTrade = matchedOrder
         ? tradeMap[matchedOrder.orderid]
         : null;
-
-
-        console.log(t,'matchedTrade');
-        
 
       const fillPrice = Number(t.buyavgprice || 0);
 
@@ -2343,7 +2405,7 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
         sellqty: t.sellqty,
         netqty: t.netqty,
         pnl: t.pnl,
-        ltp: t.ltp,
+        cmp: t.ltp,
         instrumenttype: t.instrumenttype,
 
         createdAt: t.createdAt || null,
@@ -2374,21 +2436,18 @@ export const getAngelOneTradeDataUserPostion = async function (req, res, next) {
 };
 
 
+// =============================== getAngelOneTradeDataUserPostion end ====================== 
+
 
 
 export const getPosition = async (req, res,next) => {
     try {
 
-       // Gurdeep Kaur Arora
-       let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6Ikc0MDQ2ODMiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrYzBNRFEyT0RNaUxDSmxlSEFpT2pFM05qZzROelE1TmpJc0ltNWlaaUk2TVRjMk9EYzRPRE00TWl3aWFXRjBJam94TnpZNE56ZzRNemd5TENKcWRHa2lPaUl4TXpFME5EaG1NeTFtTURJNUxUUXhabUl0WWpsa01pMDBZVGsyWW1RNU5HUmxaV0VpTENKVWIydGxiaUk2SWlKOS5jZGlBZzBwckZYTkx2ZzhHa0NNaldfNy1OTVdYRXpIV0VCUFNPalFJZW1jSUlwSzNfU1hERVdDcUd6TWlQTG1pZm0tSWtBUERWTDJnUVJwU19rTVRlR2dFVFRjVE0wMF9aMktJc2dRaDI4TWdUZmNKb1pndndlMnR5S0lkT0JyMEJTMm1KRUNHaWtIeTB0eU5JZ3hNbGh0UzlzVEp1akRlb1VWOGNGZ0NQQ1EiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODg1NjIsImV4cCI6MTc2ODg0NzQwMH0.9LgVy_pVuX4qA5oyrXXrrUou8GYzaleXS9lKxsrOq4ZyLfcg2LWTMxGPMOdbpOUosEbqdJU8EjNeZJ611433wA"
+       
 
-      // let token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkcxMzE3MTkiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pRc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzBMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lSekV6TVRjeE9TSXNJbVY0Y0NJNk1UYzJPRGc1TlRNMU55d2libUptSWpveE56WTRPREE0TnpjM0xDSnBZWFFpT2pFM05qZzRNRGczTnpjc0ltcDBhU0k2SWprM1lqSTBNRFExTFRJMk16QXRORGN4TnkwNVltWXpMVFkzTW1ReE9EQmtOMkZpT0NJc0lsUnZhMlZ1SWpvaUluMC5yQVl3aEpCYUIxM25sNmNZNHBCRm5NVkNyT0pCZFZtNURhek9YLTVNX2JXTGEwUUNOdU5xX0VEMExWS05BOVkzeWN0c2MzZm1wRDAwZmgzUGRwZHF4WktwY0xMOTI2OGsxT2dJcUFkY2wzaEtQWXd4WlVUY3BvVXNkQXdsTGlzNlZjUTRTaUFBaS1qbEJaUFVOSDdRZjlJdmd3a0ExcXZRV2pyVmhETl85UXMiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg4MDg5NTcsImV4cCI6MTc2ODg0NzQwMH0.kdfxh-5a24xvPa8gNP2_u0EaVEUbYRw8ZwBvJ1Lsbd_onkT_PGfhQNxjRJIcBWWICK5a3Lg--eL5wKx0b-eemw"
+      let token = req.headers.angelonetoken
 
-
-      // let token = req.headers.angelonetoken
-
-      //   const token = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IlAyNjE5NjciLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pZc0luTnZkWEpqWlNJNklqTWlMQ0prWlhacFkyVmZhV1FpT2lJeFpUTmtOMlk1WVMwME5EVmlMVE5rWXpVdE9URXhZUzAyTkdWbU9UWTROakExWW1RaUxDSnJhV1FpT2lKMGNtRmtaVjlyWlhsZmRqSWlMQ0p2Ylc1bGJXRnVZV2RsY21sa0lqbzJMQ0p3Y205a2RXTjBjeUk2ZXlKa1pXMWhkQ0k2ZXlKemRHRjBkWE1pT2lKaFkzUnBkbVVpZlN3aWJXWWlPbnNpYzNSaGRIVnpJam9pWVdOMGFYWmxJbjBzSW01aWRVeGxibVJwYm1jaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMTlMQ0pwYzNNaU9pSjBjbUZrWlY5c2IyZHBibDl6WlhKMmFXTmxJaXdpYzNWaUlqb2lVREkyTVRrMk55SXNJbVY0Y0NJNk1UYzJPRGczTkRJek15d2libUptSWpveE56WTROemczTmpVekxDSnBZWFFpT2pFM05qZzNPRGMyTlRNc0ltcDBhU0k2SW1VeVpUY3lOREF6TFRkbE5HRXROREkwTXkwNVltVTBMV0kyWkRjNU0yRTRNRFV4T1NJc0lsUnZhMlZ1SWpvaUluMC5tQTlNM05FQWZ5d2xibzA5MnY5cjJVX18teXJESGVWOHkxdl9uWjBkWWtlLW9IUTZZTHYycnFCLTVCc2hLQ3JROGRMWXFrSlV6RDJvU3hzTTJieUxLNnVkalBKaTRQcUNQaHMzY0ZUZkc1SG9HUlQzQWFUZGNxUmpnV3hKYXlZMndZM2hQblFXdmoxYzA5SWJHeGJzWmpuQjlZdU9JaXBoTnNHcUpCR2hqUjgiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njg3ODc4MzMsImV4cCI6MTc2ODg0NzQwMH0.iOU4qSD_IVPqLRwXqwwswls5hUc1JUzetgNvYoLBZCychEPhiJDo8vnTIijC-pSpyzvo3ydir99T7sdQOcyJ2A"
-
+     
       var config = {
         method: 'get',
         url: 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition',
@@ -2678,3 +2737,109 @@ export const getAngelTradeBooks = async (req, res) => {
     }
 };
 
+
+
+export const getAngelHistoricalMarketData = async (req, res) => {
+  try {
+
+    // const angelToken = req.headers.angelonetoken;
+
+    const angelToken = 
+    'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkMxOTEzMzEiLCJyb2xlcyI6MCwidXNlcnR5cGUiOiJVU0VSIiwidG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKMWMyVnlYM1I1Y0dVaU9pSmpiR2xsYm5RaUxDSjBiMnRsYmw5MGVYQmxJam9pZEhKaFpHVmZZV05qWlhOelgzUnZhMlZ1SWl3aVoyMWZhV1FpT2pFd01pd2ljMjkxY21ObElqb2lNeUlzSW1SbGRtbGpaVjlwWkNJNklqRmxNMlEzWmpsaExUUTBOV0l0TTJSak5TMDVNVEZoTFRZMFpXWTVOamcyTURWaVpDSXNJbXRwWkNJNkluUnlZV1JsWDJ0bGVWOTJNaUlzSW05dGJtVnRZVzVoWjJWeWFXUWlPakV3TWl3aWNISnZaSFZqZEhNaU9uc2laR1Z0WVhRaU9uc2ljM1JoZEhWeklqb2lZV04wYVhabEluMHNJbTFtSWpwN0luTjBZWFIxY3lJNkltRmpkR2wyWlNKOWZTd2lhWE56SWpvaWRISmhaR1ZmYkc5bmFXNWZjMlZ5ZG1salpTSXNJbk4xWWlJNklrTXhPVEV6TXpFaUxDSmxlSEFpT2pFM05qazFOalF5TWpNc0ltNWlaaUk2TVRjMk9UUTNOelkwTXl3aWFXRjBJam94TnpZNU5EYzNOalF6TENKcWRHa2lPaUl4T1dVMk5qVXlOeTA0WWpFd0xUUTNNRFF0T1dReU9DMW1NelEzT1Rkak5tSmlaRE1pTENKVWIydGxiaUk2SWlKOS5hM0JoYnBBUGpVYUpLSjEwSEtmWEMzck50VjBmVGhKWGwtdEZ1V180anBtdVcxdnpRVHNRN3BJS1JLZHdlYUo2dzZLdk0yVmZfWFBISHd6bm5kQm9jX2JJQnNiUmhVTnlGRnc2UUJqSmltenJIV1ZGeVpnY1R4ZlB1aENrVnZWVUdhUGlocGdoOE5CTzY0d2RTQ1cwUGMwcEVzdWpRMzBQS1V5OFFIa0ozQTQiLCJBUEktS0VZIjoieUpicm5ua3giLCJYLU9MRC1BUEktS0VZIjp0cnVlLCJpYXQiOjE3Njk0Nzc4MjMsImV4cCI6MTc2OTUzODYwMH0.YosjBr1zM1SLhhsaqX6aJGZd4IfOzS-f04BomLKM_5ugbAcO5wPPiPL1oGxqKTVty6qNmg5wGBIO8o7aiJo0bw'
+
+    if (!angelToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login In AngelOne Account",
+        data: null,
+        error: null,
+      });
+    }
+
+    const {
+      exchange='NFO',        // NSE | NFO
+      symboltoken='46823',     // instrument token
+      interval='THREE_MINUTE',        // ONE_MINUTE, FIVE_MINUTE, etc
+      fromdate="2026-01-27 09:15",
+      todate="2026-01-27 15:30",
+      oiSymboltoken='46823'    // optional (sirf NFO ke liye)
+    } = req.query;
+
+
+
+    const headers = {
+      Authorization: `Bearer ${angelToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-UserType": "USER",
+      "X-SourceID": "WEB",
+      "X-ClientLocalIP": process.env.CLIENT_LOCAL_IP,
+      "X-ClientPublicIP": process.env.CLIENT_PUBLIC_IP,
+      "X-MACAddress": process.env.MAC_Address,
+      "X-PrivateKey": process.env.PRIVATE_KEY,
+    };
+
+    // =====================================================
+    // 1️⃣ HISTORICAL CANDLE DATA
+    // =====================================================
+    const candlePayload = {
+      exchange,
+      symboltoken,
+      interval,
+      fromdate,
+      todate
+    };
+
+    const candleRes = await axios.post(
+      "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getCandleData",
+      candlePayload,
+      { headers }
+    );
+
+    // =====================================================
+    // 2️⃣ HISTORICAL OI DATA (ONLY IF NFO)
+    // =====================================================
+    let oiData = [];
+
+    if (exchange === "NFO" && oiSymboltoken) {
+      const oiPayload = {
+        exchange: "NFO",
+        symboltoken: oiSymboltoken,
+        interval,
+        fromdate,
+        todate
+      };
+
+      const oiRes = await axios.post(
+        "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData",
+        oiPayload,
+        { headers }
+      );
+
+      oiData = oiRes.data?.data || [];
+    }
+
+    // =====================================================
+    // ✅ FINAL RESPONSE
+    // =====================================================
+    return res.json({
+      status: true,
+      message: "Angel One Historical Market Data",
+      data: {
+        candles: candleRes.data?.data || [],
+        oi: oiData
+      },
+      error: null
+    });
+
+  } catch (err) {
+    console.error("Angel Historical API Error:", err?.response?.data || err.message);
+
+    return res.json({
+      status: false,
+      message: "Failed to fetch Angel historical data",
+      error: err?.response?.data || err.message,
+    });
+  }
+};

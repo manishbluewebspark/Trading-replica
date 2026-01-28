@@ -1,6 +1,6 @@
 import express from 'express';
 import {  authMiddleware } from '../middleware/authMiddleware.js';
-import { angelGetProfileController, angelOneCallback, cancelOrder, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getAngelTradeBooks, getDeshboardOrdersUpdate, getPerticularTradeBook, getPosition,
+import { angelGetProfileController, angelOneCallback, cancelOrder, getAngelHistoricalMarketData, getAngelOneLTP, getAngelOneOrder, getAngelOneProfileFund, getAngelTradeBooks, getDeshboardOrdersUpdate, getPerticularTradeBook, getPosition,
    getTradeBook,
    getTradeDataForCommonDeshboardUpdate,
    getTradeDataForDeshboard, loginWithAngelOne, loginWithTOTPInAngelOne, logoutAngelOne,
@@ -73,6 +73,10 @@ router.get('/agnelone/instrument',getMergedInstruments )
 
 // working code 
 router.get('/agnelone/instrumentnew',heavyCompression,getMergedInstrumentsNew )
+
+
+
+router.get('/agnelone/bankchart',getAngelHistoricalMarketData )
 
 
 

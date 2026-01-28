@@ -853,10 +853,12 @@ const DetailRowRenderer = (props: any) => {
           paginationPageSize={10}
           rowHeight={50}
           headerHeight={40}
+           // ✅ COPY ENABLE
+  enableCellTextSelection={true}
+  ensureDomOrder={true}
           suppressCellFocus={true}
           animateRows={true}
-          enableCellTextSelection={true}
-          ensureDomOrder={true}
+        
           overlayLoadingTemplate={
             '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'
           }
@@ -1690,8 +1692,10 @@ const handlerTargetAndStoploss = (payload: any) => {
             suppressCellFocus={true}
             animateRows={true}
             rowSelection="single"
+             // ✅ COPY ENABLE
             enableCellTextSelection={true}
             ensureDomOrder={true}
+
             headerHeight={40}
             overlayLoadingTemplate={
               '<div class="flex justify-center items-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><span class="ml-3 text-gray-600">Loading orders...</span></div>'

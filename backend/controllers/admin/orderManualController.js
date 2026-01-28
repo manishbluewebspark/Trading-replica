@@ -25,18 +25,47 @@ function generateFillId() {
   return Math.floor(1000000 + Math.random() * 9000000);
 }
 
+const BROKER_FIELD_MAP = {
+  kite: {
+    symbol: "kiteSymbol",
+    token: "kiteToken",
+    exchange: "kiteExchange",
+  },
+  groww: {
+    symbol: "growwTradingSymbol",
+    token: "token",              // groww me token same hota hai
+    exchange: "exch_seg",
+  },
+  finvasia: {
+    symbol: "finvasiaSymbol",
+    token: "finvasiaToken",
+    exchange: "exch_seg",
+  },
+  upstox: {
+    symbol: "upstoxSymbol",
+    token: "upstoxToken",
+    exchange: "exch_seg",
+  },
+  fyers: {
+    symbol: "fyersSymbol",
+    token: "fyersToken",
+    exchange: "exch_seg",
+  },
+};
+
+
 export const createManualOrderWithBrokerPrice = async (req, res) => {
+
   try {
 
     let data = req.body;
 
      let strategyUniqueId = await generateStrategyUniqueId("clone-user")
 
-     const user = await User.findOne({
-          where: { id: data.userId,
-            
-          }
-        });
+      const brokerKey = data.brokerName.toLowerCase();
+      const brokerConfig = BROKER_FIELD_MAP[brokerKey];
+
+      let symobol = data.instrument[brokerConfig?.symbol] || data.tradingsymbol;
     
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -72,7 +101,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.uniqueorderid = generateUniqueOrderUUID();
     data.fillid = generateFillId();
     data.userNameId = data.username
-    data.broker = user?.brokerName ||""
+    data.broker = data.brokerName ||""
     // -------- Default Values --------
     data.text = data.text || "";
     data.status = data.status || "COMPLETE";
@@ -100,7 +129,8 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
     data.strategyUniqueId = strategyUniqueId||""
 
     data.angelOneSymbol =  data.tradingsymbol,
-    data.angelOneToken =  data.symboltoken
+    data.angelOneToken =  data.symboltoken,
+    data.tradingsymbol = symobol
 
 
     // ------------------------------------------------------
@@ -123,7 +153,7 @@ export const createManualOrderWithBrokerPrice = async (req, res) => {
         where: {
           userId: data.userId,
           variety: data.variety,
-          tradingsymbol: data.tradingsymbol,
+          tradingsymbol: symobol,
           symboltoken: data.symboltoken,
           exchange: data.exchange,
           ordertype: data.ordertype,
@@ -196,6 +226,10 @@ export const createManualOrder = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     let data = { ...req.body };
+
+     const brokerKey = data.brokerName.toLowerCase();
+     const brokerConfig = BROKER_FIELD_MAP[brokerKey];
+     let symobol = data.instrument[brokerConfig?.symbol] || data.tradingsymbol;
 
     // -------- Basic Validations --------
     if (!data.tradingsymbol)
@@ -272,6 +306,7 @@ export const createManualOrder = async (req, res) => {
       fillprice: Number(data.buyPrice),
       angelOneSymbol :  data.tradingsymbol,
       angelOneToken :  data.symboltoken,
+      tradingsymbol :symobol,
 
       // optional store buyprice too (keeps your schema consistent)
       buyprice: Number(data.buyPrice),
@@ -297,7 +332,7 @@ export const createManualOrder = async (req, res) => {
 
       transactiontype: "SELL",
       ordertag: data.ordertag || "MANUAL_ORDER",
-      broker : user?.brokerName ||"",
+      broker : data?.brokerName ||"",
 
       // Link sell to buy (choose one)
       parentorderid: buyOrder.orderid, // ✅ strong link
@@ -305,6 +340,7 @@ export const createManualOrder = async (req, res) => {
 
        angelOneSymbol :  data.tradingsymbol,
        angelOneToken :  data.symboltoken,
+      tradingsymbol :symobol,
 
       // SELL-side mapping
       filltime: utcSellTime,

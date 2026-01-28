@@ -3,6 +3,7 @@ import redis from "../utils/redis.js";  // your redis client
 import { logSuccess, logError } from "../utils/loggerr.js"; // <-- path adjust
 import { startMergeWorker } from "../workers/startMergeWorker.js";
 import zlib from "zlib";
+import { GetInstrumentAngelone } from "../utils/getRedisInstrument.js";
 
 
 // =======================================================
@@ -56,25 +57,46 @@ export const getMergedInstrumentsNew = async (req, res) => {
           }
           
          
+           const realData = JSON.parse(decompressed.toString("utf8"));
+
+
+           console.log(realData.data[0],'realData');
+
           
           // Send decompressed data
           res.setHeader("Content-Type", "application/json");
           res.setHeader("X-Compression", compressionType);
           res.setHeader("X-Original-Size", cached.length);
           res.setHeader("X-Decompressed-Size", decompressed.length);
+
+          
+
+        //  await GetInstrumentAngelone()
+
+        
+        
+          
           return res.status(200).send(decompressed);
+
+
           
         } catch (decompressError) {
           console.error("❌ Decompression failed:", decompressError);
           // Fallback: Send compressed data (client will need to handle it)
           res.setHeader("Content-Type", "application/octet-stream");
           res.setHeader("X-Compression", compressionType);
+
+          console.log('Decompressed 123',cached[0]);
+
           return res.status(200).send(cached);
         }
       } else {
         // Data is not compressed, send as is
         console.log("✅ Data is not compressed, sending directly");
         res.setHeader("Content-Type", "application/json");
+
+          console.log('Decompressed 1',cached[0]);
+
         return res.status(200).send(cached);
       }
     }
@@ -120,6 +142,157 @@ export const getMergedInstrumentsNew = async (req, res) => {
   }
 };
 
+
+
+
+// ====================backup 23 jan =====================
+
+
+
+// import redis from "../utils/redis.js";  // your redis client
+// import { logSuccess, logError } from "../utils/loggerr.js"; // <-- path adjust
+// import { startMergeWorker } from "../workers/startMergeWorker.js";
+// import zlib from "zlib";
+// import { GetInstrumentAngelone } from "../utils/getRedisInstrument.js";
+
+
+// // =======================================================
+// // ✅ MAIN CONTROLLER: Merged Instruments Testing Code
+// // =======================================================
+// let isWorkerRunning = false;
+
+// // Helper to check if buffer is compressed
+// const isCompressedBuffer = (buffer) => {
+//   if (!Buffer.isBuffer(buffer)) return false;
+//   // Check for gzip magic number (0x1f 0x8b)
+//   if (buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
+//     return 'gzip';
+//   }
+//   // Check for deflate/zlib header
+//   if (buffer.length >= 2 && (buffer[0] === 0x78 && 
+//       (buffer[1] === 0x01 || buffer[1] === 0x5e || 
+//        buffer[1] === 0x9c || buffer[1] === 0xda))) {
+//     return 'deflate';
+//   }
+//   return false;
+// };
+
+// export const getMergedInstrumentsNew = async (req, res) => {
+//   try {
+//     console.log("✅ getMergedInstrumentsNew called");
+
+//     const MERGED_KEY = "merged_instruments_new";
+
+//     // await redis.del(MERGED_KEY);
+//     // console.log("🧹 Redis merged data removed!");
+
+//     // 1️⃣ Check Redis cache
+//     const cached = await redis.getBuffer(MERGED_KEY);
+    
+//     if (cached) {
+//       console.log("✅ Cache found, checking compression...");
+      
+//       // Check if data is compressed
+//       const compressionType = isCompressedBuffer(cached);
+      
+//       if (compressionType) {
+       
+//         try {
+//           let decompressed;
+          
+//           if (compressionType === 'gzip') {
+//             decompressed = zlib.gunzipSync(cached);
+//           } else if (compressionType === 'deflate') {
+//             decompressed = zlib.inflateSync(cached);
+//           }
+          
+         
+//            const realData = JSON.parse(decompressed.toString("utf8"));
+
+
+//            console.log(realData.data[0],'realData');
+
+          
+//           // Send decompressed data
+//           res.setHeader("Content-Type", "application/json");
+//           res.setHeader("X-Compression", compressionType);
+//           res.setHeader("X-Original-Size", cached.length);
+//           res.setHeader("X-Decompressed-Size", decompressed.length);
+
+          
+
+//         //  await GetInstrumentAngelone()
+
+        
+        
+          
+//           return res.status(200).send(decompressed);
+
+
+          
+//         } catch (decompressError) {
+//           console.error("❌ Decompression failed:", decompressError);
+//           // Fallback: Send compressed data (client will need to handle it)
+//           res.setHeader("Content-Type", "application/octet-stream");
+//           res.setHeader("X-Compression", compressionType);
+
+//           console.log('Decompressed 123',cached[0]);
+
+//           return res.status(200).send(cached);
+//         }
+//       } else {
+//         // Data is not compressed, send as is
+//         console.log("✅ Data is not compressed, sending directly");
+//         res.setHeader("Content-Type", "application/json");
+
+//           console.log('Decompressed 1',cached[0]);
+
+//         return res.status(200).send(cached);
+//       }
+//     }
+
+//     // 2️⃣ If worker already running
+//     if (isWorkerRunning) {
+//       return res.status(202).json({
+//         status: false,
+//         code: "WORKER_RUNNING",
+//         message: "Preparing instruments... worker is already running, try again in 10-15 minutes"
+//       });
+//     }
+
+//     // 3️⃣ Start worker (async fire)
+//     console.log("❌ Cache empty — starting merge worker");
+//     isWorkerRunning = true;
+
+//     startMergeWorker()   // no await here → fire and forget
+//       // .then(() => console.log("✔️ Merge worker completed"))
+//       // .catch((err) => console.error("❌ Merge worker failed:", err))
+//       // .finally(() => {
+//       //   isWorkerRunning = false;
+//       //   console.log("✅ Worker status reset");
+//       // });
+
+//     // 4️⃣ Immediate response
+//     return res.status(202).json({
+//       status: false,
+//       code: "WORKER_STARTED",
+//       message: "Preparing instruments... try again in 10-15 minutes",
+//       startedAt: new Date().toISOString()
+//     });
+
+//   } catch (err) {
+//     console.error("❌ Controller error:", err);
+//     isWorkerRunning = false;
+//     return res.status(500).json({
+//       status: false,
+//       code: "INTERNAL_ERROR",
+//       error: err.message,
+//       message: "Server error while preparing instruments. Please try again in 20-30 minutes"
+//     });
+//   }
+// };
+
+// ====================backup 23 end ===================
 
 const resolveMergedRedisKey = (req) => {
 

@@ -10,6 +10,7 @@ import {  getAngelOneTradeDataUserPostion, getCommonUserHolding } from '../contr
 import { getFyersUserHolding } from '../controllers/fyersController.js';
 import { getUpstoxUserHolding } from '../controllers/upStockController.js';
 import { syncMyHoldings } from '../services/baseBrokerHoldings.js';
+import { getFinvasiaTradesDataUserPosition } from '../controllers/shoonyaController.js';
 
 
 const router = express.Router();
@@ -37,7 +38,7 @@ router.get('/userposition/common/todaytrade',authMiddleware,
   async (req, res,next) => {
     try {
 
-      const { role, borker:brokername } = req;
+        const { role, borker:brokername } = req;
 
         if (role === "user" && brokername === "kite") {
 
@@ -46,7 +47,20 @@ router.get('/userposition/common/todaytrade',authMiddleware,
         }else if(role === "user" && brokername === "angelone") {
 
           return getAngelOneTradeDataUserPostion(req, res,next)
-        }else {
+
+        }else if(role === "user" && brokername === "finvasia") {
+         return getFinvasiaTradesDataUserPosition(req,res,next)
+
+        }else if(role === "user" && brokername === "fyers") {
+          
+        }else if(role === "user" && brokername === "upstox") {
+          
+        }else if(role === "user" && brokername === "groww") {
+
+          
+        }
+        
+        else {
         
           return getCloneUserTradeDataUserPostion(req,res,next)
         
@@ -76,9 +90,6 @@ async (req, res,next) => {
 
         
         }else  if(role === "user" && brokername === "finvasia"){
-
-          console.log('==============finavasia=============');
-          
 
           return getCommonUserHolding(req,res,next)
         

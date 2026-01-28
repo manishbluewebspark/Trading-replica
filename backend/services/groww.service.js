@@ -76,6 +76,7 @@ const fetchGrowwTrades = async ({
 
 export const placeGrowwOrder = async (user, reqInput, req) => {
   let newOrder = null;
+
   const nowISO = new Date().toISOString();
 
   try {
@@ -116,7 +117,7 @@ export const placeGrowwOrder = async (user, reqInput, req) => {
         product: reqInput.product || "CNC",
         order_type: reqInput.order_type,
         transaction_type: reqInput.transaction_type,
-        order_reference_id: `ORD-${Date.now()}`,
+        order_reference_id: `softwaresetu`,
       },
       {
         headers: {

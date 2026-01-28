@@ -67,6 +67,7 @@ import FinavasiaCrendetial from "./pages/Forms/FinavasiaCredential";
 import UserPnlAdmin from "./pages/Tables/UserPnlAdmin";
 import RejectedHistory from "./pages/Tables/RejectedHistory";
 import GrowwCrendetial from "./pages/Forms/growwCrendetial";
+import AdminCheckUserPosition from "./pages/Tables/UserPositionTableAdmin";
 
 export default function App() {
 
@@ -109,7 +110,7 @@ export default function App() {
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
             <Route
-              path="/order-admin/:userId/:username"
+              path="/order-admin/:userId/:username/:broker"
               element={
                 <ProtectedRoute>
                   <OrdersAdminPage />
@@ -145,6 +146,7 @@ export default function App() {
 
 
             <Route path="/userposition" element={<ProtectedRoute><Userposition /></ProtectedRoute>} />
+             <Route path="/admin/cehckuserposition" element={<ProtectedRoute><AdminCheckUserPosition /></ProtectedRoute>} />
 
             <Route path="/angel/order" element={<ProtectedRoute><AngelOrderTable /></ProtectedRoute>} />
             <Route path="/angel/trades" element={<ProtectedRoute><AngelTradeTable /></ProtectedRoute>} />

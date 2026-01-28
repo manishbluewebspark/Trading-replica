@@ -362,157 +362,446 @@ const pnlCellRenderer = (params: any) => {
     );
   };
 
+  const priceFormatter = (params: any) => {
+  if (params.value === null || params.value === undefined) return "₹0.00";
+  return `₹${Number(params.value).toFixed(2)}`;
+};
+
   // Fixed column definitions with proper TypeScript typing
-  const columnDefs: ColDef<Order>[] = useMemo(() => [
-    {
-      headerName: "Symbol",
-      field: "tradingsymbol",
-      filter: true,
-      sortable: true,
-       width: 170,
-      minWidth: 180,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//   const columnDefs: ColDef<Order>[] = useMemo(() => [
+//     // {
+//     //   headerName: "Symbol",
+//     //   field: "tradingsymbol",
+//     //   filter: true,
+//     //   sortable: true,
+//     //    width: 170,
+//     //   minWidth: 180,
+//     //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
+
+//     {
+//   headerName: "Symbol",
+//   field: "tradingsymbol",
+//   filter: true,
+//   sortable: true,
+//   width: 170,
+//   minWidth: 180,
+//   cellStyle: () => ({
+//     borderRight: '1px solid #e2e8f0',
+//   }),
+// },
    
-    {
-      headerName: "Type",
-      field: "transactiontype",
-      filter: true,
-      sortable: true,
-      cellRenderer: transactionTypeCellRenderer,
-       width: 100,
-      minWidth: 100,
-      valueGetter: () => "BUY",     // ⭐ always same output
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     // {
+//     //   headerName: "Type",
+//     //   field: "transactiontype",
+//     //   filter: true,
+//     //   sortable: true,
+//     //   cellRenderer: transactionTypeCellRenderer,
+//     //    width: 100,
+//     //   minWidth: 100,
+//     //   valueGetter: () => "BUY",     // ⭐ always same output
+//     //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
+
+//     {
+//   headerName: "Type",
+//   field: "transactiontype",
+//   filter: true,
+//   sortable: true,
+//   cellRenderer: transactionTypeCellRenderer,
+//   width: 100,
+//   minWidth: 100,
+//   valueGetter: () => "BUY",
+//   cellStyle: () => ({
+//     borderRight: '1px solid #e2e8f0',
+//   }),
+// }
+
    
-    {
-      headerName: "Buy Price",
-      field: "buyprice",
-      filter: true,
-      sortable: true,
-            width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Sell Price",
-      field: "fillprice",
-      filter: true,
-      sortable: true,
-        width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     // {
+//     //   headerName: "Buy Price",
+//     //   field: "buyprice",
+//     //   filter: true,
+//     //   sortable: true,
+//     //         width: 120,
+//     //   minWidth: 120,
+//     //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
+//     // {
+//     //   headerName: "Sell Price",
+//     //   field: "fillprice",
+//     //   filter: true,
+//     //   sortable: true,
+//     //     width: 120,
+//     //   minWidth: 120,
+//     //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
+
+// //     {
+// //   headerName: "Buy Price",
+// //   field: "buyprice",
+// //   filter: true,
+// //   sortable: true,
+// //   width: 120,
+// //   minWidth: 120,
+// //   valueFormatter: priceFormatter,
+// //   cellStyle: { borderRight: '1px solid #e2e8f0', textAlign: 'right' }
+// // },
+
+// // {
+// //   headerName: "Buy Price",
+// //   field: "buyprice",
+// //   filter: true,
+// //   sortable: true,
+// //   width: 120,
+// //   minWidth: 120,
+// //   valueFormatter: priceFormatter,
+// //   cellStyle: () => ({
+// //     borderRight: '1px solid #e2e8f0',
+// //     textAlign: 'right',
+// //   }),
+// // },
+
+// {
+//   headerName: "Sell Price",
+//   field: "fillprice",
+//   filter: true,
+//   sortable: true,
+//   width: 120,
+//   minWidth: 120,
+//   valueFormatter: priceFormatter,
+//   cellStyle: () => ({
+//     borderRight: '1px solid #e2e8f0',
+//     textAlign: 'right',
+//   }),
+// },
+// {
+//   headerName: "Sell Price",
+//   field: "fillprice",
+//   filter: true,
+//   sortable: true,
+//   width: 120,
+//   minWidth: 120,
+//   valueFormatter: priceFormatter,
+//   cellStyle: { borderRight: '1px solid #e2e8f0', textAlign: 'right' }
+// },
+
     
-    {
-      headerName: "Traded Qty",
-      field: "quantity",
-      filter: true,
-      sortable: true,
-      cellRenderer: quantityCellRenderer,
-       width: 150,
-        minWidth: 150,
-         cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "PNL",
-      field: "pnl",
-      filter: true,
-      sortable: true,
-      cellRenderer: pnlCellRenderer,
-       width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Order ID",
-      field: "orderid",
-      filter: true,
-      sortable: true,
-        width: 140,
-      minWidth: 180,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Traded ID",
-      field: "fillid",
-      filter: true,
-      sortable: true,
-       width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     // {
+//     //   headerName: "Traded Qty",
+//     //   field: "quantity",
+//     //   filter: true,
+//     //   sortable: true,
+//     //   cellRenderer: quantityCellRenderer,
+//     //    width: 150,
+//     //     minWidth: 150,
+//     //      cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
 
-     {
-      headerName: "Order Type",
-      field: "ordertype",
-      filter: true,
-      sortable: true,
-        width: 120,
-       minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Product Type",
-      field: "producttype",
-      filter: true,
-      sortable: true,
-      width: 140,
-      minWidth: 150,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     {
+//   headerName: "Traded Qty",
+//   field: "quantity",
+//   filter: true,
+//   sortable: true,
+//   cellRenderer: quantityCellRenderer,
+//   width: 150,
+//   minWidth: 150,
+//   cellStyle: () => ({
+//     borderRight: '1px solid #e2e8f0',
+//   }),
+// },
+//     // {
+//     //   headerName: "PNL",
+//     //   field: "pnl",
+//     //   filter: true,
+//     //   sortable: true,
+//     //   cellRenderer: pnlCellRenderer,
+//     //    width: 120,
+//     //   minWidth: 120,
+//     //   cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     // },
 
-     {
-      headerName: "Instrument",
-      field: "instrumenttype",
-      filter: true,
-      sortable: true,
-      width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     {
+//   headerName: "PNL",
+//   field: "pnl",
+//   filter: true,
+//   sortable: true,
+//   cellRenderer: pnlCellRenderer,
+//   width: 120,
+//   minWidth: 120,
+//   cellStyle: () => ({
+//     borderRight: '1px solid #e2e8f0',
+//   }),
+// },
 
-    {
-      headerName: "Status",
-      field: "status",
-      filter: true,
-      sortable: true,
-      cellRenderer: statusCellRenderer,
-        width: 120,
-      minWidth: 120,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-     {
-      headerName: "Buy Time",
-      field: "buyTime",
-      filter: true,
-      sortable: true,
-      width: 300,
-      minWidth: 250,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
-    {
-      headerName: "Sell Time",
-      field: "filltime",
-      filter: true,
-      sortable: true,
-      width: 300,
-      minWidth: 250,
-      cellStyle: { borderRight: '1px solid #1a2533ff' }
-    },
-    {
-      headerName: "Message",
-      field: "text",
-      filter: true,
-      sortable: true,
-      cellRenderer: textCellRenderer,
-      width: 170,
-      minWidth: 180,
-      cellStyle: { borderRight: '1px solid #e2e8f0' }
-    },
+//     {
+//       headerName: "Order ID",
+//       field: "orderid",
+//       filter: true,
+//       sortable: true,
+//         width: 140,
+//       minWidth: 180,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+//     {
+//       headerName: "Traded ID",
+//       field: "fillid",
+//       filter: true,
+//       sortable: true,
+//        width: 120,
+//       minWidth: 120,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+
+//      {
+//       headerName: "Order Type",
+//       field: "ordertype",
+//       filter: true,
+//       sortable: true,
+//         width: 120,
+//        minWidth: 120,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+//     {
+//       headerName: "Product Type",
+//       field: "producttype",
+//       filter: true,
+//       sortable: true,
+//       width: 140,
+//       minWidth: 150,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+
+//      {
+//       headerName: "Instrument",
+//       field: "instrumenttype",
+//       filter: true,
+//       sortable: true,
+//       width: 120,
+//       minWidth: 120,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+
+//     {
+//       headerName: "Status",
+//       field: "status",
+//       filter: true,
+//       sortable: true,
+//       cellRenderer: statusCellRenderer,
+//         width: 120,
+//       minWidth: 120,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+//      {
+//       headerName: "Buy Time",
+//       field: "buyTime",
+//       filter: true,
+//       sortable: true,
+//       width: 300,
+//       minWidth: 250,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
+//     {
+//       headerName: "Sell Time",
+//       field: "filltime",
+//       filter: true,
+//       sortable: true,
+//       width: 300,
+//       minWidth: 250,
+//       cellStyle: { borderRight: '1px solid #1a2533ff' }
+//     },
+//     {
+//       headerName: "Message",
+//       field: "text",
+//       filter: true,
+//       sortable: true,
+//       cellRenderer: textCellRenderer,
+//       width: 170,
+//       minWidth: 180,
+//       cellStyle: { borderRight: '1px solid #e2e8f0' }
+//     },
    
-  ], []);
+//   ], []);
+
+// Fixed & TypeScript-safe column definitions
+const columnDefs: ColDef<Order>[] = useMemo(() => [
+  {
+    headerName: "Symbol",
+    field: "tradingsymbol",
+    filter: true,
+    sortable: true,
+    width: 170,
+    minWidth: 180,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Type",
+    field: "transactiontype",
+    filter: true,
+    sortable: true,
+    cellRenderer: transactionTypeCellRenderer,
+    width: 100,
+    minWidth: 100,
+    valueGetter: () => "BUY",
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Sell Price",
+    field: "fillprice",
+    filter: true,
+    sortable: true,
+    width: 120,
+    minWidth: 120,
+    valueFormatter: priceFormatter,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+      textAlign: "right",
+    }),
+  },
+
+  {
+    headerName: "Traded Qty",
+    field: "quantity",
+    filter: true,
+    sortable: true,
+    cellRenderer: quantityCellRenderer,
+    width: 150,
+    minWidth: 150,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "PNL",
+    field: "pnl",
+    filter: true,
+    sortable: true,
+    cellRenderer: pnlCellRenderer,
+    width: 120,
+    minWidth: 120,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Order ID",
+    field: "orderid",
+    filter: true,
+    sortable: true,
+    width: 140,
+    minWidth: 180,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Trade ID",
+    field: "fillid",
+    filter: true,
+    sortable: true,
+    width: 120,
+    minWidth: 120,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Order Type",
+    field: "ordertype",
+    filter: true,
+    sortable: true,
+    width: 120,
+    minWidth: 120,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Product Type",
+    field: "producttype",
+    filter: true,
+    sortable: true,
+    width: 140,
+    minWidth: 150,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Instrument",
+    field: "instrumenttype",
+    filter: true,
+    sortable: true,
+    width: 120,
+    minWidth: 120,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Status",
+    field: "status",
+    filter: true,
+    sortable: true,
+    cellRenderer: statusCellRenderer,
+    width: 120,
+    minWidth: 120,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Buy Time",
+    field: "buyTime",
+    filter: true,
+    sortable: true,
+    width: 300,
+    minWidth: 250,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+
+  {
+    headerName: "Sell Time",
+    field: "filltime",
+    filter: true,
+    sortable: true,
+    width: 300,
+    minWidth: 250,
+    cellStyle: () => ({
+      borderRight: "1px solid #1a2533ff",
+    }),
+  },
+
+  {
+    headerName: "Message",
+    field: "text",
+    filter: true,
+    sortable: true,
+    cellRenderer: textCellRenderer,
+    width: 170,
+    minWidth: 180,
+    cellStyle: () => ({
+      borderRight: "1px solid #e2e8f0",
+    }),
+  },
+], []);
+
 
   const getRowStyle = () => {
     return {
@@ -639,6 +928,9 @@ const pnlCellRenderer = (params: any) => {
           getRowStyle={getRowStyle}
           loading={loading}
           rowHeight={50}
+  // ✅ COPY ENABLE
+  enableCellTextSelection={true}
+  ensureDomOrder={true}
           headerHeight={50}
           overlayLoadingTemplate={
             '<span class="ag-overlay-loading-center">Loading orders...</span>'
@@ -650,6 +942,7 @@ const pnlCellRenderer = (params: any) => {
           }
           pagination={true}
           paginationPageSize={20}
+          
           paginationPageSizeSelector={[20, 50, 100, 500, 1000]}
           suppressRowClickSelection={true}
           rowSelection="multiple"

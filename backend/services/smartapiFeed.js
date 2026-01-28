@@ -3,7 +3,7 @@ import WebSocket from "ws";
 import { emitTick, emitFeedStatus } from "../socket/index.js"; // ← import helper
 import axios from 'axios';
 import Trade from "../models/orderModel.js"
-
+import { Op } from "sequelize";
 
 
 let ws = null
@@ -23,6 +23,7 @@ const EXCHANGE_TYPE = {
   CDE: 13,     // sometimes labeled CDE
 };
 
+const tokenSymbolMap = new Map();
 
 export const getOrderFunction1 =  async function (token) {
 
@@ -115,12 +116,24 @@ function buildTokenList(trades) {
     const exch = (t.exchange || "").toUpperCase().trim();
     const exchangeType = EXCHANGE_TYPE[exch];
     const token = t.symboltoken && String(t.symboltoken).trim();
+    const angelOneToken =  t.angelOneToken && String(t.angelOneToken).trim();
 
     if (!exchangeType || !token) continue;
+
+    // 🔥 SYMBOL MAP SAME LOOP ME
+    tokenSymbolMap.set(
+      `${exchangeType}|${angelOneToken}`,
+      {
+        symbol: t.tradingsymbol || t.angelOneSymbol,
+        angeloneSymbol:t.angelOneSymbol,
+        exchange: exch
+      }
+    );
 
     if (!buckets.has(exchangeType)) buckets.set(exchangeType, new Set());
     buckets.get(exchangeType).add(token);
   }
+
 
   // turn into [{ exchangeType, tokens: [...] }, ...]
   return Array.from(buckets.entries()).map(([exchangeType, set]) => ({
@@ -137,6 +150,17 @@ export const getOrderFunction = async function () {
 
         const endOfToday = new Date();
         endOfToday.setHours(23, 59, 59, 999);
+
+      //  const tradesData = await Trade.findAll({
+      //   where: {
+      //     // orderstatuslocaldb:"OPEN",   // new line add 23 dec 2025
+      //     createdAt: {
+      //       [Op.between]: [startOfToday, endOfToday],
+      //     },
+      //   },
+      //   raw: true, // plain JS objects
+      // });
+
 
        const tradesData = await Trade.findAll({
         where: {
@@ -246,6 +270,24 @@ export  function connectSmartSocket(authToken,feedToken,clientId,) {
          }
 
         //  console.log("📈 LTP:", tick,'full object');
+
+          
+
+         const key = `${tick.exchangeType}|${tick.token}`;
+
+          console.log(key,'=============key==============');
+
+        const symbolInfo = tokenSymbolMap.get(key);
+
+         console.log(symbolInfo,'=============symbolInfo==============');
+
+        tick.symbol = symbolInfo?.symbol || null;
+        tick.angelOneSymbol = symbolInfo?.angeloneSymbol || null;
+        tick.exchange = symbolInfo?.exchange || null;
+
+        console.log(tick,'=============tick==============');
+        
+
         
         // 🔥 ship to your socket clients
         emitTick(tick);

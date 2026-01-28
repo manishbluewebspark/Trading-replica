@@ -288,7 +288,9 @@ export const updateCloneUser = async (req, res) => {
       packageDate,
       brokerName,
       brokerImageLink,
-      DematFund
+      DematFund,
+      source,
+      assignEmp
     } = req.body;
 
     // 🔥 Check duplicate email for others
@@ -351,7 +353,9 @@ export const updateCloneUser = async (req, res) => {
       packageDate: packageDate ?? user.packageDate,
       brokerName: brokerName ?? user.brokerName,
       brokerImageLink: brokerImageLink ?? user.brokerImageLink,
-      DematFund:DematFund??DematFund
+      DematFund:DematFund??DematFund,
+      assignEmp:assignEmp,
+      source:source
     });
 
     return res.json({

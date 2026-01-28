@@ -1082,8 +1082,6 @@ export default function HoldingOrderAdmin() {
 
     const onTick = (tick: Tick) => {
 
-      console.log(tick,'socket admin panel pnl');
-      
       setLtpByToken((prev) => {
         const curr = prev[tick.token];
         if (curr === tick.ltp) return prev;
@@ -1107,11 +1105,11 @@ export default function HoldingOrderAdmin() {
           }
         );
 
-        console.log("RAW holding response:", data);
+       
 
         if (data.status === true) {
           const raw = data.data || [];
-          console.log("RAW data.data:", raw);
+         
 
           const normalized: Order[] = (raw as any[]).map((item: any) => {
             if (item && typeof item === "object" && "0" in item) {
@@ -1134,7 +1132,7 @@ export default function HoldingOrderAdmin() {
           localStorage.removeItem("refresh_token");
         } else {
           setError("Something went wrong");
-          toast.error(data?.message || "Something went wrong");
+          // toast.error(data?.message || "Something went wrong");
         }
       } catch (err: any) {
         console.log(err);

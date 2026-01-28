@@ -85,10 +85,9 @@ async function generateUniqueUsername() {
 
 export const register = async (req, res) => {
 
-const { firstName, lastName,mob, isChecked,broker } = req.body;
+const { firstName, lastName,mob, isChecked,broker,employee="",source="" } = req.body;
 const email = (req.body.email || "").trim();
 const password = (req.body.password || "").trim();
-
 
   try {
     
@@ -155,19 +154,10 @@ const password = (req.body.password || "").trim();
 
       const brokerLower = broker?.toString().trim().toLowerCase();
 
-
-      console.log(brokerLower);
-      
-
-
      const brokerData = await BrokerModel.findOne({
           where: { brokerName: brokerLower },
           raw: true,
         });
-
-
-        console.log(brokerData);
-        
 
     if (!brokerData) {
           return res.json({
@@ -188,7 +178,9 @@ const password = (req.body.password || "").trim();
       password: hashedPassword,
       isChecked,
       brokerName:brokerLower,
-      brokerImageLink:brokerLink
+      brokerImageLink:brokerLink,
+      assignEmp:employee,
+      source:source
     });
     
      const token = jwt.sign({ id: saveUser.id,role:saveUser.role,broker:saveUser.brokerName }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -225,6 +217,7 @@ const password = (req.body.password || "").trim();
         });
 
   }
+  
 };
 
 

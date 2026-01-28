@@ -404,8 +404,8 @@ export default function RejectedHistory() {
         filter: true,
         sortable: true,
         cellRenderer: textCellRenderer,
-        width: 770,
-        minWidth: 650,
+        width: 120,
+        minWidth: 100,
         cellStyle: { borderRight: "1px solid #e2e8f0" },
       },
       // {
@@ -419,7 +419,23 @@ export default function RejectedHistory() {
       //   cellStyle: { borderRight: "1px solid #e2e8f0" },
       // },
 
-      {
+//       {
+//   headerName: "Message",
+//   field: "text",
+//   filter: true,
+//   sortable: true,
+//   cellRenderer: textCellRenderer,
+//   autoHeight: true,
+//   wrapText: true,
+//   width: 770,
+//   minWidth: 650,
+//   cellStyle: {
+//     borderRight: "1px solid #e2e8f0",
+//     whiteSpace: "normal"
+//   },
+// },
+
+{
   headerName: "Message",
   field: "text",
   filter: true,
@@ -429,10 +445,10 @@ export default function RejectedHistory() {
   wrapText: true,
   width: 770,
   minWidth: 650,
-  cellStyle: {
+  cellStyle: () => ({
     borderRight: "1px solid #e2e8f0",
-    whiteSpace: "normal"
-  },
+    whiteSpace: "normal",
+  }),
 },
 
       {

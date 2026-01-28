@@ -88,6 +88,179 @@ const isRetryableStatus = (statusNorm) => {
   return retryables.some((x) => statusNorm === x || statusNorm.includes(x));
 };
 
+
+const getFinvasiaPositions = async ({ uid, susertoken }) => {
+  const body = `jKey=${susertoken}&jData=${JSON.stringify({
+    uid,
+    actid: uid,
+  })}`;
+
+  const res = await axios.post(
+    `${SHOONYA_BASE_URL}/PositionBook`,
+    body,
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    }
+  );
+
+  return res.data;
+};
+
+
+const hasFinvasiaOpenPosition = (positionData, tradingSymbol) => {
+  if (!Array.isArray(positionData)) return false;
+
+  return positionData.some(
+    (pos) =>
+      pos.tsym === tradingSymbol &&
+      Number(pos.netqty) !== 0
+  );
+};
+
+
+const finvasiaFIFOWithAPI = async (buyOrderId, finavasiaSymbol, user) => {
+
+    const nowISOError = new Date().toISOString();
+
+  const uid = user?.kite_client_id;
+  const susertoken = user?.authToken;
+
+  const body = `jKey=${susertoken}&jData=${JSON.stringify({
+    uid,
+    actid: uid,
+  })}`;
+
+  const res = await axios.post(
+    `${SHOONYA_BASE_URL}/TradeBook`,
+    body,
+    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+  );
+
+  const tradeBook = res.data;
+
+  if (!Array.isArray(tradeBook)) return null;
+
+  // 🔹 SELL trades for given symbol
+  let sellTradesData = tradeBook
+    .filter(
+      (t) =>
+        t.tsym === finavasiaSymbol &&
+        t.trantype === "S" &&               // SELL
+        Number(t.flqty) > 0
+    )
+    // FIFO → Oldest first
+    .sort(
+      (a, b) =>
+        new Date(a.norexchtime).getTime() -
+        new Date(b.norexchtime).getTime()
+    );
+
+  if (!sellTradesData.length) return null;
+
+  // 🔥 FIFO SELL trade
+    const sellOrderId = sellTradesData[0].norenordno;
+
+    let sellTrade = sellTradesData[0]
+
+    const sameOrderFills = sellTradesData.filter(
+      (t) => t.norenordno === sellOrderId
+    );
+
+    const sellQty = sameOrderFills.reduce(
+  (sum, f) => sum + Number(f.flqty || 0),
+  0
+);
+
+const sellValue = sameOrderFills.reduce(
+  (sum, f) =>
+    sum + Number(f.flqty || 0) * Number(f.flprc || f.avgprc || 0),
+  0
+);
+
+const sellAvgPrice = sellQty ? sellValue / sellQty : 0;
+
+
+
+  let ordersData = await Order.findOne({
+     where: {
+          orderid: buyOrderId,
+          transactiontype: "BUY"
+        },
+        raw:true
+  })
+
+   if (!ordersData) return null;
+
+const buyValue = Number(ordersData.tradedValue);
+
+const pnl = sellValue - buyValue;
+
+   // 4️⃣ Prepare SELL order object
+  const sellOrderPayload = {
+    ...ordersData,
+    id: undefined, // important (auto increment)
+    orderid: sellTrade.norenordno,
+    uniqueorderid: `${sellTrade.exchordid}`,
+    fillid:sellTrade?.flid,
+    transactiontype: "SELL",
+    price: sellAvgPrice||Number(sellTrade.flprc || sellTrade.avgprc || 0),
+    fillprice:sellAvgPrice||Number(sellTrade.flprc || sellTrade.avgprc || 0),
+    quantity:sellQty|| Number(sellTrade.flqty),
+    fillsize:sellQty||Number(sellTrade.flqty),
+    tradedValue:sellValue,
+    exchangeorderid: sellTrade.exchordid,
+    brokerorderid: sellTrade.norenordno,
+    buyvalue:ordersData.tradedValue,
+    buyprice:ordersData.fillprice,
+    buyOrderId:ordersData.orderid,
+    buysize:ordersData.fillsize,
+    buyTime:ordersData.filltime,
+    filltime:sellTrade?.fltm ? await toISOStringUTC(sellTrade.fltm) : nowISOError,
+    pnl:pnl,
+    text: "User Manual Sell",
+    ordertag: "User Manual Sell",
+    status: "COMPLETE",
+    orderstatus:"COMPLETE",
+    orderstatuslocaldb:"COMPLETE",
+    positionStatus:"COMPLETE",
+    broker: "FINVASIA",
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+
+  // 5️⃣ Insert SELL order
+  const insertedSellOrder = await Order.create(sellOrderPayload);
+
+  await Order.update(
+  {
+    status: "COMPLETE",
+    orderstatus: "COMPLETE",
+    orderstatuslocaldb: "COMPLETE",
+    positionStatus: "COMPLETE",
+  },
+  {
+    where: {
+      id: ordersData.id,   // 🔥 primary key
+    },
+  }
+);
+
+  return {
+    orderid: sellTrade.norenordno,
+    tradeid: sellTrade.tradeid || sellTrade.exchordid,
+    symbol: sellTrade.tsym,
+    qty: Number(sellTrade.flqty),
+    price: Number(sellTrade.prc),
+    exch: sellTrade.exch,
+    product: sellTrade.prd,
+    raw: sellTrade,
+  };
+};
+
+
+
 // --- RETRY LOGIC FOR ORDERBOOK ---
 const fetchOrderDetailsWithRetry = async ({ uid, susertoken, orderid, req }) => {
   const MAX_RETRIES = 3;
@@ -173,9 +346,6 @@ const fetchTradeBookWithRetry = async ({ uid, susertoken, orderid, expectedQty, 
   const DELAY = 1200;
   let lastFills = [];
 
-  console.log('===============fetchTradeBookWithRetry=================');
-  
-
   for (let attempt = 1; attempt <= MAX_TRY; attempt++) {
     try {
       const tbBody = `jKey=${susertoken}&jData=${JSON.stringify({ uid, actid: uid })}`;
@@ -207,17 +377,9 @@ const fetchTradeBookWithRetry = async ({ uid, susertoken, orderid, expectedQty, 
         continue;
       }
 
-
-      console.log('--------------------tradeBook-----------',tradeBook);
-      
-
       const fills = tradeBook.filter((t) => String(t.norenordno) === String(orderid));
 
-      console.log('--------------------fills-----------',fills);
-
       let totalQty = fills.reduce((sum, fill) => sum + (Number(fill.flqty) || 0), 0);
-
-       console.log('--------------------totalQty-----------',totalQty);
 
       logSuccess(req, {
         msg: "TradeBook attempt details",
@@ -322,6 +484,27 @@ export const placeFinavasiaOrder = async (user, reqInput, req, isLocalDbFlow = t
     angelOneSymbol: reqInput.angelOneSymbol || reqInput.symbol,
     angelOneToken: reqInput.angelOneToken || reqInput.token,
   };
+
+   if(reqInput.transactiontype.toUpperCase() === "SELL") {
+
+    const positions = await getFinvasiaPositions({
+      uid: String(uid),
+      susertoken: user.authToken,
+    });
+
+    if (
+      !hasFinvasiaOpenPosition(positions, reqInput.finavasiaSymbol)
+    ) {
+
+    await finvasiaFIFOWithAPI(reqInput.buyOrderId ,reqInput.finavasiaSymbol, user);
+
+    return { result: "DONE" };
+    }
+
+
+   }
+    
+
    newOrder = await Order.create(orderData);
  
   // --- 3. PLACE ORDER IN SHOONYA ---

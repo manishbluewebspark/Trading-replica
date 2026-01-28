@@ -11,6 +11,7 @@ import { Op } from "sequelize";
 import {  updateTargetAndStoploss } from "../../services/placeTargetAndStoplossAngel.js";
 import { checkTargetAndStoplossAngelOrder, checkTargetAndStoplossKiteOrder } from "../../services/checkTargetAndStoplossStatus.js";
 import { placeUpstoxOrder } from "../../services/placeUpstoxOrder.js";
+import { placeGrowwOrder } from "../../services/groww.service.js";
 
 
 export const getTokenStatusSummary = async (req, res) => {
@@ -168,6 +169,12 @@ export const adminPlaceMultiBrokerOrder = async (req, res) => {
             
             return await placeFinavasiaOrder(user, input, req, true);
           }
+
+          if (user.brokerName.toLowerCase() === "groww") {
+            
+            return await placeGrowwOrder(user, input, req, true);
+          }
+
 
           logSuccess(req, {
             msg: "Unsupported broker encountered",

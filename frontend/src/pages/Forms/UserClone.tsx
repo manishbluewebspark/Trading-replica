@@ -1205,9 +1205,9 @@ const UserClone: React.FC = () => {
     }
   };
 
-  const handleCreateOrder = (userId: number, username: any) => {
+  const handleCreateOrder = (userId: number, username: any,brokerName:any) => {
     try {
-      navigate(`/order-admin/${userId}/${username}`);
+      navigate(`/order-admin/${userId}/${username}/${brokerName}`);
       closeActionMenu();
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
@@ -1731,7 +1731,7 @@ const UserClone: React.FC = () => {
               onClick={() => {
                 const user = users.find(u => u.id === openActionId);
                 if (user) {
-                  handleCreateOrder(user.id, user.username);
+                  handleCreateOrder(user.id, user.username, user.brokerName);
                 }
               }}
               className="flex items-center w-full gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-colors duration-150"

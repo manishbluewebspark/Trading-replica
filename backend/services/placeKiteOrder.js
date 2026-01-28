@@ -95,6 +95,265 @@ function calculateWeightedAveragePrice(trades) {
 }
 
 
+// ======================= codde auto sell fetch code start   =======================
+
+async function kiteFIFOWithAPI(kite, symbol,user) {
+
+  try {
+
+     const normalize = v => v?.trim().toUpperCase();
+
+  // 1️⃣ Fetch OrderBook & TradeBook
+  const [orderBook, tradeBook,postions] = await Promise.all([
+    kite.getOrders(),
+    kite.getTrades(),
+    kite.getPositions()
+  ]);
+
+  // console.log(postions,'=================postions===================');
+  
+
+  // 2️⃣ Group trades by order_id
+  const tradeMap = new Map();
+  for (const t of tradeBook) {
+    const key = String(t.order_id);
+    if (!tradeMap.has(key)) tradeMap.set(key, []);
+    tradeMap.get(key).push(t);
+  }
+
+  // 3️⃣ Filter COMPLETE orders for symbol (FIFO)
+  const orders = orderBook
+    .filter(o =>
+      normalize(o.tradingsymbol) === normalize(symbol) &&
+      o.status === "COMPLETE"
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.exchange_timestamp) - new Date(b.exchange_timestamp)
+    );
+
+  const buyQueue = [];
+  const results = [];
+
+  // 4️⃣ FIFO Matching
+  for (const o of orders) {
+    // ===== BUY =====
+    if (o.transaction_type === "BUY") {
+      const trades = tradeMap.get(String(o.order_id)) || [];
+      if (!trades.length) continue;
+
+      let qty = 0;
+      let value = 0;
+
+      for (const t of trades) {
+        const q = Number(t.quantity || 0);
+        const p = Number(t.average_price || o.price || 0);
+        qty += q;
+        value += q * p;
+      }
+
+      if (!qty) continue;
+
+      buyQueue.push({
+        qty,
+        price: value / qty,
+        orderid: o.order_id,
+        time: o.exchange_timestamp
+      });
+    }
+
+    
+    
+    // ===== SELL =====
+    if (o.transaction_type === "SELL") {
+      const trades = tradeMap.get(String(o.order_id)) || [];
+      if (!trades.length) {
+        // Agar trade nahi milti, to order ki price use karein
+        const sellQty = Number(o.quantity || 0);
+        const sellPrice = Number(o.average_price || 0);
+        if (!sellQty || !sellPrice) continue;
+
+        let remainingQty = sellQty;
+        let pnl = 0;
+        const buyOrderIds = [];
+
+        while (remainingQty > 0 && buyQueue.length) {
+          const buy = buyQueue[0];
+          const matchedQty = Math.min(buy.qty, remainingQty);
+          pnl += (sellPrice - buy.price) * matchedQty;
+          remainingQty -= matchedQty;
+          buy.qty -= matchedQty;
+          buyOrderIds.push(buy.orderid);
+          if (buy.qty === 0) buyQueue.shift();
+        }
+
+        results.push({
+          symbol: o.tradingsymbol,
+          buyOrderIds,
+          sellOrderId: o.order_id,
+          ordertag: o?.tag || "User Manual Sell",
+          sellUniqueOrderId: o.order_id,
+          sellPriceAvg: Number(sellPrice.toFixed(2)),
+          quantity: sellQty,
+          pnl: Number(pnl.toFixed(2)),
+          sellFillIds: [],
+          sellTradeIds: [],
+          buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+          sellTime: o.exchange_timestamp,
+          broker: "KITE"
+        });
+        continue;
+      }
+
+      // Trades mil gayi hain, to unse average price aur total quantity nikalein
+      let sellQty = 0;
+      let sellValue = 0;
+
+      for (const t of trades) {
+        const q = Number(t.quantity || 0);
+        const p = Number(t.average_price || o.price || 0);
+        sellQty += q;
+        sellValue += q * p;
+      }
+
+      if (!sellQty) continue;
+
+      const avgSellPrice = sellValue / sellQty;
+
+      let remainingQty = sellQty;
+      let pnl = 0;
+      const buyOrderIds = [];
+
+      while (remainingQty > 0 && buyQueue.length) {
+        const buy = buyQueue[0];
+        const matchedQty = Math.min(buy.qty, remainingQty);
+        pnl += (avgSellPrice - buy.price) * matchedQty;
+        remainingQty -= matchedQty;
+        buy.qty -= matchedQty;
+        buyOrderIds.push(buy.orderid);
+        if (buy.qty === 0) buyQueue.shift();
+      }
+
+      results.push({
+        symbol: o.tradingsymbol,
+        buyOrderIds,
+        sellOrderId: o.order_id,
+        ordertag: o?.tag || "User Manual Sell",
+        sellUniqueOrderId: o.order_id,
+        sellPriceAvg: Number(avgSellPrice.toFixed(2)),
+        quantity: sellQty,
+        pnl: Number(pnl.toFixed(2)),
+        sellFillIds: trades.map(t => t.trade_id),
+        sellTradeIds: trades.map(t => t.trade_id),
+        buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+        sellTime: o.exchange_timestamp,
+        broker: "KITE"
+      });
+    }
+  }
+
+  // 5️⃣ Database Update Logic (SAME AS ANGELONE)
+  if (results.length > 0) {
+    let orderBuyFind = await Order.findOne({
+      where: {
+        orderid: results[0]?.buyOrderIds[0],
+        transactiontype: "BUY"
+      },
+      order: [["createdAt", "ASC"]],
+      raw: true
+    });
+
+    const sellPayload = {
+      userId: orderBuyFind?.userId || "",
+      userNameId: orderBuyFind?.userNameId || "",
+      tradingsymbol: orderBuyFind?.tradingsymbol || "",
+      variety: orderBuyFind?.variety || "",
+      ordertype: orderBuyFind?.ordertype || "",
+      producttype: orderBuyFind?.producttype || "",
+      duration: orderBuyFind?.duration || "",
+      exchange: orderBuyFind?.exchange || "",
+      symboltoken: orderBuyFind?.symboltoken || "",
+      instrumenttype: orderBuyFind?.instrumenttype || "",
+      optiontype: orderBuyFind?.optiontype || "",
+      text: "User Manual Sell",
+      ordertag: "User Manual Sell",
+      kiteToken: orderBuyFind?.kiteToken || "",
+      kiteSymbol: orderBuyFind?.kiteSymbol || "",
+      strategyName: orderBuyFind?.strategyName || "",
+      strategyUniqueId: orderBuyFind?.strategyUniqueId || "",
+      transactiontype: "SELL",
+      orderid: results[0]?.sellOrderId || "",
+      uniqueorderid: results[0]?.sellUniqueOrderId || "",
+      quantity: orderBuyFind?.fillsize||results[0]?.quantity || 0,
+      actualQuantity: results[0]?.quantity || 0,
+      buyOrderId: orderBuyFind?.orderid || "",
+      buyTime: orderBuyFind?.filltime || "",
+      buysize: orderBuyFind?.fillsize || "",
+      buyprice: orderBuyFind?.fillprice || "",
+      buyvalue: orderBuyFind?.tradedValue || "",
+      price: results[0]?.sellPriceAvg || "",
+      fillprice: results[0]?.sellPriceAvg || 0,
+      fillid: results[0]?.sellFillIds[0] || 0,
+      tradedValue: (results[0]?.sellPriceAvg * (orderBuyFind?.fillsize||results[0]?.quantity)) || 0,
+      fillsize: orderBuyFind?.fillsize||results[0]?.quantity || 0,
+      pnl: Number(results[0]?.pnl.toFixed(5)) || 0,
+      status: "COMPLETE",
+      orderstatus: "COMPLETE",
+      positionStatus: "COMPLETE",
+      orderstatuslocaldb: "COMPLETE",
+      filltime: new Date(results[0]?.sellTime).toISOString(),
+      broker: orderBuyFind?.broker || "KITE",
+    };
+
+
+   
+    
+
+    await Order.create(sellPayload);
+    await Order.update(
+      {
+        orderstatus: "COMPLETE",
+        orderstatuslocaldb: "COMPLETE",
+        positionStatus: "COMPLETE",
+      },
+      {
+        where: {
+          id: orderBuyFind?.id
+        }
+      }
+    );
+  }
+
+  
+  return results;
+    
+  } catch (err) {
+
+    console.log(err);
+    
+
+     logSuccess(req, {
+        msg: "angelOneFIFOWithAPI",
+        error:err?.message||err,
+        userId:user?.id
+      });
+
+       return [];
+    
+  }
+
+}
+
+// ======================= codde auto sell fetch code end   =======================
+
+const hasOpenPosition = (positionData, tradingSymbol) => {
+  return positionData.net.some(
+    (pos) =>
+      pos.tradingsymbol === tradingSymbol && pos.quantity !== 0
+  );
+};
+
+
 // ========================= UPDATED placeKiteOrder with Partial SELL ========================
 export const placeKiteOrder = async (user, reqInput, req, useMappings = true) => {
   let newOrder = null;
@@ -155,6 +414,27 @@ export const placeKiteOrder = async (user, reqInput, req, useMappings = true) =>
       angelOneToken: reqInput.angelOneToken || reqInput.token,
       text: reqInput?.text||"",
     };
+
+
+    if(reqInput.transactiontype.toUpperCase()==='SELL')  {
+
+      let getpositionData =  await kite.getPositions()
+
+        const isOpen = hasOpenPosition(
+                      getpositionData,
+                      reqInput.kiteSymbol
+                    );
+
+          if(!isOpen) {
+
+           await kiteFIFOWithAPI(kite,reqInput?.kiteSymbol,user)
+
+          return { result: "BROKER_REJECTED", orderid:"" };
+          
+          }
+    }
+   
+   
 
     newOrder = await Order.create(orderData);
 
@@ -226,6 +506,14 @@ if (!trades?.length) {
       orderid,
       reason: lastState?.status_message
     });
+
+
+     if(reqInput.transactiontype.toUpperCase()==='SELL'&& lastState?.status?.toUpperCase()==='REJECTED') {
+
+         await kiteFIFOWithAPI(kite,reqInput?.kiteSymbol,user)
+           
+      }
+
 
     return { result: "BROKER_REJECTED", orderid };
   }
@@ -432,7 +720,244 @@ if (!trades?.length) {
 
 
 
+// =======================test codde auto sell fetch code start   =======================
 
+async function kiteFIFOWithAPI1(kite, symbol) {
+  const normalize = v => v?.trim().toUpperCase();
+
+  // 1️⃣ Fetch OrderBook & TradeBook
+  const [orderBook, tradeBook] = await Promise.all([
+    kite.getOrders(),
+    kite.getTrades()
+  ]);
+
+  // 2️⃣ Group trades by order_id
+  const tradeMap = new Map();
+  for (const t of tradeBook) {
+    const key = String(t.order_id);
+    if (!tradeMap.has(key)) tradeMap.set(key, []);
+    tradeMap.get(key).push(t);
+  }
+
+  // 3️⃣ Filter COMPLETE orders for symbol (FIFO)
+  const orders = orderBook
+    .filter(o =>
+      normalize(o.tradingsymbol) === normalize(symbol) &&
+      o.status === "COMPLETE"
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.exchange_timestamp) - new Date(b.exchange_timestamp)
+    );
+
+  const buyQueue = [];
+  const results = [];
+
+  // 4️⃣ FIFO Matching
+  for (const o of orders) {
+    // ===== BUY =====
+    if (o.transaction_type === "BUY") {
+      const trades = tradeMap.get(String(o.order_id)) || [];
+      if (!trades.length) continue;
+
+      let qty = 0;
+      let value = 0;
+
+      for (const t of trades) {
+
+        console.log(t,'======t-====');
+        
+        const q = Number(t.quantity || 0);
+        const p = Number(t.average_price || o.price || 0);
+        qty += q;
+        value += q * p;
+      }
+
+      if (!qty) continue;
+
+      buyQueue.push({
+        qty,
+        price: value / qty,
+        orderid: o.order_id,
+        time: o.exchange_timestamp
+      });
+    }
+
+    console.log(o,'=============0=========');
+    
+    // ===== SELL =====
+    if (o.transaction_type === "SELL") {
+      const trades = tradeMap.get(String(o.order_id)) || [];
+      if (!trades.length) {
+        // Agar trade nahi milti, to order ki price use karein
+        const sellQty = Number(o.quantity || 0);
+        const sellPrice = Number(o.average_price || 0);
+        if (!sellQty || !sellPrice) continue;
+
+        let remainingQty = sellQty;
+        let pnl = 0;
+        const buyOrderIds = [];
+
+        while (remainingQty > 0 && buyQueue.length) {
+          const buy = buyQueue[0];
+          const matchedQty = Math.min(buy.qty, remainingQty);
+          pnl += (sellPrice - buy.price) * matchedQty;
+          remainingQty -= matchedQty;
+          buy.qty -= matchedQty;
+          buyOrderIds.push(buy.orderid);
+          if (buy.qty === 0) buyQueue.shift();
+        }
+
+        results.push({
+          symbol: o.tradingsymbol,
+          buyOrderIds,
+          sellOrderId: o.order_id,
+          ordertag: o?.tag || "User Manual Sell",
+          sellUniqueOrderId: o.order_id,
+          sellPriceAvg: Number(sellPrice.toFixed(2)),
+          quantity: sellQty,
+          pnl: Number(pnl.toFixed(2)),
+          sellFillIds: [],
+          sellTradeIds: [],
+          buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+          sellTime: o.exchange_timestamp,
+          broker: "KITE"
+        });
+        continue;
+      }
+
+      // Trades mil gayi hain, to unse average price aur total quantity nikalein
+      let sellQty = 0;
+      let sellValue = 0;
+
+      for (const t of trades) {
+        const q = Number(t.quantity || 0);
+        const p = Number(t.average_price || o.price || 0);
+        sellQty += q;
+        sellValue += q * p;
+      }
+
+      if (!sellQty) continue;
+
+      const avgSellPrice = sellValue / sellQty;
+
+      let remainingQty = sellQty;
+      let pnl = 0;
+      const buyOrderIds = [];
+
+      while (remainingQty > 0 && buyQueue.length) {
+        const buy = buyQueue[0];
+        const matchedQty = Math.min(buy.qty, remainingQty);
+        pnl += (avgSellPrice - buy.price) * matchedQty;
+        remainingQty -= matchedQty;
+        buy.qty -= matchedQty;
+        buyOrderIds.push(buy.orderid);
+        if (buy.qty === 0) buyQueue.shift();
+      }
+
+      results.push({
+        symbol: o.tradingsymbol,
+        buyOrderIds,
+        sellOrderId: o.order_id,
+        ordertag: o?.tag || "User Manual Sell",
+        sellUniqueOrderId: o.order_id,
+        sellPriceAvg: Number(avgSellPrice.toFixed(2)),
+        quantity: sellQty,
+        pnl: Number(pnl.toFixed(2)),
+        sellFillIds: trades.map(t => t.trade_id),
+        sellTradeIds: trades.map(t => t.trade_id),
+        buyTime: buyOrderIds.length ? buyQueue[0]?.time : null,
+        sellTime: o.exchange_timestamp,
+        broker: "KITE"
+      });
+    }
+  }
+
+  // 5️⃣ Database Update Logic (SAME AS ANGELONE)
+  if (results.length > 0) {
+    let orderBuyFind = await Order.findOne({
+      where: {
+        orderid: results[0]?.buyOrderIds[0],
+        transactiontype: "BUY"
+      },
+      order: [["createdAt", "ASC"]],
+      raw: true
+    });
+
+    const sellPayload = {
+      userId: orderBuyFind?.userId || "",
+      userNameId: orderBuyFind?.userNameId || "",
+      tradingsymbol: orderBuyFind?.tradingsymbol || "",
+      variety: orderBuyFind?.variety || "",
+      ordertype: orderBuyFind?.ordertype || "",
+      producttype: orderBuyFind?.producttype || "",
+      duration: orderBuyFind?.duration || "",
+      exchange: orderBuyFind?.exchange || "",
+      symboltoken: orderBuyFind?.symboltoken || "",
+      instrumenttype: orderBuyFind?.instrumenttype || "",
+      optiontype: orderBuyFind?.optiontype || "",
+      text: "User Manual Sell",
+      ordertag: "User Manual Sell",
+      kiteToken: orderBuyFind?.kiteToken || "",
+      kiteSymbol: orderBuyFind?.kiteSymbol || "",
+      strategyName: orderBuyFind?.strategyName || "",
+      strategyUniqueId: orderBuyFind?.strategyUniqueId || "",
+      transactiontype: "SELL",
+      orderid: results[0]?.sellOrderId || "",
+      uniqueorderid: results[0]?.sellUniqueOrderId || "",
+      quantity: results[0]?.quantity || 0,
+      actualQuantity: results[0]?.quantity || 0,
+      buyOrderId: orderBuyFind?.orderid || "",
+      buyTime: orderBuyFind?.filltime || "",
+      buysize: orderBuyFind?.fillsize || "",
+      buyprice: orderBuyFind?.fillprice || "",
+      buyvalue: orderBuyFind?.tradedValue || "",
+      price: results[0]?.sellPriceAvg || "",
+      fillprice: results[0]?.sellPriceAvg || 0,
+      fillid: results[0]?.sellFillIds[0] || 0,
+      tradedValue: (results[0]?.sellPriceAvg * results[0]?.quantity) || 0,
+      fillsize: results[0]?.quantity || 0,
+      pnl: Number(results[0]?.pnl.toFixed(5)) || 0,
+      status: "COMPLETE",
+      orderstatus: "COMPLETE",
+      positionStatus: "COMPLETE",
+      orderstatuslocaldb: "COMPLETE",
+      filltime: new Date(results[0]?.sellTime).toISOString(),
+      broker: orderBuyFind?.broker || "KITE",
+    };
+
+    await Order.create(sellPayload);
+    await Order.update(
+      {
+        orderstatus: "COMPLETE",
+        orderstatuslocaldb: "COMPLETE",
+        positionStatus: "COMPLETE",
+      },
+      {
+        where: {
+          id: orderBuyFind?.id
+        }
+      }
+    );
+  }
+
+  console.log(results, "========== FINAL KITE FIFO ==========");
+  return results;
+}
+
+
+
+
+
+ const kite = await getKiteClientForUserId(43);
+
+// const trades =  await kiteFIFOWithAPI(
+//   kite, // authenticated kite client
+//   "NIFTY26JAN25300CE"
+// );
+
+
+// =======================test codde auto sell fetch code end   =======================
 
 
 // ========================= aws running code======================

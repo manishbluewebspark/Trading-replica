@@ -345,7 +345,7 @@ export const getOrderWithDate = async (req, res, next) => {
       statusCode: 200,
       buydata: buyCount,
       data: formatted,
-      message: "get data",
+      message: "Trading data retrieved successfully",
     });
   } catch (error) {
     console.error("getOrderWithDate error:", error);
@@ -2102,24 +2102,17 @@ export const adminGetOrderWithDate = async (req, res,next) => {
     //   });
     // }
 
-
-
-
-    
         return res.json({
             status: true,
             statusCode:200,
             data: unique ,
             buydata:buyCount,
-            message:'get data'
+            message:'Trading data retrieved successfully'
         });
         
 
     } catch (error) {
-
-
-        
-
+      
         return res.json({
             status: false,
             statusCode:500,

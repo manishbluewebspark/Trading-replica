@@ -1,9 +1,21 @@
+
+
+// 🔥 Global crash handlers
+process.on("uncaughtException", err => {
+  console.error("🔥 Uncaught Exception:", err.stack || err);
+});
+
+process.on("unhandledRejection", err => {
+  console.error("🔥 Unhandled Rejection:", err.stack || err);
+});
+
+
+
 import express from 'express';
 import dotenv from 'dotenv';
 import sequelize from './config/db.js';
 import authRoutes from './routes/authRoute.js';
 import userRoutes from './routes/userRoute.js';
-import licenseRoutes from './routes/licenseRoutes.js';
 import orderRoute from './routes/orderRoute.js';
 import fyersRoute from './routes/fyersRoute.js';
 import kiteRoute from './routes/kiteRoute.js';
@@ -67,7 +79,6 @@ app.get("/test/point", (req, res) => {
 app.use("/uploads", express.static(path.join("uploads")));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use("/api/licenses", licenseRoutes);
 app.use('/api/order', orderRoute);
 app.use('/api/admin', adminRoute);
 

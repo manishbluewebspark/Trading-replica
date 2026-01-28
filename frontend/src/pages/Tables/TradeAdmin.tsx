@@ -1746,6 +1746,9 @@ const DetailRowRenderer = (props: any) => {
           defaultColDef={subDefaultColDef}
           pagination={true}
           paginationPageSize={10}
+           // ✅ COPY ENABLE
+  enableCellTextSelection={true}
+  ensureDomOrder={true}
           rowHeight={50}
           headerHeight={40}
           suppressCellFocus={true}

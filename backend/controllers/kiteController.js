@@ -5,6 +5,7 @@ import axios from "axios";
 import crypto from "crypto";
 import { getKiteClientForUserId } from "../services/userKiteBrokerService.js";
 import { Op } from "sequelize";
+import { GetInstrumentAngelone } from "../utils/getRedisInstrument.js";
 
 export const getKiteAllInstruments = async (req, res) => {
   try {
@@ -554,7 +555,7 @@ export const getKiteFunds = async (req, res) => {
 
 // ===================== DASHBOARD P&L =====================
 
-export const getKiteTradesDataUserPosition = async function (req, res, next) {
+export const getKiteTradesDataUserPositionRunning = async function (req, res, next) {
   try {
 
     const kiteToken = req.headers.angelonetoken;
@@ -638,6 +639,581 @@ export const getKiteTradesDataUserPosition = async function (req, res, next) {
     });
   }
 };
+
+
+// =============================== getKiteTradesDataUserPosition start====================== 
+
+export const getKiteTradesDataUserPosition1 = async function (req, res, next) {
+  try {
+    const kiteToken = req.headers.angelonetoken;
+    if (!kiteToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login in Broker Account",
+        error: null,
+      });
+    }
+
+    const kite = await getKiteClientForUserId(req.userId);
+
+    // Kite Position, Orders, Trades
+    const positions = await kite.getPositions();
+    const orders = await kite.getOrders();
+    const trades = await kite.getTrades();
+
+
+    console.log(positions,'====================positions===================');
+    
+
+    // Build trade map (order_id → trade)
+    const tradeMap = {};
+    for (const t of trades) {
+      if (!tradeMap[t.order_id]) {
+        tradeMap[t.order_id] = t;
+      }
+    }
+
+    // Map positions to trades/orders (using both net and day)
+    const mappedTrades = [];
+
+    // Process NET positions
+    for (const p of positions.net) {
+      const quantity = Math.abs(Number(p.quantity || 0));
+      if (quantity === 0) continue;
+
+      const transaction_type = p.quantity > 0 ? "BUY" : "SELL";
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === p.tradingsymbol &&
+        o.transaction_type === transaction_type &&
+        o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder ? tradeMap[matchedOrder.order_id] : null;
+
+      mappedTrades.push({
+        tradingsymbol: p.tradingsymbol || "-",
+        exchange: p.exchange || "-",
+        transaction_type,
+        product: p.product || "-",
+        average_price: Number(p.average_price || 0),
+        quantity,
+
+        order_id: matchedOrder?.order_id || "",
+        trade_id: matchedTrade?.trade_id || "",
+        uniqueorderid: matchedOrder?.order_id || matchedOrder?.uniqueorderid || "",
+
+        transactiontype: transaction_type,
+        ordertype: matchedOrder?.order_type || "MARKET",
+        producttype: p.product || "-",
+        fillprice: String(p.average_price || ""),
+        price: String(p.average_price || ""),
+        fillsize: quantity,
+        orderid: matchedOrder?.order_id || "",
+        status: "COMPLETE",
+        instrumenttype: p.instrument_type || p.segment || "",
+        orderstatus: matchedOrder?.status || "COMPLETE",
+        text: "",
+        updatetime: matchedOrder?.order_timestamp || matchedTrade?.exchange_timestamp || "",
+
+        symboltoken: String(p.instrument_token || ""),
+
+        createdAt: p.createdAt || null,
+        updatedAt: p.updatedAt || null,
+      });
+    }
+
+    // Process DAY positions (if needed)
+    for (const p of positions.day) {
+      const quantity = Math.abs(Number(p.quantity || 0));
+      if (quantity === 0) continue;
+
+      const transaction_type = p.quantity > 0 ? "BUY" : "SELL";
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === p.tradingsymbol &&
+        o.transaction_type === transaction_type &&
+        o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder ? tradeMap[matchedOrder.order_id] : null;
+
+      const existingTrade = mappedTrades.find(t => t.tradingsymbol === p.tradingsymbol);
+      if (!existingTrade) {
+        mappedTrades.push({
+          tradingsymbol: p.tradingsymbol || "-",
+          exchange: p.exchange || "-",
+          transaction_type,
+          product: p.product || "-",
+          average_price: Number(p.average_price || 0),
+          quantity,
+
+          order_id: matchedOrder?.order_id || "",
+          trade_id: matchedTrade?.trade_id || "",
+          uniqueorderid: matchedOrder?.order_id || matchedOrder?.uniqueorderid || "",
+
+          transactiontype: transaction_type,
+          ordertype: matchedOrder?.order_type || "MARKET",
+          producttype: p.product || "-",
+          fillprice: String(p.average_price || ""),
+          price: String(p.average_price || ""),
+          fillsize: quantity,
+          orderid: matchedOrder?.order_id || "",
+          status: "COMPLETE",
+          instrumenttype: p.instrument_type || p.segment || "",
+          orderstatus: matchedOrder?.status || "COMPLETE",
+          text: "",
+          updatetime: matchedOrder?.order_timestamp || matchedTrade?.exchange_timestamp || "",
+
+          symboltoken: String(p.instrument_token || ""),
+
+          createdAt: p.createdAt || null,
+          updatedAt: p.updatedAt || null,
+        });
+      }
+    }
+
+    // Get local open orders (for socket token list)
+    const localOpenOrders = await Order.findAll({
+      where: {
+        orderstatuslocaldb: "OPEN",
+        userId:req.userId
+      },
+      attributes: ["tradingsymbol"],
+      raw: true,
+    });
+
+    // console.log(mappedTrades,'=====================mappedTrades===================');
+    
+    const localOpenSymbolSet = new Set(
+      localOpenOrders.map(o => o.tradingsymbol)
+    );
+
+    const kiteOrders = orders.filter(o => {
+    if (o.status !== "COMPLETE") return false;
+    if (localOpenSymbolSet.has(o.tradingsymbol)) return false;
+    return true;
+  });
+
+   
+
+    // 🔥 UNIQUE trading symbols
+    const tradingSymbols = [...new Map(
+            kiteOrders
+              .filter(o => o.status === "COMPLETE" && !localOpenSymbolSet.has(o.tradingsymbol))
+              .map(o => [JSON.stringify({ tradingsymbol: o.tradingsymbol, exchange: o.exchange }), { tradingsymbol: o.tradingsymbol, exchange: o.exchange }])
+          ).values()];
+
+
+
+
+    
+    let responseFun = await GetInstrumentAngelone(tradingSymbols)
+
+  
+    
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "User Position Trades",
+      onlineTrades: mappedTrades,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+export const getKiteTradesDataUserPosition = async function (req, res, next) {
+  try {
+    const kiteToken = req.headers.angelonetoken;
+    if (!kiteToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login in Broker Account",
+        error: null,
+      });
+    }
+
+    const kite = await getKiteClientForUserId(req.userId);
+
+    // Kite Position, Orders, Trades
+    let positions = await kite.getPositions();
+    const orders = await kite.getOrders();
+    const trades = await kite.getTrades();
+
+
+    const now = new Date();
+
+      // IST time nikalna
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+
+      // 3:20 PM ke baad condition
+      const isAfter320 =
+        hours > 15 || (hours === 15 && minutes >= 20);
+
+      //  positions = isAfter320 ? [] : positions;
+       positions = isAfter320 ? {day:[]} : positions;
+
+    if (!positions?.day?.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No Trade in User Position",
+        onlineTrades: [],
+        error: null,
+      });
+    }
+
+    if (!trades.length) {
+      return res.json({
+        status: true,
+        statusCode: 200,
+        message: "No Trade in User Position",
+        onlineTrades: [],
+        error: null,
+      });
+    }
+
+    
+
+    // Build trade map (order_id → trade)
+    const tradeMap = {};
+    for (const t of trades) {
+      if (!tradeMap[t.order_id]) {
+        tradeMap[t.order_id] = t;
+      }
+    }
+
+    // Map positions to trades/orders (using both net and day)
+    const mappedTrades = [];
+
+    // Process NET positions
+    for (const p of positions?.net) {
+      const quantity = Math.abs(Number(p.quantity || 0));
+      if (quantity === 0) continue;
+
+      const transaction_type = p.quantity > 0 ? "BUY" : "SELL";
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === p.tradingsymbol &&
+        o.transaction_type === transaction_type &&
+        o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder ? tradeMap[matchedOrder.order_id] : null;
+
+      mappedTrades.push({
+        tradingsymbol: p.tradingsymbol || "-",
+        exchange: p.exchange || "-",
+        transaction_type,
+        product: p.product || "-",
+        average_price: Number(p.average_price || 0),
+        quantity,
+
+        order_id: matchedOrder?.order_id || "",
+        trade_id: matchedTrade?.trade_id || "",
+        uniqueorderid: matchedOrder?.order_id || matchedOrder?.uniqueorderid || "",
+
+        transactiontype: transaction_type,
+        ordertype: matchedOrder?.order_type || "MARKET",
+        producttype: p.product || "-",
+        fillprice: String(p.average_price || ""),
+        price: String(p.average_price || ""),
+        pnl: String(p.pnl || ""),
+        cmp:String(p.last_price),
+        fillsize: quantity,
+        orderid: matchedOrder?.order_id || "",
+        status: "COMPLETE",
+        instrumenttype: p.instrument_type || p.segment || "",
+        orderstatus: matchedOrder?.status || "COMPLETE",
+        text: "",
+        updatetime: matchedOrder?.order_timestamp || matchedTrade?.exchange_timestamp || "",
+
+        symboltoken: String(p.instrument_token || ""),
+
+        createdAt: p.createdAt || null,
+        updatedAt: p.updatedAt || null,
+      });
+    }
+
+    // Process DAY positions (if needed)
+    for (const p of positions.day) {
+      const quantity = Math.abs(Number(p.quantity || 0));
+      if (quantity === 0) continue;
+
+      const transaction_type = p.quantity > 0 ? "BUY" : "SELL";
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === p.tradingsymbol &&
+        o.transaction_type === transaction_type &&
+        o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder ? tradeMap[matchedOrder.order_id] : null;
+
+      const existingTrade = mappedTrades.find(t => t.tradingsymbol === p.tradingsymbol);
+      if (!existingTrade) {
+        mappedTrades.push({
+          tradingsymbol: p.tradingsymbol || "-",
+          exchange: p.exchange || "-",
+          transaction_type,
+          product: p.product || "-",
+          average_price: Number(p.average_price || 0),
+          quantity,
+          order_id: matchedOrder?.order_id || "",
+          trade_id: matchedTrade?.trade_id || "",
+          uniqueorderid: matchedOrder?.order_id || matchedOrder?.uniqueorderid || "",
+          transactiontype: transaction_type,
+          ordertype: matchedOrder?.order_type || "MARKET",
+          producttype: p.product || "-",
+          fillprice: String(p.average_price || ""),
+          price: String(p.average_price || ""),
+          fillsize: quantity,
+          orderid: matchedOrder?.order_id || "",
+          status: "COMPLETE",
+          instrumenttype: p.instrument_type || p.segment || "",
+          orderstatus: matchedOrder?.status || "COMPLETE",
+          text: "",
+          updatetime: matchedOrder?.order_timestamp || matchedTrade?.exchange_timestamp || "",
+          symboltoken: String(p.instrument_token || ""),
+          createdAt: p.createdAt || null,
+          updatedAt: p.updatedAt || null,
+        });
+      }
+    }
+
+  //   // Get local open orders (for socket token list)
+  //   const localOpenOrders = await Order.findAll({
+  //     where: {
+  //       orderstatuslocaldb: "OPEN",
+  //       userId:req.userId
+  //     },
+  //     attributes: ["tradingsymbol"],
+  //     raw: true,
+  //   });
+
+  //   // console.log(mappedTrades,'=====================mappedTrades===================');
+    
+  //   const localOpenSymbolSet = new Set(
+  //     localOpenOrders.map(o => o.tradingsymbol)
+  //   );
+
+  //   const kiteOrders = orders.filter(o => {
+  //   if (o.status !== "COMPLETE") return false;
+  //   if (localOpenSymbolSet.has(o.tradingsymbol)) return false;
+  //   return true;
+  // });
+
+  //   // 🔥 UNIQUE trading symbols
+  //   const tradingSymbols = [...new Map(
+  //           kiteOrders
+  //             .filter(o => o.status === "COMPLETE" && !localOpenSymbolSet.has(o.tradingsymbol))
+  //             .map(o => [JSON.stringify({ tradingsymbol: o.tradingsymbol, exchange: o.exchange }), { tradingsymbol: o.tradingsymbol, exchange: o.exchange }])
+  //         ).values()];
+
+  //   let responseFun = await GetInstrumentAngelone(tradingSymbols)
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "User Position Trades",
+      onlineTrades: mappedTrades,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+export const getKiteTradesDataUserPosition12 = async function (req, res, next) {
+  try {
+    const kiteToken = req.headers.angelonetoken;
+    if (!kiteToken) {
+      return res.json({
+        status: false,
+        statusCode: 401,
+        message: "Login in Broker Account",
+        error: null,
+      });
+    }
+
+    const kite = await getKiteClientForUserId(req.userId);
+
+    const positions = await kite.getPositions();
+    const orders = await kite.getOrders();
+    const trades = await kite.getTrades();
+
+    // ---------- TRADE MAP ----------
+    const tradeMap = {};
+    for (const t of trades) {
+      if (!tradeMap[t.order_id]) {
+        tradeMap[t.order_id] = t;
+      }
+    }
+
+    const mappedTrades = [];
+
+
+    console.log(positions,'=====================positions========================');
+    
+
+    // ---------- NET POSITIONS ----------
+    for (const p of positions.net) {
+      const quantity = Math.abs(Number(p.quantity || 0));
+      if (quantity === 0) continue;
+
+      const transaction_type = p.quantity > 0 ? "BUY" : "SELL";
+
+      const matchedOrder = orders.find(o =>
+        o.tradingsymbol === p.tradingsymbol &&
+        o.transaction_type === transaction_type &&
+        o.status === "COMPLETE"
+      );
+
+      const matchedTrade = matchedOrder ? tradeMap[matchedOrder.order_id] : null;
+
+      const tradeObj = {
+        tradingsymbol: p.tradingsymbol || "-",
+        exchange: p.exchange || "-",
+        transaction_type,
+        product: p.product || "-",
+        average_price: Number(p.average_price || 0),
+        quantity,
+
+        order_id: matchedOrder?.order_id || "",
+        trade_id: matchedTrade?.trade_id || "",
+        uniqueorderid: matchedOrder?.order_id || matchedOrder?.uniqueorderid || "",
+
+        transactiontype: transaction_type,
+        ordertype: matchedOrder?.order_type || "MARKET",
+        producttype: p.product || "-",
+        fillprice: String(p.average_price || ""),
+        price: String(p.average_price || ""),
+        fillsize: quantity,
+        orderid: matchedOrder?.order_id || "",
+        status: "COMPLETE",
+        instrumenttype: p.instrument_type || p.segment || "",
+        orderstatus: matchedOrder?.status || "COMPLETE",
+        text: "",
+        updatetime: matchedOrder?.order_timestamp || matchedTrade?.exchange_timestamp || "",
+        symboltoken: String(p.instrument_token || ""),
+
+        userId: req.userId,
+        role: req.userRole || "USER", // ADMIN / USER
+      };
+
+      mappedTrades.push(tradeObj);
+
+      // ================= DB LOGIC START =================
+
+      if (transaction_type === "BUY") {
+
+        // Check existing ADMIN buy
+        const existingAdminBuy = await Order.findOne({
+          where: {
+            tradingsymbol: tradeObj.tradingsymbol,
+            transactiontype: "BUY",
+            // role: "ADMIN",
+          },
+        });
+
+        // Check existing USER buy
+        const existingUserBuy = await Order.findOne({
+          where: {
+            tradingsymbol: tradeObj.tradingsymbol,
+            transactiontype: "BUY",
+            // role: "USER",
+            userId: req.userId,
+          },
+        });
+
+        if (existingAdminBuy && tradeObj.role === "USER") {
+          // MERGE USER BUY INTO ADMIN BUY
+          const totalQty = existingAdminBuy.quantity + tradeObj.quantity;
+          const avgPrice =
+            (existingAdminBuy.average_price * existingAdminBuy.quantity +
+              tradeObj.average_price * tradeObj.quantity) / totalQty;
+
+          await existingAdminBuy.update({
+            quantity: totalQty,
+            average_price: avgPrice,
+          });
+
+        } else if (!existingUserBuy) {
+          // STORE NEW BUY
+          await Order.create({
+            ...tradeObj,
+            remainingQty: tradeObj.quantity,
+          });
+        }
+
+      } else if (transaction_type === "SELL") {
+
+        // STORE SELL OBJECT
+        await Order.create({
+          ...tradeObj,
+        });
+
+        // CHECK ADMIN BUY TO UPDATE
+        const adminBuy = await Order.findOne({
+          where: {
+            tradingsymbol: tradeObj.tradingsymbol,
+            transactiontype: "BUY",
+            // role: "ADMIN",
+            remainingQty: { [Op.gt]: 0 },
+          },
+        });
+
+        if (adminBuy) {
+          const newRemaining =
+            adminBuy.remainingQty - tradeObj.quantity;
+
+          await adminBuy.update({
+            remainingQty: Math.max(newRemaining, 0),
+          });
+        }
+      }
+
+      // ================= DB LOGIC END =================
+    }
+
+    return res.json({
+      status: true,
+      statusCode: 200,
+      message: "User Position Trades",
+      onlineTrades: mappedTrades,
+    });
+
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    return res.json({
+      status: false,
+      statusCode: 500,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+
+// =============================== getKiteTradesDataUserPosition end ====================== 
 
 
 export const getTradeDataForKiteDeshboard2 = async function (req, res) {
@@ -1567,11 +2143,8 @@ export const getKiteHolding = async (req, res) => {
 export const getKiteTrades = async (req, res) => {
   try {
 
-    const  kite  = await getKiteClientForUserId(55)
+    const  kite  = await getKiteClientForUserId(43)
 
-
-    
-    
 
     //  const  kite  = await getKiteClientForUserId(13)
 
@@ -1583,7 +2156,7 @@ export const getKiteTrades = async (req, res) => {
 
         const orders = await kite.getOrders();
 
-        console.log('kite request !',orders);
+        // console.log('kite request !',orders);
 
               //  const orders = await kite.getOrderTrades("2004398212261355520");
         //  const orders = await kite.getPositions();
@@ -1709,7 +2282,7 @@ export const getKiteOrders = async (req, res) => {
 
   //  const orders = await kite.getOrders();
 
-    const orders = await kite.getOrderTrades("260119150182582");
+    const orders = await kite.getOrderTrades("260122151467261");
     
 
     // console.log(orders,'orders orders');

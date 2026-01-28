@@ -3247,6 +3247,206 @@ export const AdminGetHoldingMultiple = async (req, res) => {
 };
 
 
+export const adminFetchUserPositionData = async (req, res, next) => {
+  try {
+
+    const userId = req.query.userId;
+
+    if (!userId) {
+      return res.status(400).json({ status: false, message: "userId is required" });
+    }
+
+    // 1️⃣ Fetch user
+    const user = await User.findOne({
+      where: { id: userId, role: "user" },
+      raw: true
+    });
+
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    // 2️⃣ Initialize unified positions response
+    let positions = {
+      kite: [],
+      angelone: []
+    };
+
+    // 3️⃣ Fetch Kite positions
+    if (user.brokerName === "kite") {
+      try {
+        const kite = await getKiteClientForUserId(user.id);
+        const kitePositionsRes = await kite.getPositions(); // assuming getPositions() exists in your kite instance
+
+        // normalize fields
+        positions.kite = kitePositionsRes.day.map((p) => ({
+          tradingsymbol: p.tradingsymbol,
+          buy_quantity: p.buy_quantity,
+          sell_quantity: p.sell_quantity,
+          buy_price: p.buy_price,
+          quantity:p.quantity,
+          sell_price: p.sell_price,
+          averagePrice: p.average_price || p.avgPrice,
+          pnl: p.pnl || 0,
+          product:p.product,
+         
+        }));
+      } catch (err) {
+        console.error("Error fetching Kite positions:", err);
+        positions.kite = [];
+      }
+    }
+
+    // 4️⃣ Fetch AngelOne positions
+    if (user.brokerName === "angelone") {
+      try {
+
+        // -----------------------
+        // HEADERS
+        // -----------------------
+        const angelHeaders = (token) => ({
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-UserType": "USER",
+          "X-SourceID": "WEB",
+          'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP, 
+          'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP, 
+          'X-MACAddress': process.env.MAC_Address, 
+          'X-PrivateKey': process.env.PRIVATE_KEY, 
+        });
+
+
+        const angelPositionsRes = await axios.get(
+          `https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition`,
+          { headers:angelHeaders(user.authToken) }
+        );
+
+        positions.angelone = (angelPositionsRes.data?.data || []).map((p) => ({
+
+          tradingsymbol: p.tradingsymbol,
+          buy_quantity: p.buyqty,
+          sell_quantity: p.sellqty,
+          buy_price: p.totalbuyavgprice,
+          quantity:p.netqty,
+          sell_price: p.totalsellavgprice,
+          averagePrice: p.average_price || p.avgPrice,
+          pnl: p.pnl || 0,
+          product:p.producttype,
+         
+
+        }));
+      } catch (err) {
+        console.error("Error fetching AngelOne positions:", err?.data?.message ||err.message);
+        positions.angelone = [];
+      }
+    }
+
+   
+    
+    if(user.brokerName === "finvasia") {
+
+      const getFinvasiaPositions = async (uid, susertoken ) => {
+
+        try {
+          
+        const SHOONYA_BASE_URL = process.env.SHOONYA_BASE_URL;
+        
+        const body = `jKey=${susertoken}&jData=${JSON.stringify({
+          uid,
+          actid: uid,
+        })}`;
+
+        const res = await axios.post(
+          `${SHOONYA_BASE_URL}/PositionBook`,
+          body,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        );
+
+        return res.data;
+
+        } catch (error) {
+
+          console.log(error);
+        
+        }
+    };
+
+    
+      
+
+       let finavasiaPosition = await getFinvasiaPositions( user?.kite_client_id, user?.authToken)
+
+      positions.finvasia = Array.isArray(finavasiaPosition)
+      ? finavasiaPosition.map((p) => {
+          const buyQty = Number(p.daybuyqty || 0);
+          const sellQty = Number(p.daysellqty || 0);
+
+          const buyPrice = Number(p.daybuyavgprc || 0);
+          const sellPrice = Number(p.daysellavgprc || 0);
+
+          const realised = Number(p.rpnl || 0);
+          const unrealised = Number(p.urmtom || 0);
+
+          return {
+            tradingsymbol: p.tsym,
+            buy_quantity: buyQty,
+            sell_quantity: sellQty,
+            quantity: Number(p.netqty || 0),
+
+            buy_price: buyPrice,
+            sell_price: sellPrice,
+
+            averagePrice:
+              buyQty > 0
+                ? buyPrice
+                : sellQty > 0
+                ? sellPrice
+                : 0,
+
+            pnl: realised + unrealised,
+
+            product: p.prd, // M / I / C
+          };
+        })
+      : [];
+       
+  } 
+    if(user.brokerName === "fyers") {
+
+    }
+    if(user.brokerName === "upstox") {
+
+    }
+    if(user.brokerName === "groww") {
+
+    }
+
+    // 5️⃣ Return unified response
+    return res.json({
+      status: true,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        brokerName: user.brokerName
+      },
+      positions
+    });
+
+  } catch (err) {
+   
+    return res.status(500).json({
+      status: false,
+      message: err.message || "Internal server error"
+    });
+  }
+};
+
 
 
  

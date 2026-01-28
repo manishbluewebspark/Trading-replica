@@ -1,6 +1,5 @@
 // import { parentPort } from "worker_threads";
 import redis from "../utils/redis.js";
-import crypto from "crypto";
 import axios from "axios";
 import zlib from "zlib";
 import unzipper from "unzipper";
@@ -204,14 +203,14 @@ export const instrumentGetFun = async function () {
   
   logSuccess(null, 'Broker instrument fetching started!');
 
-  const requestId = crypto.randomUUID();
+
   const startTime = Date.now();
 
   try {
     // parentPort.postMessage({ status: "STARTED", requestId });
 
     // Fetch all data in parallel
-    const [angeloneData, kiteData, finvasiaList, upstoxData, fyersData, growwData] =
+    const [angeloneData=[], kiteData=[], finvasiaList=[], upstoxData=[], fyersData=[], growwData=[]] =
       await Promise.all([
         fetchAngelOneScripMaster(),
         fetchKiteInstruments(),
@@ -378,7 +377,7 @@ export const instrumentGetFun = async function () {
 
     const payload = JSON.stringify(responseObj);
 
-    logSuccess(null, 'Payload stringify instrument done!');
+    logSuccess(null, 'Payload stringify instrument done !');
 
     // Save to Redis with compression
     const saveToRedis = async () => {
@@ -425,7 +424,7 @@ export const instrumentGetFun = async function () {
     //   error: err.message,
     // });
 
-    console.error('Worker error:', err?.stack || err?.message);
+    console.error('Worker error:',err, err?.stack || err?.message);
     
     logError(null, "❌ Worker crashed!");
     logError(null, err?.stack || err?.message);

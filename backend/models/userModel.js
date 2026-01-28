@@ -143,9 +143,17 @@ finavacia_vendor_code:{
     allowNull: true
 },
 finavacia_imei:{
- type: DataTypes.STRING,
+    type: DataTypes.STRING,
     allowNull: true
 },
+source:{
+    type: DataTypes.STRING,
+    allowNull: true
+},
+assignEmp:{
+    type: DataTypes.STRING,
+    allowNull: true
+}
 
 
 }, {

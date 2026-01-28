@@ -70,6 +70,23 @@ export default function UserPnlAdmin() {
   // ---------------- Grid columns ----------------
   const columnDefs = useMemo<ColDef<UserPnl>[]>(
     () => [
+     {
+  headerName: "S.No",
+  width: 90,
+  minWidth: 80,
+  sortable: false,
+  filter: false,
+  valueGetter: (params) => {
+    return params.node?.rowIndex != null
+      ? params.node.rowIndex + 1
+      : "";
+  },
+  cellStyle: {
+    textAlign: "center",
+    fontWeight: "500",
+  },
+},
+
       { headerName: "User ID", field: "userId", width: 140, minWidth: 120 },
       { headerName: "First Name", field: "firstname", width: 200, minWidth: 160 },
       { headerName: "Last Name", field: "lastname", width: 200, minWidth: 160 },
@@ -344,6 +361,7 @@ export default function UserPnlAdmin() {
             defaultColDef={defaultColDef}
             pagination={true}
             paginationPageSize={20}
+            paginationPageSizeSelector={[10, 25, 50, 100,500,1000]}
             suppressCellFocus={true}
             animateRows={true}
             rowSelection="single"
